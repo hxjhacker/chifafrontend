@@ -1,0 +1,14 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: #FFFBFA;
+  color: #0B1F3A;
+}
+
+.btn-gold {
+  @apply rounded-2xl bg-gold px-5 py-3 text-center font-bold text-royal shadow-gold transition hover:bg-gold-400;
+}
