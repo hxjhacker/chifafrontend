@@ -22,6 +22,11 @@ const config: Config = {
           300: "#E8D5A3",
           200: "#F3E9C8",
         },
+        amber: {
+          DEFAULT: "#D97706",
+          400: "#F59E0B",
+          100: "#FEF3C7",
+        },
         bronze: { DEFAULT: "#B87333" },
         cream: { DEFAULT: "#FFFBFA" },
       },

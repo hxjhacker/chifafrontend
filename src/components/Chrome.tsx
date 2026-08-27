@@ -25,7 +25,7 @@ export function Header({ cartCount, onCart }: { cartCount: number; onCart: () =>
         <nav className="hidden md:flex items-center gap-6 text-sm text-royal">
           <Link href="/">الرئيسية</Link>
           <Link href="/products/quran">القرآن</Link>
-          <Link href="/products/kids">تعليم الأطفال</Link>
+          <Link href="/product">تعليم الأطفال</Link>
           <Link href="/products/music">الموسيقى</Link>
         </nav>
         <button

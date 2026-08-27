@@ -12,3 +12,33 @@ body {
 .btn-gold {
   @apply rounded-2xl bg-gold px-5 py-3 text-center font-bold text-royal shadow-gold transition hover:bg-gold-400;
 }
+
+.hero-stage {
+  background:
+    radial-gradient(ellipse 70% 55% at 85% 10%, rgba(201, 162, 39, 0.18), transparent 58%),
+    radial-gradient(ellipse 55% 50% at 8% 88%, rgba(11, 31, 58, 0.08), transparent 52%),
+    linear-gradient(180deg, #FFFBFA 0%, #F6EED8 100%);
+}
+
+.hero-float {
+  animation: hero-float 6.5s ease-in-out infinite;
+}
+
+@keyframes hero-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-float { animation: none; }
+  .pulse-dot { animation: none; }
+}
+
+.pulse-dot {
+  animation: pulse-dot 1.6s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(1.35); }
+}

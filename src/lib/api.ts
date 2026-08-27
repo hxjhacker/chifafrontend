@@ -4,6 +4,7 @@ export type OrderPayload = {
   full_name: string;
   phone: string;
   city: string;
+  address?: string | null;
   product_slug: string;
   tier_qty: 1 | 2 | 3;
   cross_sell_slug?: string | null;

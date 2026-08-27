@@ -7,3 +7,4 @@ out
 *.log
 README.md
 docs
+**/*.md

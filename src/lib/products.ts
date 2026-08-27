@@ -120,11 +120,29 @@ export const PRODUCTS: Product[] = [
 ];
 
 export function getProduct(slug: string) {
+  if (slug === "educative") {
+    const kids = PRODUCTS.find((p) => p.slug === "kids");
+    if (!kids) return undefined;
+    return {
+      ...kids,
+      nameAr: "الفلاشة التعليمية الذكية للأطفال",
+      tagline: "100% بدون إنترنت — رفيق التفوق المدرسي.",
+    };
+  }
   return PRODUCTS.find((p) => p.slug === slug);
 }
 
 export function otherProducts(slug: string) {
   return PRODUCTS.filter((p) => p.slug !== slug);
+}
+
+export function galleryShots(product: Product) {
+  return [
+    { id: "hero", label: product.nameAr, src: product.heroImage },
+    { id: "usb", label: "الفلاشة", src: product.image },
+    ...product.features.map((f, i) => ({ id: `feature-${i}`, label: f.title, src: f.image })),
+    { id: "use", label: "الاستعمال", src: product.heroImage },
+  ];
 }
 
 export function productBySlug(slug: string) {

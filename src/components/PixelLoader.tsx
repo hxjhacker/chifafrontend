@@ -4,12 +4,14 @@ import Script from "next/script";
 import { useEffect } from "react";
 import { markPixelsReady, newEventId, trackBrowser } from "@/lib/tracking";
 
-const FB = process.env.NEXT_PUBLIC_FB_PIXEL_ID || "";
-const TT = process.env.NEXT_PUBLIC_TIKTOK_PIXEL_ID || "";
-const SNAP = process.env.NEXT_PUBLIC_SNAPCHAT_PIXEL_ID || "";
+const ENABLED = process.env.NEXT_PUBLIC_ENABLE_PIXELS !== "false";
+const FB = ENABLED ? process.env.NEXT_PUBLIC_FB_PIXEL_ID || "" : "";
+const TT = ENABLED ? process.env.NEXT_PUBLIC_TIKTOK_PIXEL_ID || "" : "";
+const SNAP = ENABLED ? process.env.NEXT_PUBLIC_SNAPCHAT_PIXEL_ID || "" : "";
 
 export function PixelLoader() {
   useEffect(() => {
+    if (!ENABLED) return;
     const boot = () => {
       markPixelsReady();
       trackBrowser("PageView", newEventId());
