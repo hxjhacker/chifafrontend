@@ -31,8 +31,8 @@ const config: Config = {
         cream: { DEFAULT: "#FFFBFA" },
       },
       fontFamily: {
-        cairo: ["var(--font-cairo)", "Tahoma", "sans-serif"],
-        cinzel: ["var(--font-cinzel)", "serif"],
+        cairo: ["Cairo", "Tahoma", "sans-serif"],
+        cinzel: ["Cinzel", "serif"],
       },
       boxShadow: {
         gold: "0 10px 30px rgba(201, 162, 39, 0.18)",
