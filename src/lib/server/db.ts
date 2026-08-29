@@ -98,6 +98,15 @@ CREATE TABLE IF NOT EXISTS tracking_events (
 CREATE INDEX IF NOT EXISTS ix_tracking_events_event_id ON tracking_events (event_id);
 
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS address varchar(240);
+ALTER TABLE orders ALTER COLUMN upsell_price_cents SET DEFAULT 0;
+ALTER TABLE orders ALTER COLUMN cross_sell_price_cents SET DEFAULT 0;
+ALTER TABLE orders ALTER COLUMN phone_national SET DEFAULT '';
+ALTER TABLE orders ALTER COLUMN currency SET DEFAULT 'MAD';
+ALTER TABLE orders ALTER COLUMN status SET DEFAULT 'pending';
+ALTER TABLE orders ALTER COLUMN payment_method SET DEFAULT 'COD';
+ALTER TABLE orders ALTER COLUMN source SET DEFAULT 'website';
+ALTER TABLE orders ALTER COLUMN created_at SET DEFAULT now();
+ALTER TABLE orders ALTER COLUMN updated_at SET DEFAULT now();
 `;
 
 const PRODUCT_SEED = [
