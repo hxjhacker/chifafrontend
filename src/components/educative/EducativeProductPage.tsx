@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { DEFAULT_BUNDLE, EDUCATIVE_SLUG, getBundle } from "@/lib/educative";
 import { trackFunnel } from "@/lib/tracking";
+import { scrollToOrderFields } from "@/lib/scroll";
 import { Faq } from "./Faq";
 import { FeatureGrid } from "./FeatureGrid";
 import { HeroGallery } from "./HeroGallery";
@@ -26,7 +27,7 @@ export function EducativeProductPage() {
 
   const scrollToForm = useCallback(() => {
     markCheckout();
-    document.getElementById("order-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    scrollToOrderFields();
   }, [markCheckout]);
 
   useEffect(() => {

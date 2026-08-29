@@ -1,10 +1,9 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BadgeCheck, Eye, MessageCircle, ShieldCheck } from "lucide-react";
-import { filterCities } from "@/lib/cities";
-import { isValidMaPhone } from "@/lib/phone";
+import { digitsOnly, isTenDigitMaPhone } from "@/lib/phone";
 import { submitOrder } from "@/lib/api";
 import { clickIds, newEventId, trackFunnel } from "@/lib/tracking";
 import { EDUCATIVE_SLUG, type Bundle } from "@/lib/educative";
@@ -32,20 +31,17 @@ export function CodForm({
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [city, setCity] = useState("");
-  const [cityQ, setCityQ] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const cities = useMemo(() => filterCities(cityQ), [cityQ]);
-  const showCityList = cityQ.trim().length > 0 && !city;
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
     if (name.trim().length < 3) return setError("كتبي الاسم الكامل");
-    if (!isValidMaPhone(phone)) {
-      return setError("دخل رقم مغربي صحيح، مثلا: 06XXXXXXXX");
+    if (!isTenDigitMaPhone(phone)) {
+      return setError("رقم الهاتف خاصو يكون 10 أرقام بالضبط، مثلا: 06XXXXXXXX");
     }
-    if (!city) return setError("اختاري المدينة من اللائحة");
+    if (city.trim().length < 2) return setError("كتبي اسم المدينة");
 
     setLoading(true);
     const eventId = newEventId();
@@ -53,7 +49,7 @@ export function CodForm({
       const order = await submitOrder({
         full_name: name.trim(),
         phone,
-        city,
+        city: city.trim(),
         product_slug: deal.slug,
         tier_qty: deal.qty,
         event_id: eventId,
@@ -65,7 +61,7 @@ export function CodForm({
         value: order.total,
         contentIds: [deal.slug],
         phone,
-        city,
+        city: city.trim(),
         fullName: name.trim(),
       });
       router.push(`/thank-you?order=${order.order_id}`);
@@ -77,12 +73,12 @@ export function CodForm({
   }
 
   return (
-    <section id="order-form" className="scroll-mt-32">
+    <section id="order-form">
       <div className="rounded-[2rem] border border-emerald/20 bg-white p-5 shadow-lg sm:p-8">
         <h2 className="text-2xl font-extrabold text-royal sm:text-3xl">أكّدي الطلب دابا — الدفع عند الاستلام</h2>
         <p className="mt-2 text-sm text-royal/70">ما كاتخلّصيش حتى تشوفي السلعة قدام الموصّل.</p>
 
-        <form onSubmit={onSubmit} className="mt-6 space-y-4" onFocus={onFocusCheckout}>
+        <form id="order-fields" onSubmit={onSubmit} className="mt-6 space-y-4" onFocus={onFocusCheckout}>
           <div className="flex flex-wrap items-baseline justify-end gap-3 rounded-2xl bg-gradient-to-l from-royal to-royal-700 px-4 py-3 text-white">
             <span className="text-2xl font-black tabular-nums">
               {deal.price} <span className="text-sm font-bold">درهم</span>
@@ -113,56 +109,27 @@ export function CodForm({
               autoComplete="tel"
               placeholder="06XXXXXXXX"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              onChange={(e) => setPhone(digitsOnly(e.target.value).slice(0, 10))}
+              maxLength={10}
               dir="ltr"
               className="mt-1 w-full rounded-2xl border border-slate-200 px-4 py-3.5 text-right text-base font-medium outline-none ring-emerald/30 focus:border-emerald focus:ring-2"
               required
             />
           </label>
 
-          <div>
-            <label className="block text-sm font-bold text-royal" htmlFor={`city-${fieldId}`}>
-              المدينة
-              <input
-                id={`city-${fieldId}`}
-                name="city"
-                autoComplete="address-level2"
-                value={cityQ}
-                onChange={(e) => {
-                  setCityQ(e.target.value);
-                  setCity("");
-                }}
-                className="mt-1 w-full rounded-2xl border border-slate-200 px-4 py-3.5 text-base font-medium outline-none ring-emerald/30 focus:border-emerald focus:ring-2"
-                placeholder="كتبي اسم المدينة"
-                required
-                aria-autocomplete="list"
-                aria-controls={`city-list-${fieldId}`}
-                aria-expanded={showCityList}
-              />
-            </label>
-            {showCityList ? (
-              <ul
-                id={`city-list-${fieldId}`}
-                role="listbox"
-                className="mt-2 max-h-40 overflow-auto rounded-2xl border border-slate-200 bg-slate-50"
-              >
-                {cities.slice(0, 10).map((c) => (
-                  <li key={c.fr} role="option" aria-selected={city === c.ar}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setCity(c.ar);
-                        setCityQ(`${c.ar} — ${c.fr}`);
-                      }}
-                      className={`block w-full px-4 py-2.5 text-right text-sm ${city === c.ar ? "bg-emerald/15 font-bold" : ""}`}
-                    >
-                      {c.ar} <span className="text-royal/45">({c.fr})</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </div>
+          <label className="block text-sm font-bold text-royal" htmlFor={`city-${fieldId}`}>
+            المدينة
+            <input
+              id={`city-${fieldId}`}
+              name="city"
+              autoComplete="address-level2"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              className="mt-1 w-full rounded-2xl border border-slate-200 px-4 py-3.5 text-base font-medium outline-none ring-emerald/30 focus:border-emerald focus:ring-2"
+              placeholder="كتبي اسم المدينة"
+              required
+            />
+          </label>
 
           {error ? (
             <p className="text-sm font-semibold text-red-700" role="alert">

@@ -1,10 +1,9 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCart } from "@/lib/cart";
-import { filterCities } from "@/lib/cities";
-import { isValidMaPhone } from "@/lib/phone";
+import { digitsOnly, isTenDigitMaPhone } from "@/lib/phone";
 import { submitOrder } from "@/lib/api";
 import { clickIds, newEventId, trackFunnel } from "@/lib/tracking";
 
@@ -13,19 +12,17 @@ export function CheckoutModal() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [city, setCity] = useState("");
-  const [cityQ, setCityQ] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const cities = useMemo(() => filterCities(cityQ), [cityQ]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
     if (name.trim().length < 3) return setError("كتبي الاسم الكامل");
-    if (!isValidMaPhone(phone)) {
-      return setError("دخل رقم مغربي صحيح يبدا بـ 05 أو 06 أو 07 أو +212");
+    if (!isTenDigitMaPhone(phone)) {
+      return setError("رقم الهاتف خاصو يكون 10 أرقام بالضبط، مثلا: 06XXXXXXXX");
     }
-    if (!city) return setError("اختاري المدينة من اللائحة");
+    if (city.trim().length < 2) return setError("كتبي اسم المدينة");
     if (!cart.productSlug) return;
     setLoading(true);
     const eventId = newEventId();
@@ -33,7 +30,7 @@ export function CheckoutModal() {
       const order = await submitOrder({
         full_name: name.trim(),
         phone,
-        city,
+        city: city.trim(),
         product_slug: cart.productSlug,
         tier_qty: cart.tierQty,
         cross_sell_slug: cart.crossSellSlug,
@@ -46,7 +43,7 @@ export function CheckoutModal() {
         value: order.total,
         contentIds: [cart.productSlug],
         phone,
-        city,
+        city: city.trim(),
         fullName: name.trim(),
       });
       cart.onOrderCreated(order.order_id);
@@ -81,36 +78,25 @@ export function CheckoutModal() {
             </label>
             <label className="mt-3 block text-sm">
               رقم الهاتف
-              <input value={phone} onChange={(e) => setPhone(e.target.value)} className="mt-1 w-full rounded-xl border border-gold-200 px-3 py-3" inputMode="tel" placeholder="06xxxxxxxx" />
+              <input
+                value={phone}
+                onChange={(e) => setPhone(digitsOnly(e.target.value).slice(0, 10))}
+                maxLength={10}
+                className="mt-1 w-full rounded-xl border border-gold-200 px-3 py-3 text-right"
+                dir="ltr"
+                inputMode="numeric"
+                placeholder="06XXXXXXXX"
+              />
             </label>
             <label className="mt-3 block text-sm">
               المدينة
               <input
-                value={cityQ}
-                onChange={(e) => {
-                  setCityQ(e.target.value);
-                  setCity("");
-                }}
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
                 className="mt-1 w-full rounded-xl border border-gold-200 px-3 py-3"
                 placeholder="كتبي اسم المدينة"
               />
             </label>
-            <ul className="mt-2 max-h-40 overflow-auto rounded-xl border border-gold-200 bg-white">
-              {cities.slice(0, 12).map((c) => (
-                <li key={c.fr}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCity(c.ar);
-                      setCityQ(`${c.ar} — ${c.fr}`);
-                    }}
-                    className={`block w-full px-3 py-2 text-right text-sm ${city === c.ar ? "bg-gold-200" : ""}`}
-                  >
-                    {c.ar} <span className="text-royal/50">({c.fr})</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
             {error ? <p className="mt-3 text-sm text-red-700">{error}</p> : null}
             <button type="submit" disabled={loading} className="btn-gold mt-5 w-full">
               {loading ? "كنسجّلو الطلب…" : "أكّد الطلب — الدفع عند الاستلام"}

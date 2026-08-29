@@ -6,6 +6,7 @@ import { galleryShots, getProduct } from "@/lib/products";
 import { CATALOG_OFFER, type Offer } from "@/lib/offer";
 import { trackFunnel } from "@/lib/tracking";
 import { padTime, useOfferCountdown } from "@/hooks/useOfferCountdown";
+import { scrollToOrderFields } from "@/lib/scroll";
 import { ProductCarousel } from "@/components/lp/ProductCarousel";
 import { CodForm } from "@/components/educative/CodForm";
 import { StickyCta } from "@/components/educative/StickyCta";
@@ -49,7 +50,7 @@ export function ProductLanding({ slug }: { slug: string }) {
 
   const scrollToForm = useCallback(() => {
     markCheckout();
-    document.getElementById("order-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    scrollToOrderFields();
   }, [markCheckout]);
 
   useEffect(() => {

@@ -23,3 +23,11 @@ export function normalizeMaPhone(raw: string): string | null {
 export function isValidMaPhone(raw: string) {
   return Boolean(normalizeMaPhone(raw));
 }
+
+/** Local Moroccan mobile/landline: exactly 10 digits, starting with 05 / 06 / 07. */
+export function isTenDigitMaPhone(raw: string) {
+  const digits = digitsOnly(raw);
+  if (digits.length !== 10) return false;
+  if (digits[0] !== "0" || !"567".includes(digits[1])) return false;
+  return Boolean(normalizeMaPhone(digits));
+}

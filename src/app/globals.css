@@ -32,6 +32,7 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .hero-float { animation: none; }
   .pulse-dot { animation: none; }
+  .cta-pulse { animation: none; }
 }
 
 .pulse-dot {
@@ -41,4 +42,13 @@ body {
 @keyframes pulse-dot {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.35; transform: scale(1.35); }
+}
+
+.cta-pulse {
+  animation: cta-pulse 1.35s ease-in-out infinite;
+}
+
+@keyframes cta-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.07); }
 }
