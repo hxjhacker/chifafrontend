@@ -1,0 +1,175 @@
+import { Pool } from "pg";
+
+const DEFAULT_URL =
+  "postgres://chifaglow:chifaglow@chifaglow_database:5432/chifaglow?sslmode=disable";
+
+function connectionString() {
+  if (process.env.DATABASE_URL) return process.env.DATABASE_URL.trim();
+  if (process.env.NODE_ENV !== "production") {
+    return "postgres://chifaglow:chifaglow@127.0.0.1:5432/chifaglow?sslmode=disable";
+  }
+  return DEFAULT_URL;
+}
+
+let pool: Pool | null = null;
+let schemaReady: Promise<void> | null = null;
+
+export function getPool() {
+  if (!pool) {
+    const url = connectionString();
+    pool = new Pool({
+      connectionString: url,
+      max: 5,
+      ssl: /sslmode=require/i.test(url) ? { rejectUnauthorized: false } : false,
+    });
+  }
+  return pool;
+}
+
+const SCHEMA_SQL = `
+CREATE TABLE IF NOT EXISTS products (
+  id uuid PRIMARY KEY,
+  slug varchar(64) NOT NULL UNIQUE,
+  name_ar varchar(160) NOT NULL,
+  name_en varchar(160) NOT NULL,
+  tagline_ar varchar(240) NOT NULL DEFAULT '',
+  description_ar text NOT NULL DEFAULT '',
+  accent varchar(32) NOT NULL DEFAULT 'gold',
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ix_products_slug ON products (slug);
+
+CREATE TABLE IF NOT EXISTS orders (
+  id uuid PRIMARY KEY,
+  full_name varchar(120) NOT NULL,
+  phone varchar(20) NOT NULL,
+  phone_national varchar(20) NOT NULL DEFAULT '',
+  city varchar(80) NOT NULL,
+  address varchar(240),
+  product_slug varchar(64) NOT NULL,
+  tier_qty integer NOT NULL,
+  tier_price_cents integer NOT NULL,
+  cross_sell_slug varchar(64),
+  cross_sell_price_cents integer NOT NULL DEFAULT 0,
+  upsell_slug varchar(64),
+  upsell_price_cents integer NOT NULL DEFAULT 0,
+  subtotal_cents integer NOT NULL,
+  total_cents integer NOT NULL,
+  currency varchar(8) NOT NULL DEFAULT 'MAD',
+  status varchar(32) NOT NULL DEFAULT 'pending',
+  payment_method varchar(16) NOT NULL DEFAULT 'COD',
+  event_id varchar(80) NOT NULL UNIQUE,
+  fbp varchar(255),
+  fbc varchar(512),
+  ttclid varchar(512),
+  sccid varchar(512),
+  client_ip varchar(64),
+  user_agent text,
+  landing_url text,
+  source varchar(32) NOT NULL DEFAULT 'website',
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS ix_orders_phone ON orders (phone);
+CREATE INDEX IF NOT EXISTS ix_orders_status ON orders (status);
+CREATE UNIQUE INDEX IF NOT EXISTS ix_orders_event_id ON orders (event_id);
+
+CREATE TABLE IF NOT EXISTS order_items (
+  id uuid PRIMARY KEY,
+  order_id uuid NOT NULL REFERENCES orders(id),
+  product_slug varchar(64) NOT NULL,
+  role varchar(32) NOT NULL,
+  quantity integer NOT NULL,
+  unit_price_cents integer NOT NULL,
+  line_total_cents integer NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_order_items_order_id ON order_items (order_id);
+
+CREATE TABLE IF NOT EXISTS tracking_events (
+  id uuid PRIMARY KEY,
+  event_id varchar(80) NOT NULL,
+  event_name varchar(64) NOT NULL,
+  platform varchar(32) NOT NULL,
+  status varchar(32) NOT NULL DEFAULT 'pending',
+  detail text NOT NULL DEFAULT '',
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS ix_tracking_events_event_id ON tracking_events (event_id);
+
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS address varchar(240);
+`;
+
+const PRODUCT_SEED = [
+  {
+    slug: "quran",
+    name_ar: "USB القرآن الكريم",
+    name_en: "Holy Quran USB",
+    tagline_ar: "القرآن كامل بجودة عالية… يتسمع في الدار والسيارة.",
+    description_ar: "مكتبة قرآنية فاخرة على USB جاهز للتشغيل.",
+    accent: "gold",
+  },
+  {
+    slug: "kids",
+    name_ar: "USB تعليم الأطفال",
+    name_en: "Children Learning USB",
+    tagline_ar: "محتوى تربوي جاهز… ولادك يتعلمو وأنت مرتاح.",
+    description_ar: "تجميعة تعليمية للأطفال بلا إعلانات وبلا نت.",
+    accent: "emerald",
+  },
+  {
+    slug: "music",
+    name_ar: "USB الأغاني والموسيقى",
+    name_en: "Music & Songs USB",
+    tagline_ar: "موسيقى جاهزة، بلا نت وبلا تقطيعة.",
+    description_ar: "مكتبة أغاني مرتبة للسيارة والمحل.",
+    accent: "bronze",
+  },
+  {
+    slug: "educative",
+    name_ar: "الفلاشة التعليمية الذكية للأطفال",
+    name_en: "Smart Educational USB for Kids",
+    tagline_ar: "100% بدون إنترنت — رفيق التفوق المدرسي.",
+    description_ar: "فلاشة تربوية جاهزة للتلفاز والحاسوب.",
+    accent: "emerald",
+  },
+] as const;
+
+export async function ensureSchema() {
+  if (!schemaReady) {
+    schemaReady = (async () => {
+      const client = await getPool().connect();
+      try {
+        await client.query(SCHEMA_SQL);
+        for (const product of PRODUCT_SEED) {
+          await client.query(
+            `INSERT INTO products (id, slug, name_ar, name_en, tagline_ar, description_ar, accent, is_active, created_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, true, now())
+             ON CONFLICT (slug) DO UPDATE SET
+               name_ar = EXCLUDED.name_ar,
+               name_en = EXCLUDED.name_en,
+               tagline_ar = EXCLUDED.tagline_ar,
+               description_ar = EXCLUDED.description_ar,
+               accent = EXCLUDED.accent,
+               is_active = true`,
+            [
+              crypto.randomUUID(),
+              product.slug,
+              product.name_ar,
+              product.name_en,
+              product.tagline_ar,
+              product.description_ar,
+              product.accent,
+            ],
+          );
+        }
+      } finally {
+        client.release();
+      }
+    })().catch((err) => {
+      schemaReady = null;
+      throw err;
+    });
+  }
+  await schemaReady;
+}

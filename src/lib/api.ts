@@ -41,8 +41,12 @@ async function parse<T>(res: Response): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+function apiPath(path: string) {
+  return `${API_URL}${path}`;
+}
+
 export async function submitOrder(payload: OrderPayload) {
-  const res = await fetch(`${API_URL}/api/orders`, {
+  const res = await fetch(apiPath("/api/orders"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -51,7 +55,7 @@ export async function submitOrder(payload: OrderPayload) {
 }
 
 export async function submitUpsell(orderId: string, productSlug: string, eventId: string) {
-  const res = await fetch(`${API_URL}/api/orders/${orderId}/upsell`, {
+  const res = await fetch(apiPath(`/api/orders/${orderId}/upsell`), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ product_slug: productSlug, event_id: eventId }),
@@ -60,13 +64,13 @@ export async function submitUpsell(orderId: string, productSlug: string, eventId
 }
 
 export async function fetchOrder(orderId: string) {
-  const res = await fetch(`${API_URL}/api/orders/${orderId}`, { cache: "no-store" });
+  const res = await fetch(apiPath(`/api/orders/${orderId}`), { cache: "no-store" });
   return parse<OrderResponse>(res);
 }
 
 export async function sendTracking(body: Record<string, unknown>) {
   try {
-    await fetch(`${API_URL}/api/tracking/events`, {
+    await fetch(apiPath("/api/tracking/events"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),

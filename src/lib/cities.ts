@@ -83,6 +83,37 @@ export const CITIES: City[] = [
   { ar: "الدريوش", fr: "Driouch", aliases: ["driouch"] },
 ];
 
+function norm(value: string) {
+  return (value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[éè]/g, "e")
+    .replace(/[âà]/g, "a")
+    .replace(/\s+/g, " ");
+}
+
+export function resolveCity(raw: string): { ar: string; fr: string } {
+  const needle = norm(raw);
+  const fallback = { ar: raw.trim(), fr: raw.trim() };
+  if (!needle) return fallback;
+
+  for (const city of CITIES) {
+    const hay = [norm(city.ar), norm(city.fr), ...city.aliases.map(norm)];
+    if (hay.includes(needle)) return { ar: city.ar, fr: city.fr };
+  }
+
+  if (needle.length >= 3) {
+    for (const city of CITIES) {
+      const hay = [norm(city.ar), norm(city.fr), ...city.aliases.map(norm)];
+      if (hay.some((h) => h.length >= 3 && (h.includes(needle) || needle.includes(h)))) {
+        return { ar: city.ar, fr: city.fr };
+      }
+    }
+  }
+
+  return fallback;
+}
+
 export function filterCities(q: string) {
   const n = q.trim().toLowerCase();
   if (!n) return CITIES;

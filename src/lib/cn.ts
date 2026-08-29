@@ -13,5 +13,8 @@ export const TIERS = [
 
 export const CROSS_SELL_PRICE = 199;
 export const UPSELL_PRICE = 99;
-export const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.chifaglow.com";
+
+const configuredApi = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/$/, "");
+export const API_URL =
+  !configuredApi || configuredApi === "https://api.chifaglow.com" ? "" : configuredApi;
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://chifaglow.com";
