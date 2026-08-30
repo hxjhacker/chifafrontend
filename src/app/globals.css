@@ -39,6 +39,10 @@ html.dark body {
   box-shadow: 0 15px 35px -10px rgba(212, 175, 55, 0.15);
 }
 
+.check-glow {
+  box-shadow: 0 0 30px rgba(16, 185, 129, 0.35);
+}
+
 .hero-stage {
   background:
     radial-gradient(ellipse 70% 55% at 85% 10%, rgba(201, 162, 39, 0.18), transparent 58%),

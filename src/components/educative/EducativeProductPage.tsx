@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { DEFAULT_BUNDLE, EDUCATIVE_SLUG, getBundle } from "@/lib/educative";
 import { trackFunnel } from "@/lib/tracking";
-import { scrollToOrderFields } from "@/lib/scroll";
+import { CodFormModal } from "./CodFormModal";
 import { Faq } from "./Faq";
 import { FeatureGrid } from "./FeatureGrid";
 import { HeroGallery } from "./HeroGallery";
@@ -14,6 +14,7 @@ import { StickyCta } from "./StickyCta";
 
 export function EducativeProductPage() {
   const initiated = useRef(false);
+  const [orderOpen, setOrderOpen] = useState(false);
   const bundle = getBundle(DEFAULT_BUNDLE);
 
   const markCheckout = useCallback(() => {
@@ -25,9 +26,9 @@ export function EducativeProductPage() {
     });
   }, [bundle.price]);
 
-  const scrollToForm = useCallback(() => {
+  const openOrder = useCallback(() => {
     markCheckout();
-    scrollToOrderFields();
+    setOrderOpen(true);
   }, [markCheckout]);
 
   useEffect(() => {
@@ -45,7 +46,13 @@ export function EducativeProductPage() {
         <Reviews />
         <Faq />
       </main>
-      <StickyCta bundle={bundle} onOrder={scrollToForm} />
+      <StickyCta bundle={bundle} onOrder={openOrder} />
+      <CodFormModal
+        open={orderOpen}
+        onClose={() => setOrderOpen(false)}
+        bundle={bundle}
+        onFocusCheckout={markCheckout}
+      />
     </div>
   );
 }

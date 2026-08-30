@@ -251,7 +251,7 @@ export function HomePage() {
         </div>
       </section>
 
-      <div className="mx-auto max-w-4xl px-4 py-12 md:py-16">
+      <div className="mx-auto max-w-[950px] px-4 py-12 md:py-16">
         <ReviewGrid
           title="تجارب حقيقية لزبنائنا فالمغرب 🇲🇦"
           subtitle="ثقتكم هي سر نجاحنا واستمراريتنا"

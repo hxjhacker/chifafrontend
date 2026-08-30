@@ -31,3 +31,11 @@ export function isTenDigitMaPhone(raw: string) {
   if (digits[0] !== "0" || !"567".includes(digits[1])) return false;
   return Boolean(normalizeMaPhone(digits));
 }
+
+/** Display like +212 612-345678 */
+export function formatMaPhoneDisplay(raw: string) {
+  const e164 = normalizeMaPhone(raw);
+  if (!e164) return raw || "";
+  const national = e164.slice(4);
+  return `+212 ${national.slice(0, 3)}-${national.slice(3)}`;
+}

@@ -1,41 +1,211 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { fetchOrder } from "@/lib/api";
+import {
+  ArrowRight,
+  Check,
+  MapPin,
+  PackageOpen,
+  PencilLine,
+  PhoneCall,
+  User,
+} from "lucide-react";
+import { fetchOrder, type OrderResponse } from "@/lib/api";
 import { getProduct } from "@/lib/products";
-import { CheckCircle2 } from "lucide-react";
+import { formatMaPhoneDisplay } from "@/lib/phone";
+import { waLink, WhatsAppIcon } from "@/components/Chrome";
+
+type OrderDetails = {
+  name: string;
+  product: string;
+  price: string;
+  city: string;
+  phone: string;
+};
+
+function productLabel(order: OrderResponse) {
+  const product = getProduct(order.product_slug);
+  const name = product?.nameAr || order.product_slug;
+  return order.tier_qty > 1 ? `${name} × ${order.tier_qty}` : name;
+}
 
 function ThanksInner() {
   const params = useSearchParams();
   const orderId = params.get("order") || "";
-  const [summary, setSummary] = useState("كنجيبو تفاصيل الطلب…");
+  const [details, setDetails] = useState<OrderDetails | null>(null);
+  const [loading, setLoading] = useState(Boolean(orderId));
 
   useEffect(() => {
     if (!orderId) {
-      setSummary("الطلب تسجّل. غادي نتصلو بك لتأكيد العنوان.");
+      setLoading(false);
       return;
     }
+    let cancelled = false;
+    setLoading(true);
     fetchOrder(orderId)
-      .then((o) => {
-        const p = getProduct(o.product_slug);
-        setSummary(`${o.full_name} · ${p?.nameAr || o.product_slug} · ${o.total} درهم · ${o.city}`);
+      .then((order) => {
+        if (cancelled) return;
+        setDetails({
+          name: order.full_name,
+          product: productLabel(order),
+          price: `${order.total} درهم`,
+          city: order.city,
+          phone: formatMaPhoneDisplay(order.phone_national),
+        });
       })
-      .catch(() => setSummary("الطلب تسجّل بنجاح. غادي نتصلو بك على الهاتف."));
+      .catch(() => {
+        if (!cancelled) setDetails(null);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [orderId]);
 
+  const confirmWa = waLink(
+    orderId
+      ? `Salam Chifaglow, bghit n2akd talab dyali (${orderId})`
+      : "Salam Chifaglow, bghit n2akd talab dyali",
+  );
+  const changePhoneWa = waLink(
+    orderId
+      ? `Salam Chifaglow, bghit nbdel ra9m dyal talab dyali (${orderId})`
+      : "Salam Chifaglow, bghit nbdel ra9m dyal talab dyali",
+  );
+
   return (
-    <main className="mx-auto max-w-xl px-4 py-16 text-center">
-      <div className="rounded-3xl border-2 border-gold/30 bg-white p-8 shadow-luxury dark:bg-cardDark">
-        <CheckCircle2 className="mx-auto h-14 w-14 text-emeraldCustom" />
-        <h1 className="mt-4 text-3xl font-extrabold text-royal dark:text-white">الله يعطيك الصحة، الطلب تسجّل</h1>
-        <p className="mt-3 text-royal/75 dark:text-slate-300">{summary}</p>
-        <ul className="mt-6 space-y-2 text-royal dark:text-slate-200">
-          <li>غادي نتصلو بك لتأكيد العنوان.</li>
-          <li>التوصيل ما بين 24 و 48 ساعة لجميع مدن المغرب.</li>
-          <li>الدفع عند الاستلام — ما خاصكش تخلص دابا.</li>
-        </ul>
-        {orderId ? <p className="mt-6 text-xs text-royal/50 dark:text-slate-500">رقم الطلب: {orderId}</p> : null}
+    <main className="flex flex-grow items-center justify-center px-4 py-12">
+      <div className="w-full max-w-2xl">
+        <div className="relative overflow-hidden rounded-3xl border-2 border-gold/40 bg-white p-6 text-center shadow-luxury transition-all dark:bg-cardDark sm:p-10">
+          <div className="check-glow mx-auto mb-6 flex h-20 w-20 animate-bounce items-center justify-center rounded-full border-2 border-emeraldCustom bg-emeraldCustom/10 text-3xl text-emeraldCustom motion-reduce:animate-none">
+            <Check className="h-9 w-9 stroke-[3]" />
+          </div>
+
+          <h1 className="text-2xl font-black leading-tight text-royal dark:text-white sm:text-4xl">
+            الله يعطيك الصحة، الطلب تسجّل بنجاح!
+          </h1>
+
+          {loading ? (
+            <p className="mt-4 text-sm font-bold text-royal/60 dark:text-slate-400">كنجيبو تفاصيل الطلب…</p>
+          ) : details ? (
+            <div className="mt-4 inline-flex flex-wrap items-center justify-center gap-2 rounded-2xl border border-gold/20 bg-cream px-4 py-2 text-xs font-bold text-royal/80 dark:bg-brandDark dark:text-slate-300 sm:text-sm">
+              <span>
+                <User className="ml-1 inline h-3.5 w-3.5 text-gold" /> {details.name}
+              </span>
+              <span className="text-gold">•</span>
+              <span>
+                <PackageOpen className="ml-1 inline h-3.5 w-3.5 text-gold" /> {details.product}
+              </span>
+              <span className="text-gold">•</span>
+              <span className="font-black text-emeraldCustom">{details.price}</span>
+              <span className="text-gold">•</span>
+              <span>
+                <MapPin className="ml-1 inline h-3.5 w-3.5 text-gold" /> {details.city}
+              </span>
+            </div>
+          ) : null}
+
+          {details?.phone ? (
+            <div className="mt-6 rounded-2xl border-2 border-dashed border-gold/40 bg-cream p-4 text-right dark:bg-brandDark sm:p-5">
+              <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
+                <div>
+                  <p className="flex items-center gap-2 text-xs font-black text-royal dark:text-white sm:text-sm">
+                    <PhoneCall className="h-4 w-4 animate-pulse text-gold motion-reduce:animate-none" />
+                    واش هدا هو رقم الهاتف الصحيح ديالك؟
+                  </p>
+                  <span className="mt-1 block font-mono text-lg font-black text-gold sm:text-xl" dir="ltr">
+                    {details.phone}
+                  </span>
+                </div>
+
+                <a
+                  href={changePhoneWa}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-1 rounded-xl border border-moroccoRed/20 bg-moroccoRed/10 px-3 py-1.5 text-xs font-bold text-moroccoRed hover:underline"
+                >
+                  <PencilLine className="h-3.5 w-3.5" />
+                  <span>غلطتي فالرقم؟ صلحو هنا</span>
+                </a>
+              </div>
+              <p className="mt-2 text-[11px] text-royal/60 dark:text-slate-400">
+                غادي نتصلو بك فهاد الرقم للتأكيد، عافاك خلي تيليفونك شاعل وقريب ليك.
+              </p>
+            </div>
+          ) : null}
+
+          <div className="mt-8 border-t border-gold/20 pt-6 text-right">
+            <h2 className="mb-4 text-center text-sm font-black text-royal dark:text-white">شنو الخطوات القادمة دابا؟</h2>
+
+            <div className="space-y-3.5 text-xs sm:text-sm">
+              <div className="flex items-start gap-3.5 rounded-2xl border border-gold/10 bg-cream p-3.5 dark:bg-brandDark">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gold/10 font-black text-gold">
+                  1
+                </div>
+                <div>
+                  <strong className="block font-bold text-royal dark:text-white">مكالمة التأكيد</strong>
+                  <p className="mt-0.5 text-royal/70 dark:text-slate-400">
+                    سنتصل بك في أقل من ساعتين لتأكيد العنوان وموعد التسليم المناسب لك.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3.5 rounded-2xl border border-gold/10 bg-cream p-3.5 dark:bg-brandDark">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gold/10 font-black text-gold">
+                  2
+                </div>
+                <div>
+                  <strong className="block font-bold text-royal dark:text-white">التوصيل السريع (24 - 48 ساعة)</strong>
+                  <p className="mt-0.5 text-royal/70 dark:text-slate-400">
+                    الموزع غادي يوصلك حتى لباب الدار فجميع مدن وقرى المغرب.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3.5 rounded-2xl border border-gold/10 bg-cream p-3.5 dark:bg-brandDark">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emeraldCustom/10 font-black text-emeraldCustom">
+                  3
+                </div>
+                <div>
+                  <strong className="block font-bold text-emeraldCustom">الدفع عند الاستلام بعد الفحص</strong>
+                  <p className="mt-0.5 text-royal/70 dark:text-slate-400">
+                    حل الكولية ديالك، جربها وتأكد منها عاد خلص الموزع كاش.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <a
+              href={confirmWa}
+              target="_blank"
+              rel="noreferrer"
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#25D366] px-5 py-3.5 text-sm font-bold text-white shadow-md transition hover:bg-[#20bd5a]"
+            >
+              <WhatsAppIcon className="h-5 w-5" />
+              <span>تأكيد فوري عبر الواتساب</span>
+            </a>
+            <Link
+              href="/"
+              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-gold bg-royal px-5 py-3.5 text-sm font-extrabold text-gold transition hover:brightness-110 dark:bg-gold dark:text-brandDark"
+            >
+              <ArrowRight className="h-4 w-4" />
+              <span>الرجوع للمتجر</span>
+            </Link>
+          </div>
+
+          {orderId ? (
+            <div className="mt-6 border-t border-gold/10 pt-4 font-mono text-[11px] text-royal/50 dark:text-slate-500">
+              رقم الطلبية المرجعي:{" "}
+              <span className="font-bold text-royal/70 dark:text-slate-400">{orderId}</span>
+            </div>
+          ) : null}
+        </div>
       </div>
     </main>
   );
@@ -43,7 +213,7 @@ function ThanksInner() {
 
 export default function ThankYouPage() {
   return (
-    <Suspense fallback={<p className="p-10 text-center">...</p>}>
+    <Suspense fallback={<p className="p-10 text-center">كنجيبو تفاصيل الطلب…</p>}>
       <ThanksInner />
     </Suspense>
   );
