@@ -5,12 +5,20 @@
 html { scroll-behavior: smooth; }
 
 body {
-  background: #FFFBFA;
+  background: #FAF8F5;
   color: #0B1F3A;
 }
 
 .btn-gold {
-  @apply rounded-2xl bg-gold px-5 py-3 text-center font-bold text-royal shadow-gold transition hover:bg-gold-400;
+  @apply rounded-2xl bg-gold px-5 py-3 text-center font-bold text-royal shadow-gold transition hover:brightness-110;
+}
+
+.gold-gradient {
+  background: linear-gradient(135deg, #ECC94B 0%, #D4AF37 50%, #AA820A 100%);
+}
+
+.shadow-luxury {
+  box-shadow: 0 15px 35px -10px rgba(212, 175, 55, 0.15);
 }
 
 .hero-stage {

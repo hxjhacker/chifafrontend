@@ -13,18 +13,18 @@ function ShellInner({ children }: { children: React.ReactNode }) {
   const cart = useCart();
   const pathname = usePathname();
   const isProductLp = pathname === "/product" || pathname.startsWith("/products/");
+  const isHome = pathname === "/";
+  const hideStoreChrome = isProductLp || isHome;
   return (
     <>
       <PixelLoader />
-      <div className={isProductLp ? "block" : "hidden"} hidden={!isProductLp}>
-        <AnnouncementBar />
-      </div>
-      <div className={isProductLp ? "hidden" : "block"} hidden={isProductLp}>
-        <TopBar />
-      </div>
-      {isProductLp ? null : <Header cartCount={cart.itemCount} onCart={() => cart.setDrawer(true)} />}
+      {isProductLp ? <AnnouncementBar /> : null}
+      {hideStoreChrome ? null : <TopBar />}
+      {hideStoreChrome ? null : (
+        <Header cartCount={cart.itemCount} onCart={() => cart.setDrawer(true)} />
+      )}
       {children}
-      <Footer />
+      {isHome ? null : <Footer />}
       <CartDrawer />
       <CheckoutModal />
       <UpsellModal />
