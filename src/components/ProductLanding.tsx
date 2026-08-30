@@ -1,13 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { galleryShots, getProduct } from "@/lib/products";
 import { CATALOG_OFFER, type Offer } from "@/lib/offer";
 import { trackFunnel } from "@/lib/tracking";
 import { padTime, useOfferCountdown } from "@/hooks/useOfferCountdown";
+import { scrollToOrderFields } from "@/lib/scroll";
 import { ProductCarousel } from "@/components/lp/ProductCarousel";
 import { CodForm } from "@/components/educative/CodForm";
-import { CodFormModal } from "@/components/educative/CodFormModal";
 import { StickyCta } from "@/components/educative/StickyCta";
 import { Specs } from "@/components/educative/Specs";
 import { Faq } from "@/components/educative/Faq";
@@ -24,7 +24,6 @@ const STOCK = 18;
 export function ProductLanding({ slug }: { slug: string }) {
   const product = getProduct(slug);
   const initiated = useRef(false);
-  const [orderOpen, setOrderOpen] = useState(false);
   const time = useOfferCountdown(`cg-${slug}-offer-end`);
   const shots = useMemo(() => (product ? galleryShots(product) : []), [product]);
   const stockPct = Math.max(8, Math.round((STOCK / 50) * 100));
@@ -49,9 +48,9 @@ export function ProductLanding({ slug }: { slug: string }) {
     });
   }, [offer]);
 
-  const openOrder = useCallback(() => {
+  const scrollToForm = useCallback(() => {
     markCheckout();
-    setOrderOpen(true);
+    scrollToOrderFields();
   }, [markCheckout]);
 
   useEffect(() => {
@@ -170,13 +169,7 @@ export function ProductLanding({ slug }: { slug: string }) {
 
         <Faq />
       </main>
-      <StickyCta offer={offer} onOrder={openOrder} />
-      <CodFormModal
-        open={orderOpen}
-        onClose={() => setOrderOpen(false)}
-        offer={offer}
-        onFocusCheckout={markCheckout}
-      />
+      <StickyCta offer={offer} onOrder={scrollToForm} />
     </div>
   );
 }

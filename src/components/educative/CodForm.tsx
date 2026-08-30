@@ -13,12 +13,10 @@ export function CodForm({
   offer,
   bundle,
   onFocusCheckout,
-  instanceId = "page",
 }: {
   offer?: Offer;
   bundle?: Bundle;
   onFocusCheckout: () => void;
-  instanceId?: string;
 }) {
   const deal: Offer = offer ?? {
     slug: EDUCATIVE_SLUG,
@@ -28,8 +26,7 @@ export function CodForm({
     save: bundle?.save ?? 100,
     title: bundle?.title ?? "1 فلاشة تعليمية",
   };
-  const fieldId = `${instanceId}-${deal.slug}`;
-  const isPage = instanceId === "page";
+  const fieldId = deal.slug;
   const router = useRouter();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -76,12 +73,12 @@ export function CodForm({
   }
 
   return (
-    <section id={isPage ? "order-form" : undefined}>
+    <section id="order-form">
       <div className="rounded-[2rem] border-2 border-gold/30 bg-white p-5 shadow-luxury sm:p-8 dark:bg-cardDark">
         <h2 className="text-2xl font-extrabold text-royal dark:text-white sm:text-3xl">أكّدي الطلب دابا — الدفع عند الاستلام</h2>
         <p className="mt-2 text-sm text-royal/70 dark:text-slate-400">ما كاتخلّصيش حتى تشوفي السلعة قدام الموصّل.</p>
 
-        <form id={isPage ? "order-fields" : undefined} onSubmit={onSubmit} className="mt-6 space-y-4" onFocus={onFocusCheckout}>
+        <form id="order-fields" onSubmit={onSubmit} className="mt-6 space-y-4" onFocus={onFocusCheckout}>
           <div className="flex flex-wrap items-baseline justify-end gap-3 rounded-2xl bg-gradient-to-l from-royal to-royal-700 px-4 py-3 text-white">
             <span className="text-2xl font-black tabular-nums">
               {deal.price} <span className="text-sm font-bold">درهم</span>
