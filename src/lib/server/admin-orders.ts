@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { AdminOrder, AdminStats, AdminStatus } from "@/lib/admin";
 import { displayStatus, packLabel } from "@/lib/admin";
 import { ensureSchema, getPool } from "./db";
@@ -51,7 +52,7 @@ export async function listAdminOrders(filters: { q?: string; city?: string; stat
   if (q) {
     params.push(`%${q}%`);
     const i = params.length;
-    where.push(`(full_name ILIKE $${i} OR phone ILIKE $${i} OR phone_national ILIKE $${i})`);
+    where.push(`(full_name ILIKE $${i} OR phone ILIKE $${i} OR phone_national ILIKE $${i} OR city ILIKE $${i})`);
   }
   const city = (filters.city || "").trim();
   if (city) {
@@ -114,6 +115,11 @@ export async function adminStats(): Promise<AdminStats> {
       else if (status === "cancelled") cancelled += 1;
       if (status !== "cancelled") revenueCents += Number(row.total_cents || 0);
     }
+    const cities = await client.query<{ city: string; count: string }>(
+      `SELECT city, COUNT(*)::text AS count FROM orders
+       WHERE city IS NOT NULL AND city <> ''
+       GROUP BY city ORDER BY COUNT(*) DESC, city ASC`,
+    );
     const won = confirmed + shipped + delivered;
     const processed = won + cancelled;
     return {
@@ -126,6 +132,7 @@ export async function adminStats(): Promise<AdminStats> {
       cancelled_orders: cancelled,
       confirmation_rate: processed ? Math.round((won / processed) * 1000) / 10 : 0,
       total_orders: result.rows.length,
+      city_breakdown: cities.rows.map((r) => ({ city: r.city, count: Number(r.count) })),
     };
   } finally {
     client.release();
@@ -145,6 +152,61 @@ export async function updateAdminOrderStatus(orderId: string, status: AdminStatu
     );
     const row = result.rows[0];
     return row ? serialize(row) : null;
+  } finally {
+    client.release();
+  }
+}
+
+export async function createAdminOrder(input: {
+  full_name: string;
+  phone: string;
+  city: string;
+  product_slug: string;
+  tier_qty: number;
+  total_mad: number;
+  status: AdminStatus;
+}): Promise<AdminOrder> {
+  if (!ALLOWED.includes(input.status)) throw new Error("invalid_status");
+  const fullName = input.full_name.trim();
+  if (fullName.length < 3) throw new Error("invalid_name");
+  const { normalizeMaPhone } = await import("@/lib/phone");
+  const { resolveCity } = await import("@/lib/cities");
+  const e164 = normalizeMaPhone(input.phone);
+  if (!e164) throw new Error("invalid_ma_phone");
+  const city = resolveCity(input.city);
+  const qty = input.tier_qty >= 2 ? 2 : 1;
+  const cents = Math.round(Number(input.total_mad) * 100);
+  if (!Number.isFinite(cents) || cents < 100) throw new Error("invalid_price");
+  const slug = ["quran", "kids", "music", "educative"].includes(input.product_slug) ? input.product_slug : "quran";
+  const national = e164.startsWith("+212") && e164.length === 13 ? `0${e164.slice(4)}` : e164;
+  const orderId = randomUUID();
+  const eventId = `admin-${orderId}`;
+
+  await ensureSchema();
+  const client = await getPool().connect();
+  try {
+    await client.query("BEGIN");
+    const inserted = await client.query<OrderRow>(
+      `INSERT INTO orders (
+         id, full_name, phone, phone_national, city, address, product_slug, tier_qty, tier_price_cents,
+         cross_sell_slug, cross_sell_price_cents, upsell_slug, upsell_price_cents, subtotal_cents, total_cents,
+         currency, status, payment_method, event_id, source, created_at, updated_at
+       ) VALUES (
+         $1,$2,$3,$4,$5,NULL,$6,$7,$8,NULL,0,NULL,0,$8,$8,'MAD',$9,'COD',$10,'admin', now(), now()
+       ) RETURNING id, full_name, phone, phone_national, city, product_slug, tier_qty,
+         cross_sell_slug, upsell_slug, total_cents, currency, status, created_at`,
+      [orderId, fullName, e164, national, city.ar, slug, qty, cents, input.status, eventId],
+    );
+    await client.query(
+      `INSERT INTO order_items (id, order_id, product_slug, role, quantity, unit_price_cents, line_total_cents)
+       VALUES ($1,$2,$3,'primary',$4,$5,$6)`,
+      [randomUUID(), orderId, slug, qty, Math.floor(cents / qty), cents],
+    );
+    await client.query("COMMIT");
+    return serialize(inserted.rows[0]);
+  } catch (err) {
+    await client.query("ROLLBACK").catch(() => undefined);
+    throw err;
   } finally {
     client.release();
   }

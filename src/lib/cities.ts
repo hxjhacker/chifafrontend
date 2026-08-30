@@ -81,6 +81,9 @@ export const CITIES: City[] = [
   { ar: "سوق الأربعاء", fr: "Souk El Arbaa", aliases: ["souk"] },
   { ar: "زايو", fr: "Zaio", aliases: ["zaio"] },
   { ar: "الدريوش", fr: "Driouch", aliases: ["driouch"] },
+  { ar: "بوسكورة", fr: "Bouskoura", aliases: ["bouskoura"] },
+  { ar: "مديونة", fr: "Mediouna", aliases: ["mediouna"] },
+  { ar: "النواصر", fr: "Nouaceur", aliases: ["nouaceur"] },
 ];
 
 function norm(value: string) {

@@ -46,6 +46,47 @@ html.dark body {
   box-shadow: 0 15px 35px -10px rgba(212, 175, 55, 0.15);
 }
 
+.blurred-number {
+  filter: blur(5px);
+  user-select: none;
+  transition: filter 0.25s ease;
+  display: inline-block;
+}
+
+.morocco-region {
+  fill: #5bb381;
+  stroke: #ffffff;
+  stroke-width: 1.2;
+  stroke-linejoin: round;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.morocco-region:hover,
+.morocco-region.active-region {
+  fill: #3b9462;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.35));
+}
+
+.region-count-label {
+  font-family: var(--font-tajawal), Tajawal, sans-serif;
+  font-weight: 900;
+  font-size: 15px;
+  fill: #0A192F;
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;
+  transition: filter 0.25s ease;
+}
+
+.admin-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.admin-scroll::-webkit-scrollbar-thumb {
+  background: rgba(212, 175, 55, 0.35);
+  border-radius: 99px;
+}
+
 .check-glow {
   box-shadow: 0 0 30px rgba(16, 185, 129, 0.35);
 }

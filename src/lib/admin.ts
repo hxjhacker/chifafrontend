@@ -28,6 +28,7 @@ export type AdminStats = {
   cancelled_orders: number;
   confirmation_rate: number;
   total_orders: number;
+  city_breakdown: { city: string; count: number }[];
 };
 
 export const ADMIN_STATUSES: {
@@ -38,33 +39,33 @@ export const ADMIN_STATUSES: {
 }[] = [
   {
     id: "new",
-    label: "جديد",
+    label: "جديدة",
     tone: "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-400/15 dark:text-amber-200 dark:border-amber-400/40",
-    selectClass: "border-amber-400 bg-amber-50 text-amber-900 dark:bg-amber-400/10 dark:text-amber-100",
+    selectClass: "bg-amber-500/10 text-amber-500 border-amber-500/30",
   },
   {
     id: "confirmed",
-    label: "مؤكد",
+    label: "تم التأكيد",
     tone: "bg-sky-100 text-sky-800 border-sky-300 dark:bg-sky-400/15 dark:text-sky-200 dark:border-sky-400/40",
-    selectClass: "border-sky-400 bg-sky-50 text-sky-900 dark:bg-sky-400/10 dark:text-sky-100",
+    selectClass: "bg-blue-500/10 text-blue-500 border-blue-500/30",
   },
   {
     id: "shipped",
-    label: "تم الشحن",
+    label: "قيد الشحن",
     tone: "bg-violet-100 text-violet-800 border-violet-300 dark:bg-violet-400/15 dark:text-violet-200 dark:border-violet-400/40",
-    selectClass: "border-violet-400 bg-violet-50 text-violet-900 dark:bg-violet-400/10 dark:text-violet-100",
+    selectClass: "bg-purple-500/10 text-purple-500 border-purple-500/30",
   },
   {
     id: "delivered",
     label: "تم التسليم",
     tone: "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-400/15 dark:text-emerald-200 dark:border-emerald-400/40",
-    selectClass: "border-emerald-400 bg-emerald-50 text-emerald-900 dark:bg-emerald-400/10 dark:text-emerald-100",
+    selectClass: "bg-emeraldCustom/10 text-emeraldCustom border-emeraldCustom/30",
   },
   {
     id: "cancelled",
-    label: "ملغى",
+    label: "ملغاة",
     tone: "bg-red-100 text-red-800 border-red-300 dark:bg-red-400/15 dark:text-red-200 dark:border-red-400/40",
-    selectClass: "border-red-400 bg-red-50 text-red-900 dark:bg-red-400/10 dark:text-red-100",
+    selectClass: "bg-moroccoRed/10 text-moroccoRed border-moroccoRed/30",
   },
 ];
 
@@ -100,7 +101,16 @@ export function statusMeta(id: AdminStatus) {
 }
 
 export function formatMad(value: number) {
-  return `${Math.round(value).toLocaleString("fr-MA")} د.م.`;
+  return `${Math.round(value).toLocaleString("fr-MA")} درهم`;
+}
+
+export function shortOrderRef(id: string) {
+  return `#CFG-${id.replace(/-/g, "").slice(0, 6).toUpperCase()}`;
+}
+
+export function pct(part: number, total: number) {
+  if (!total) return "0.00%";
+  return `${((part / total) * 100).toFixed(2)}%`;
 }
 
 export function formatStamp(iso: string | null) {
