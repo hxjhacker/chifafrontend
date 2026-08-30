@@ -8,7 +8,7 @@ import { cn } from "@/lib/cn";
 import { applyTheme, resolveIsDark, storedTheme, THEME_STORAGE_KEY } from "@/lib/theme";
 
 export function waLink(message: string) {
-  return `https://wa.me/212600000000?text=${encodeURIComponent(message)}`;
+  return `https://wa.me/212620863895?text=${encodeURIComponent(message)}`;
 }
 
 export const WA_LINK = waLink("Salam Chifaglow, bghit nswl 3la l-USB");

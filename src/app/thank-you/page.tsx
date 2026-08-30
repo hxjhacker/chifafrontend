@@ -8,13 +8,10 @@ import {
   Check,
   MapPin,
   PackageOpen,
-  PencilLine,
-  PhoneCall,
   User,
 } from "lucide-react";
 import { fetchOrder, type OrderResponse } from "@/lib/api";
 import { getProduct } from "@/lib/products";
-import { formatMaPhoneDisplay } from "@/lib/phone";
 import { waLink, WhatsAppIcon } from "@/components/Chrome";
 
 type OrderDetails = {
@@ -22,7 +19,6 @@ type OrderDetails = {
   product: string;
   price: string;
   city: string;
-  phone: string;
 };
 
 function productLabel(order: OrderResponse) {
@@ -52,7 +48,6 @@ function ThanksInner() {
           product: productLabel(order),
           price: `${order.total} درهم`,
           city: order.city,
-          phone: formatMaPhoneDisplay(order.phone_national),
         });
       })
       .catch(() => {
@@ -70,11 +65,6 @@ function ThanksInner() {
     orderId
       ? `Salam Chifaglow, bghit n2akd talab dyali (${orderId})`
       : "Salam Chifaglow, bghit n2akd talab dyali",
-  );
-  const changePhoneWa = waLink(
-    orderId
-      ? `Salam Chifaglow, bghit nbdel ra9m dyal talab dyali (${orderId})`
-      : "Salam Chifaglow, bghit nbdel ra9m dyal talab dyali",
   );
 
   return (
@@ -106,35 +96,6 @@ function ThanksInner() {
               <span>
                 <MapPin className="ml-1 inline h-3.5 w-3.5 text-gold" /> {details.city}
               </span>
-            </div>
-          ) : null}
-
-          {details?.phone ? (
-            <div className="mt-6 rounded-2xl border-2 border-dashed border-gold/40 bg-cream p-4 text-right dark:bg-brandDark sm:p-5">
-              <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
-                <div>
-                  <p className="flex items-center gap-2 text-xs font-black text-royal dark:text-white sm:text-sm">
-                    <PhoneCall className="h-4 w-4 animate-pulse text-gold motion-reduce:animate-none" />
-                    واش هدا هو رقم الهاتف الصحيح ديالك؟
-                  </p>
-                  <span className="mt-1 block font-mono text-lg font-black text-gold sm:text-xl" dir="ltr">
-                    {details.phone}
-                  </span>
-                </div>
-
-                <a
-                  href={changePhoneWa}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center gap-1 rounded-xl border border-moroccoRed/20 bg-moroccoRed/10 px-3 py-1.5 text-xs font-bold text-moroccoRed hover:underline"
-                >
-                  <PencilLine className="h-3.5 w-3.5" />
-                  <span>غلطتي فالرقم؟ صلحو هنا</span>
-                </a>
-              </div>
-              <p className="mt-2 text-[11px] text-royal/60 dark:text-slate-400">
-                غادي نتصلو بك فهاد الرقم للتأكيد، عافاك خلي تيليفونك شاعل وقريب ليك.
-              </p>
             </div>
           ) : null}
 
