@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ArrowUp, Moon, Sun } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { applyTheme, resolveIsDark, storedTheme, THEME_STORAGE_KEY } from "@/lib/theme";
 
 export function waLink(message: string) {
   return `https://wa.me/212600000000?text=${encodeURIComponent(message)}`;
@@ -24,15 +25,25 @@ export function WhatsAppIcon({ className }: { className?: string }) {
   );
 }
 
+export function ThemeSync() {
+  useLayoutEffect(() => {
+    applyTheme(resolveIsDark());
+  }, []);
+  return null;
+}
+
 export function ThemeToggle() {
   const [dark, setDark] = useState(false);
 
-  useEffect(() => {
-    setDark(document.documentElement.classList.contains("dark"));
+  useLayoutEffect(() => {
+    const initial = resolveIsDark();
+    applyTheme(initial);
+    setDark(initial);
+
     const media = window.matchMedia("(prefers-color-scheme: dark)");
     const onPrefChange = (e: MediaQueryListEvent) => {
-      if ("theme" in localStorage) return;
-      document.documentElement.classList.toggle("dark", e.matches);
+      if (storedTheme()) return;
+      applyTheme(e.matches);
       setDark(e.matches);
     };
     media.addEventListener("change", onPrefChange);
@@ -41,8 +52,8 @@ export function ThemeToggle() {
 
   function toggle() {
     const next = !document.documentElement.classList.contains("dark");
-    document.documentElement.classList.toggle("dark", next);
-    localStorage.setItem("theme", next ? "dark" : "light");
+    applyTheme(next);
+    localStorage.setItem(THEME_STORAGE_KEY, next ? "dark" : "light");
     setDark(next);
   }
 
