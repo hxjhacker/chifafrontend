@@ -2,12 +2,12 @@
 
 import Script from "next/script";
 import { useEffect } from "react";
+import { FB_PIXEL_ID, SNAPCHAT_PIXEL_ID, TIKTOK_PIXEL_ID } from "@/lib/pixels";
 import { markPixelsReady, newEventId, trackBrowser } from "@/lib/tracking";
 
-const ENABLED = process.env.NEXT_PUBLIC_ENABLE_PIXELS !== "false";
-const FB = ENABLED ? process.env.NEXT_PUBLIC_FB_PIXEL_ID || "" : "";
-const TT = ENABLED ? process.env.NEXT_PUBLIC_TIKTOK_PIXEL_ID || "" : "";
-const SNAP = ENABLED ? process.env.NEXT_PUBLIC_SNAPCHAT_PIXEL_ID || "" : "";
+const ENABLED = Boolean(FB_PIXEL_ID || TIKTOK_PIXEL_ID || SNAPCHAT_PIXEL_ID);
+const TT = TIKTOK_PIXEL_ID;
+const SNAP = SNAPCHAT_PIXEL_ID;
 
 export function PixelLoader() {
   useEffect(() => {
@@ -28,15 +28,6 @@ export function PixelLoader() {
 
   return (
     <>
-      {FB ? (
-        <Script id="fb-pixel" strategy="lazyOnload">{`
-          !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-          n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
-          n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
-          t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window, document,'script','https://connect.facebook.net/en_US/fbevents.js');
-          fbq('init','${FB}');
-        `}</Script>
-      ) : null}
       {TT ? (
         <Script id="tt-pixel" strategy="lazyOnload">{`
           !function (w, d, t) { w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];
