@@ -282,13 +282,13 @@ export function AdminDashboard() {
         </div>
       ) : null}
 
-      <header className="sticky top-0 z-40 border-b border-gold/20 bg-white/95 px-4 py-3.5 shadow-sm backdrop-blur-md dark:bg-cardDark/95">
-        <div className="mx-auto flex max-w-7xl items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl border-2 border-gold bg-royal shadow-sm dark:bg-brandDark">
-              <span className="font-cinzel text-xl font-black text-gold">C</span>
+      <header className="sticky top-0 z-40 border-b border-gold/20 bg-white/95 px-3 py-2.5 shadow-sm backdrop-blur-md dark:bg-cardDark/95 md:px-4 md:py-3.5">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border-2 border-gold bg-royal shadow-sm dark:bg-brandDark md:h-10 md:w-10">
+              <span className="font-cinzel text-lg font-black text-gold md:text-xl">C</span>
             </div>
-            <div>
+            <div className="hidden min-w-0 md:block">
               <span className="block font-cinzel text-lg font-black tracking-widest text-royal dark:text-white">CHIFAGLOW</span>
               <span className="-mt-1 block text-[10px] font-extrabold tracking-wider text-gold-600 dark:text-gold">
                 لوحة إدارة المبيعات {username ? `· ${username}` : ""}
@@ -296,42 +296,45 @@ export function AdminDashboard() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5 sm:gap-3">
+          <div className="flex shrink-0 items-center gap-1.5 md:gap-3">
             <button
               type="button"
+              aria-label="إضافة طلب"
               onClick={() => {
                 setEditing(null);
                 setModalOpen(true);
               }}
-              className="flex items-center gap-1.5 rounded-xl bg-gold px-3.5 py-2 text-xs font-black text-royal shadow-sm transition hover:bg-gold-600 active:scale-95"
+              className="flex h-9 w-9 items-center justify-center rounded-xl bg-gold text-royal shadow-sm transition hover:bg-gold-600 active:scale-95 md:h-auto md:w-auto md:gap-1.5 md:px-3.5 md:py-2"
             >
-              <Plus className="h-3.5 w-3.5" />
-              <span>إضافة طلب</span>
+              <Plus className="h-4 w-4" />
+              <span className="hidden text-xs font-black md:inline">إضافة طلب</span>
             </button>
             <button
               type="button"
+              aria-label={hideAll ? "إظهار كل الأرقام" : "إخفاء الأرقام"}
               onClick={() => setHideAll((v) => !v)}
-              className="flex items-center gap-1.5 rounded-xl border border-gold/30 bg-gold/10 px-3 py-2 text-xs font-bold text-gold-600 transition hover:bg-gold hover:text-royal dark:text-gold"
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-gold/30 bg-gold/10 text-gold-600 transition hover:bg-gold hover:text-royal md:h-auto md:w-auto md:gap-1.5 md:px-3 md:py-2 dark:text-gold"
             >
               {hideAll ? <Eye className="h-3.5 w-3.5 text-emeraldCustom" /> : <EyeOff className="h-3.5 w-3.5" />}
-              <span className="hidden sm:inline">{hideAll ? "إظهار كل الأرقام" : "إخفاء الأرقام"}</span>
+              <span className="hidden text-xs font-bold md:inline">{hideAll ? "إظهار كل الأرقام" : "إخفاء الأرقام"}</span>
             </button>
             <ThemeToggle />
             <button
               type="button"
               onClick={() => downloadCsv("orders-chifaglow.csv", ordersToCsv(filtered))}
-              className="hidden items-center gap-1.5 rounded-xl border border-emeraldCustom/30 bg-emeraldCustom/10 px-3 py-2 text-xs font-bold text-emeraldCustom transition hover:bg-emeraldCustom hover:text-white sm:flex"
+              className="hidden items-center gap-1.5 rounded-xl border border-emeraldCustom/30 bg-emeraldCustom/10 px-3 py-2 text-xs font-bold text-emeraldCustom transition hover:bg-emeraldCustom hover:text-white md:flex"
             >
               <FileSpreadsheet className="h-3.5 w-3.5" />
               <span>تصدير CSV</span>
             </button>
             <button
               type="button"
+              aria-label="خروج"
               onClick={() => void logout()}
-              className="flex items-center gap-1.5 rounded-xl border border-moroccoRed/30 bg-moroccoRed/10 px-3.5 py-2 text-xs font-bold text-moroccoRed transition hover:bg-moroccoRed hover:text-white"
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-moroccoRed/30 bg-moroccoRed/10 text-moroccoRed transition hover:bg-moroccoRed hover:text-white md:h-auto md:w-auto md:gap-1.5 md:px-3.5 md:py-2"
             >
               <LogOut className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">خروج</span>
+              <span className="hidden text-xs font-bold md:inline">خروج</span>
             </button>
           </div>
         </div>
