@@ -29,23 +29,23 @@ export function CartDrawer() {
             role="dialog"
             aria-modal
             aria-label="السلة"
-            className="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col bg-cream shadow-drawer"
+            className="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col bg-cream shadow-drawer dark:bg-brandDark"
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ duration: 0.28, ease: "easeOut" }}
           >
-            <div className="flex items-center justify-between border-b border-gold-200 px-5 py-4">
-              <h2 className="text-lg font-bold text-royal">سلتك</h2>
+            <div className="flex items-center justify-between border-b border-gold/20 px-5 py-4">
+              <h2 className="text-lg font-bold text-royal dark:text-white">سلتك</h2>
               <button type="button" onClick={() => cart.setDrawer(false)} aria-label="إغلاق">
                 <X className="h-5 w-5" />
               </button>
             </div>
             <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
               {product && tier ? (
-                <div className="rounded-2xl border border-gold-200 bg-white p-4">
-                  <p className="font-bold text-royal">{product.nameAr}</p>
-                  <p className="text-sm text-royal/70">
+                <div className="rounded-2xl border border-gold/20 bg-white p-4 dark:bg-cardDark">
+                  <p className="font-bold text-royal dark:text-white">{product.nameAr}</p>
+                  <p className="text-sm text-royal/70 dark:text-slate-400">
                     {tier.label} — {tier.price} درهم
                   </p>
                   {tier.save > 0 ? (
@@ -53,12 +53,12 @@ export function CartDrawer() {
                   ) : null}
                 </div>
               ) : (
-                <p className="text-royal/70">السلة فارغة.</p>
+                <p className="text-royal/70 dark:text-slate-400">السلة فارغة.</p>
               )}
               {cross ? (
-                <div className="rounded-2xl border border-dashed border-gold bg-white p-4">
-                  <p className="text-sm font-bold text-royal">زيد USB ثاني بـ 199 درهم (الثمن الأصلي)</p>
-                  <p className="mt-1 text-sm text-royal/80">{cross.nameAr}</p>
+                <div className="rounded-2xl border border-dashed border-gold bg-white p-4 dark:bg-cardDark">
+                  <p className="text-sm font-bold text-royal dark:text-white">زيد USB ثاني بـ 199 درهم (الثمن الأصلي)</p>
+                  <p className="mt-1 text-sm text-royal/80 dark:text-slate-300">{cross.nameAr}</p>
                   <button
                     type="button"
                     onClick={cart.toggleCrossSell}
@@ -69,8 +69,8 @@ export function CartDrawer() {
                 </div>
               ) : null}
             </div>
-            <div className="border-t border-gold-200 p-5">
-              <p className="mb-3 text-royal">
+            <div className="border-t border-gold/20 p-5">
+              <p className="mb-3 text-royal dark:text-slate-100">
                 المجموع: <b>{cart.totalPreview} درهم</b>
               </p>
               <button

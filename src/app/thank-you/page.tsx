@@ -26,15 +26,17 @@ function ThanksInner() {
 
   return (
     <main className="mx-auto max-w-xl px-4 py-16 text-center">
-      <CheckCircle2 className="mx-auto h-14 w-14 text-emerald" />
-      <h1 className="mt-4 text-3xl font-extrabold text-royal">الله يعطيك الصحة، الطلب تسجّل</h1>
-      <p className="mt-3 text-royal/75">{summary}</p>
-      <ul className="mt-6 space-y-2 text-royal">
-        <li>غادي نتصلو بك لتأكيد العنوان.</li>
-        <li>التوصيل ما بين 24 و 48 ساعة لجميع مدن المغرب.</li>
-        <li>الدفع عند الاستلام — ما خاصكش تخلص دابا.</li>
-      </ul>
-      {orderId ? <p className="mt-6 text-xs text-royal/50">رقم الطلب: {orderId}</p> : null}
+      <div className="rounded-3xl border-2 border-gold/30 bg-white p-8 shadow-luxury dark:bg-cardDark">
+        <CheckCircle2 className="mx-auto h-14 w-14 text-emeraldCustom" />
+        <h1 className="mt-4 text-3xl font-extrabold text-royal dark:text-white">الله يعطيك الصحة، الطلب تسجّل</h1>
+        <p className="mt-3 text-royal/75 dark:text-slate-300">{summary}</p>
+        <ul className="mt-6 space-y-2 text-royal dark:text-slate-200">
+          <li>غادي نتصلو بك لتأكيد العنوان.</li>
+          <li>التوصيل ما بين 24 و 48 ساعة لجميع مدن المغرب.</li>
+          <li>الدفع عند الاستلام — ما خاصكش تخلص دابا.</li>
+        </ul>
+        {orderId ? <p className="mt-6 text-xs text-royal/50 dark:text-slate-500">رقم الطلب: {orderId}</p> : null}
+      </div>
     </main>
   );
 }

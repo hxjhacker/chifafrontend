@@ -42,7 +42,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
-      <body className="font-cairo bg-cream text-royal antialiased">
+      <body className="font-tajawal bg-cream text-royal antialiased transition-colors duration-300 selection:bg-gold selection:text-royal dark:bg-brandDark dark:text-slate-100">
         <StoreShell>{children}</StoreShell>
       </body>
     </html>

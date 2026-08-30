@@ -5,10 +5,9 @@ import {
   HandCoins,
   Headphones,
   ShieldHalf,
-  Star,
   Truck,
 } from "lucide-react";
-import { BackToTop, ThemeToggle, WhatsAppFloat } from "./HomeChrome";
+import { ReviewGrid, Stars } from "@/components/reviews/ReviewCard";
 
 const PRODUCTS = [
   {
@@ -71,83 +70,22 @@ const FEATURES = [
 
 const REVIEWS = [
   {
-    name: "عثمان — الدار البيضاء",
+    name: "عثمان",
+    city: "الدار البيضاء",
     text: "وصلني الـ USB ديال القرآن في الدار البيضاء فنفس اليوم تقريباً، الصوت نقي بزااف وكيخدم فالطوموبيل بسلاسة وبلا تعقاد.",
+    stars: 5,
   },
   {
-    name: "مريم — مراكش",
+    name: "مريم",
+    city: "مراكش",
     text: "صراحة USB ديال الأطفال عتقني، ولادي ملهيين مع الرسوم التعليمية والقصص بلا دوخة ديال الإعلانات فاليوتيوب.",
+    stars: 5,
   },
 ] as const;
 
-function Stars() {
-  return (
-    <div className="flex text-gold">
-      {Array.from({ length: 5 }).map((_, i) => (
-        <Star key={i} className="h-3 w-3 fill-gold text-gold" />
-      ))}
-    </div>
-  );
-}
-
 export function HomePage() {
   return (
-    <div className="font-tajawal bg-cream text-royal antialiased transition-colors duration-300 selection:bg-gold selection:text-royal dark:bg-brandDark dark:text-slate-100">
-      <WhatsAppFloat />
-      <BackToTop />
-
-      <div className="border-b border-gold/30 bg-royal px-4 py-2.5 text-center text-xs font-bold text-white dark:bg-cardDark md:text-sm">
-        <div className="mx-auto flex max-w-6xl items-center justify-center gap-2">
-          <span className="inline-flex animate-pulse items-center justify-center rounded-md bg-moroccoRed px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-white">
-            عرض حصري
-          </span>
-          <span className="text-gold-100">
-            توصيل مجاني لجميع مدن المغرب + الدفع نقدًا بعد معاينة السلعة بيدك!
-          </span>
-        </div>
-      </div>
-
-      <header className="sticky top-0 z-40 border-b border-gold/20 bg-white/95 shadow-sm backdrop-blur-md transition-colors duration-300 dark:bg-brandDark/95">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3.5">
-          <Link href="/" className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl border-2 border-gold bg-royal shadow-sm dark:bg-cardDark md:h-11 md:w-11">
-              <span className="font-cinzel text-xl font-black text-gold">C</span>
-            </div>
-            <div>
-              <span className="font-cinzel block text-lg font-black tracking-widest text-royal dark:text-white md:text-xl">
-                CHIFAGLOW
-              </span>
-              <span className="-mt-1 block text-[10px] font-extrabold tracking-wider text-gold-600 dark:text-gold">
-                شيفا جلو المغرب
-              </span>
-            </div>
-          </Link>
-
-          <div className="flex items-center gap-3 md:gap-6">
-            <nav className="hidden items-center gap-6 text-sm font-bold text-royal/90 dark:text-slate-200 md:flex">
-              <a href="#catalog" className="transition hover:text-gold">
-                المنتجات
-              </a>
-              <a href="#features" className="transition hover:text-gold">
-                المميزات
-              </a>
-              <a href="#reviews" className="transition hover:text-gold">
-                آراء الزبناء
-              </a>
-            </nav>
-
-            <ThemeToggle />
-
-            <a
-              href="#catalog"
-              className="rounded-xl border border-gold bg-royal px-4 py-2 text-xs font-black text-gold shadow-sm transition-all hover:brightness-110 dark:bg-gold dark:text-brandDark md:text-sm"
-            >
-              تصفح الباقات
-            </a>
-          </div>
-        </div>
-      </header>
-
+    <>
       <section className="relative overflow-hidden pb-16 pt-10 md:pb-24 md:pt-16">
         <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 md:grid-cols-2">
           <div>
@@ -313,55 +251,13 @@ export function HomePage() {
         </div>
       </section>
 
-      <section id="reviews" className="bg-cream py-16 dark:bg-brandDark">
-        <div className="mx-auto max-w-4xl px-4">
-          <div className="mb-10 text-center">
-            <h2 className="text-2xl font-black text-royal dark:text-white sm:text-3xl">
-              تجارب حقيقية لزبنائنا فالمغرب 🇲🇦
-            </h2>
-            <p className="mt-1 text-xs font-semibold text-royal/70 dark:text-slate-400 sm:text-sm">
-              ثقتكم هي سر نجاحنا واستمراريتنا
-            </p>
-          </div>
-          <div className="grid gap-5 sm:grid-cols-2">
-            {REVIEWS.map((r) => (
-              <div key={r.name} className="rounded-2xl border border-gold/20 bg-white p-5 shadow-sm dark:bg-cardDark">
-                <div className="mb-2 flex items-center justify-between">
-                  <span className="text-sm font-bold text-royal dark:text-gold">{r.name}</span>
-                  <Stars />
-                </div>
-                <p className="text-xs leading-relaxed text-royal/80 dark:text-slate-300">“{r.text}”</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <footer className="border-t border-gold/30 bg-royal py-10 text-cream transition-colors duration-300 dark:bg-brandDark">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 px-4 text-center md:flex-row md:text-right">
-          <div>
-            <span className="font-cinzel text-xl font-bold text-gold">CHIFAGLOW</span>
-            <p className="mt-1 text-xs text-cream/70">شيفا جلو — المتجر المغربي المعتمد لمنتجات الوسائط الفاخرة.</p>
-          </div>
-          <div className="flex items-center gap-6 text-xs font-semibold text-cream/80">
-            <a href="#catalog" className="transition hover:text-gold">
-              المنتجات
-            </a>
-            <a href="#features" className="transition hover:text-gold">
-              الضمان والتوصيل
-            </a>
-            <a
-              href="https://wa.me/212600000000"
-              target="_blank"
-              rel="noreferrer"
-              className="transition hover:text-gold"
-            >
-              واتساب
-            </a>
-          </div>
-          <p className="text-xs text-cream/60">© 2026 Chifaglow.com — جميع الحقوق محفوظة.</p>
-        </div>
-      </footer>
-    </div>
+      <div className="mx-auto max-w-4xl px-4 py-12 md:py-16">
+        <ReviewGrid
+          title="تجارب حقيقية لزبنائنا فالمغرب 🇲🇦"
+          subtitle="ثقتكم هي سر نجاحنا واستمراريتنا"
+          reviews={[...REVIEWS]}
+        />
+      </div>
+    </>
   );
 }

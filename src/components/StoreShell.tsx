@@ -1,30 +1,25 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { CartProvider, useCart } from "@/lib/cart";
-import { Footer, Header, TopBar } from "./Chrome";
-import { AnnouncementBar } from "./educative/AnnouncementBar";
+import { CartProvider } from "@/lib/cart";
+import { BackToTop, Footer, Header, TopBar, WhatsAppFloat } from "./Chrome";
 import { CartDrawer } from "./CartDrawer";
 import { CheckoutModal } from "./CheckoutModal";
 import { UpsellModal } from "./UpsellModal";
 import { PixelLoader } from "./PixelLoader";
 
 function ShellInner({ children }: { children: React.ReactNode }) {
-  const cart = useCart();
   const pathname = usePathname();
-  const isProductLp = pathname === "/product" || pathname.startsWith("/products/");
-  const isHome = pathname === "/";
-  const hideStoreChrome = isProductLp || isHome;
+  const raisedFloats = pathname === "/product" || pathname.startsWith("/products/");
   return (
     <>
       <PixelLoader />
-      {isProductLp ? <AnnouncementBar /> : null}
-      {hideStoreChrome ? null : <TopBar />}
-      {hideStoreChrome ? null : (
-        <Header cartCount={cart.itemCount} onCart={() => cart.setDrawer(true)} />
-      )}
+      <TopBar />
+      <Header />
       {children}
-      {isHome ? null : <Footer />}
+      <Footer />
+      <WhatsAppFloat raised={raisedFloats} />
+      <BackToTop raised={raisedFloats} />
       <CartDrawer />
       <CheckoutModal />
       <UpsellModal />

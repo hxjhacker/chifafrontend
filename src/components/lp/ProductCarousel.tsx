@@ -31,7 +31,7 @@ export function ProductCarousel({ shots }: { shots: readonly GalleryShot[] }) {
   return (
     <div>
       <div className="relative">
-        <div className="overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-inner">
+        <div className="overflow-hidden rounded-3xl border-2 border-gold/30 bg-white shadow-luxury dark:bg-cardDark">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={shot.src} alt={shot.label} className="aspect-square w-full object-contain" />
         </div>
@@ -41,7 +41,7 @@ export function ProductCarousel({ shots }: { shots: readonly GalleryShot[] }) {
               type="button"
               aria-label="الصورة السابقة"
               onClick={() => goTo(index - 1)}
-              className="absolute start-2 top-1/2 z-10 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-royal shadow-md ring-1 ring-slate-200 hover:bg-white"
+              className="absolute start-2 top-1/2 z-10 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full border border-gold/20 bg-white/90 text-royal shadow-md hover:bg-white dark:bg-cardDark dark:text-gold"
             >
               <ChevronRight className="h-5 w-5" aria-hidden />
             </button>
@@ -49,7 +49,7 @@ export function ProductCarousel({ shots }: { shots: readonly GalleryShot[] }) {
               type="button"
               aria-label="الصورة التالية"
               onClick={() => goTo(index + 1)}
-              className="absolute end-2 top-1/2 z-10 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-royal shadow-md ring-1 ring-slate-200 hover:bg-white"
+              className="absolute end-2 top-1/2 z-10 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full border border-gold/20 bg-white/90 text-royal shadow-md hover:bg-white dark:bg-cardDark dark:text-gold"
             >
               <ChevronLeft className="h-5 w-5" aria-hidden />
             </button>
@@ -68,7 +68,7 @@ export function ProductCarousel({ shots }: { shots: readonly GalleryShot[] }) {
                 aria-label={item.label}
                 aria-selected={active}
                 onClick={() => goTo(i)}
-                className={`overflow-hidden rounded-2xl p-0.5 transition ${active ? "ring-2 ring-emerald" : "opacity-80 hover:opacity-100"}`}
+                className={`overflow-hidden rounded-2xl p-0.5 transition ${active ? "ring-2 ring-gold" : "opacity-80 hover:opacity-100"}`}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={item.src} alt="" className="aspect-square w-full rounded-xl object-cover" />

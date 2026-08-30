@@ -9,6 +9,24 @@ body {
   color: #0B1F3A;
 }
 
+.dark body,
+html.dark body {
+  background: #070F1B;
+  color: #f1f5f9;
+}
+
+.card-lux {
+  @apply rounded-2xl border border-gold/20 bg-white shadow-sm dark:bg-cardDark;
+}
+
+.field-input {
+  @apply mt-1 w-full rounded-2xl border border-gold/20 bg-white px-4 py-3.5 text-base font-medium text-royal outline-none ring-gold/30 transition focus:border-gold focus:ring-2 dark:border-gold/20 dark:bg-brandDark dark:text-slate-100;
+}
+
+.wa-pulse {
+  animation: wa-pulse 2s ease-out infinite;
+}
+
 .btn-gold {
   @apply rounded-2xl bg-gold px-5 py-3 text-center font-bold text-royal shadow-gold transition hover:brightness-110;
 }
@@ -37,10 +55,17 @@ body {
   50% { transform: translateY(-10px); }
 }
 
+@keyframes wa-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.55); }
+  70% { box-shadow: 0 0 0 14px rgba(37, 211, 102, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .hero-float { animation: none; }
   .pulse-dot { animation: none; }
   .cta-pulse { animation: none; }
+  .wa-pulse { animation: none; }
 }
 
 .pulse-dot {

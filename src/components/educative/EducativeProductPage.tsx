@@ -36,7 +36,7 @@ export function EducativeProductPage() {
   }, []);
 
   return (
-    <div className="bg-gradient-to-b from-sky-50 via-cream to-emerald/5 pb-28" dir="rtl">
+    <div className="bg-cream pb-28 transition-colors duration-300 dark:bg-brandDark" dir="rtl">
       <main className="mx-auto flex max-w-6xl flex-col gap-14 px-4 py-8 sm:py-12">
         <HeroGallery bundle={bundle} onFocusCheckout={markCheckout} />
         <PainSolution />

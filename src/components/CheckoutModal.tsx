@@ -69,12 +69,12 @@ export function CheckoutModal() {
             onSubmit={onSubmit}
             initial={{ y: 40, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            className="w-full max-w-md rounded-t-3xl bg-cream p-6 shadow-gold md:rounded-3xl"
+            className="w-full max-w-md rounded-t-3xl border border-gold/20 bg-cream p-6 shadow-gold md:rounded-3xl dark:bg-cardDark dark:text-slate-100"
           >
-            <h2 className="text-xl font-bold text-royal">أكّد الطلب — الدفع عند الاستلام</h2>
+            <h2 className="text-xl font-bold text-royal dark:text-white">أكّد الطلب — الدفع عند الاستلام</h2>
             <label className="mt-4 block text-sm">
               الاسم الكامل
-              <input value={name} onChange={(e) => setName(e.target.value)} className="mt-1 w-full rounded-xl border border-gold-200 px-3 py-3" autoComplete="name" />
+              <input value={name} onChange={(e) => setName(e.target.value)} className="field-input" autoComplete="name" />
             </label>
             <label className="mt-3 block text-sm">
               رقم الهاتف
@@ -82,7 +82,7 @@ export function CheckoutModal() {
                 value={phone}
                 onChange={(e) => setPhone(digitsOnly(e.target.value).slice(0, 10))}
                 maxLength={10}
-                className="mt-1 w-full rounded-xl border border-gold-200 px-3 py-3 text-right"
+                className="field-input text-right"
                 dir="ltr"
                 inputMode="numeric"
                 placeholder="06XXXXXXXX"
@@ -93,7 +93,7 @@ export function CheckoutModal() {
               <input
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-gold-200 px-3 py-3"
+                className="field-input"
                 placeholder="كتبي اسم المدينة"
               />
             </label>
@@ -101,7 +101,7 @@ export function CheckoutModal() {
             <button type="submit" disabled={loading} className="btn-gold mt-5 w-full">
               {loading ? "كنسجّلو الطلب…" : "أكّد الطلب — الدفع عند الاستلام"}
             </button>
-            <button type="button" className="mt-2 w-full py-2 text-sm text-royal/60" onClick={() => cart.setCheckout(false)}>
+            <button type="button" className="mt-2 w-full py-2 text-sm text-royal/60 dark:text-slate-400" onClick={() => cart.setCheckout(false)}>
               رجوع للسلة
             </button>
           </motion.form>

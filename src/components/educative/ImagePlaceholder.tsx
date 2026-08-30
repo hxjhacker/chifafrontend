@@ -16,7 +16,7 @@ export function ImagePlaceholder({
     <div
       className={cn(
         aspect,
-        "flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-slate-100 px-3 text-center text-slate-400",
+        "flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gold/30 bg-cream px-3 text-center text-royal/40 dark:bg-brandDark dark:text-slate-500",
         className,
       )}
       role="img"
