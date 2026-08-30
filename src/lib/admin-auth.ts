@@ -2,7 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { ADMIN_COOKIE, adminAuthConfigured, verifyAdminToken } from "./admin-jwt";
+import { ADMIN_COOKIE, adminAuthConfigured, adminPasswordHash, adminPasswordPlain, adminUsername, verifyAdminToken } from "./admin-jwt";
 
 const WINDOW_MS = 15 * 60 * 1000;
 const MAX_FAILS = 5;
@@ -48,9 +48,9 @@ function safeEqual(a: string, b: string) {
 }
 
 export async function verifyAdminPassword(username: string, password: string) {
-  const expectedUser = (process.env.ADMIN_USERNAME || "").trim();
-  const hash = (process.env.ADMIN_PASSWORD_HASH || "").trim();
-  const plain = (process.env.ADMIN_PASSWORD || "").trim();
+  const expectedUser = adminUsername();
+  const hash = adminPasswordHash();
+  const plain = adminPasswordPlain();
   if (!expectedUser || (!hash && !plain)) return false;
   if (!safeEqual(username, expectedUser)) {
     await bcrypt.compare(password || "x", "$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW");
@@ -60,7 +60,7 @@ export async function verifyAdminPassword(username: string, password: string) {
     try {
       if (await bcrypt.compare(password, hash)) return true;
     } catch {
-      /* truncated/invalid hash — fall through to plaintext bootstrap */
+      /* invalid hash — fall through */
     }
   }
   if (plain) return safeEqual(password, plain);

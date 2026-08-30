@@ -32,7 +32,11 @@ ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000 \
     HOSTNAME=0.0.0.0 \
-    DATABASE_URL=postgres://chifaglow:chifaglow@chifaglow_database:5432/chifaglow?sslmode=disable
+    DATABASE_URL=postgres://chifaglow:chifaglow@chifaglow_database:5432/chifaglow?sslmode=disable \
+    ADMIN_USERNAME=MOhammed2003 \
+    ADMIN_PASSWORD=simo25082003elyoussfiM# \
+    ADMIN_JWT_SECRET=204a308d75e24d90b8e47391e1cc9d33b2b08cce2dcd4482a2276542bd346504 \
+    ADMIN_JWT_HOURS=12
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/.next ./.next
