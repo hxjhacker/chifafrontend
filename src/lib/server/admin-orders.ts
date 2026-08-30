@@ -140,18 +140,127 @@ export async function adminStats(): Promise<AdminStats> {
 }
 
 export async function updateAdminOrderStatus(orderId: string, status: AdminStatus): Promise<AdminOrder | null> {
-  if (!ALLOWED.includes(status)) throw new Error("invalid_status");
+  return updateAdminOrder(orderId, { status });
+}
+
+export async function updateAdminOrder(
+  orderId: string,
+  patch: {
+    status?: AdminStatus;
+    full_name?: string;
+    phone?: string;
+    city?: string;
+    product_slug?: string;
+    tier_qty?: number;
+    total_mad?: number;
+  },
+): Promise<AdminOrder | null> {
+  const fields = Object.entries(patch).filter(([, value]) => value !== undefined);
+  if (fields.length === 1 && patch.status !== undefined) {
+    if (!ALLOWED.includes(patch.status)) throw new Error("invalid_status");
+    await ensureSchema();
+    const client = await getPool().connect();
+    try {
+      const result = await client.query<OrderRow>(
+        `UPDATE orders SET status = $2, updated_at = now() WHERE id = $1
+         RETURNING id, full_name, phone, phone_national, city, product_slug, tier_qty,
+           cross_sell_slug, upsell_slug, total_cents, currency, status, created_at`,
+        [orderId, patch.status],
+      );
+      const row = result.rows[0];
+      return row ? serialize(row) : null;
+    } finally {
+      client.release();
+    }
+  }
+
   await ensureSchema();
   const client = await getPool().connect();
   try {
-    const result = await client.query<OrderRow>(
-      `UPDATE orders SET status = $2, updated_at = now() WHERE id = $1
+    const current = await client.query<OrderRow>(
+      `SELECT id, full_name, phone, phone_national, city, product_slug, tier_qty,
+         cross_sell_slug, upsell_slug, total_cents, currency, status, created_at
+       FROM orders WHERE id = $1`,
+      [orderId],
+    );
+    const row = current.rows[0];
+    if (!row) return null;
+
+    let fullName = row.full_name;
+    let phone = row.phone;
+    let phoneNational = row.phone_national;
+    let cityAr = row.city;
+    let slug = row.product_slug;
+    let qty = row.tier_qty;
+    let cents = Number(row.total_cents);
+    let status = displayStatus(row.status);
+
+    if (patch.full_name !== undefined) {
+      fullName = patch.full_name.trim();
+      if (fullName.length < 3) throw new Error("invalid_name");
+    }
+    if (patch.phone !== undefined) {
+      const { normalizeMaPhone } = await import("@/lib/phone");
+      const e164 = normalizeMaPhone(patch.phone);
+      if (!e164) throw new Error("invalid_ma_phone");
+      phone = e164;
+      phoneNational = e164.startsWith("+212") && e164.length === 13 ? `0${e164.slice(4)}` : e164;
+    }
+    if (patch.city !== undefined) {
+      const { resolveCity } = await import("@/lib/cities");
+      cityAr = resolveCity(patch.city).ar;
+    }
+    if (patch.product_slug !== undefined) {
+      slug = ["quran", "kids", "music", "educative"].includes(patch.product_slug) ? patch.product_slug : slug;
+    }
+    if (patch.tier_qty !== undefined) qty = patch.tier_qty >= 2 ? 2 : 1;
+    if (patch.total_mad !== undefined) {
+      cents = Math.round(Number(patch.total_mad) * 100);
+      if (!Number.isFinite(cents) || cents < 100) throw new Error("invalid_price");
+    }
+    if (patch.status !== undefined) {
+      if (!ALLOWED.includes(patch.status)) throw new Error("invalid_status");
+      status = patch.status;
+    }
+
+    await client.query("BEGIN");
+    const updated = await client.query<OrderRow>(
+      `UPDATE orders SET
+         full_name = $2, phone = $3, phone_national = $4, city = $5,
+         product_slug = $6, tier_qty = $7, tier_price_cents = $8, subtotal_cents = $8, total_cents = $8,
+         status = $9, updated_at = now()
+       WHERE id = $1
        RETURNING id, full_name, phone, phone_national, city, product_slug, tier_qty,
          cross_sell_slug, upsell_slug, total_cents, currency, status, created_at`,
-      [orderId, status],
+      [orderId, fullName, phone, phoneNational, cityAr, slug, qty, cents, status],
     );
-    const row = result.rows[0];
-    return row ? serialize(row) : null;
+    await client.query(
+      `UPDATE order_items SET product_slug = $2, quantity = $3, unit_price_cents = $4, line_total_cents = $5
+       WHERE order_id = $1 AND role = 'primary'`,
+      [orderId, slug, qty, Math.floor(cents / Math.max(qty, 1)), cents],
+    );
+    await client.query("COMMIT");
+    return serialize(updated.rows[0]);
+  } catch (err) {
+    await client.query("ROLLBACK").catch(() => undefined);
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+export async function deleteAdminOrder(orderId: string): Promise<boolean> {
+  await ensureSchema();
+  const client = await getPool().connect();
+  try {
+    await client.query("BEGIN");
+    await client.query(`DELETE FROM order_items WHERE order_id = $1`, [orderId]);
+    const result = await client.query(`DELETE FROM orders WHERE id = $1`, [orderId]);
+    await client.query("COMMIT");
+    return (result.rowCount || 0) > 0;
+  } catch (err) {
+    await client.query("ROLLBACK").catch(() => undefined);
+    throw err;
   } finally {
     client.release();
   }

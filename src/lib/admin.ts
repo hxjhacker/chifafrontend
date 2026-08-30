@@ -180,6 +180,33 @@ export function ordersToCsv(orders: AdminOrder[]) {
   return `\uFEFF${lines.join("\n")}`;
 }
 
+export function copyablePhone(order: { phone: string; phone_national: string }) {
+  const raw = order.phone_national || order.phone || "";
+  const digits = raw.replace(/\D/g, "");
+  if (digits.startsWith("212") && digits.length >= 12) return `0${digits.slice(3)}`;
+  if (digits.startsWith("0") && digits.length >= 10) return digits.slice(0, 10);
+  return raw;
+}
+
+export async function copyText(value: string) {
+  try {
+    await navigator.clipboard.writeText(value);
+    return true;
+  } catch {
+    const el = document.createElement("textarea");
+    el.value = value;
+    el.setAttribute("readonly", "");
+    el.style.position = "fixed";
+    el.style.left = "-9999px";
+    document.body.appendChild(el);
+    el.select();
+    el.setSelectionRange(0, value.length);
+    const ok = document.execCommand("copy");
+    document.body.removeChild(el);
+    return ok;
+  }
+}
+
 export function downloadCsv(filename: string, csv: string) {
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);

@@ -13,10 +13,12 @@ import {
   FileSpreadsheet,
   Loader2,
   LogOut,
+  Pencil,
   Phone,
   PieChart,
   Plus,
   Search,
+  Trash2,
 } from "lucide-react";
 import { ThemeToggle, WhatsAppIcon } from "@/components/Chrome";
 import { AddOrderModal } from "@/components/admin/AddOrderModal";
@@ -24,6 +26,8 @@ import { AdminDoughnut } from "@/components/admin/AdminDoughnut";
 import { MoroccoMap } from "@/components/admin/MoroccoMap";
 import {
   ADMIN_STATUSES,
+  copyText,
+  copyablePhone,
   downloadCsv,
   formatMad,
   ordersToCsv,
@@ -73,6 +77,9 @@ export function AdminDashboard() {
   const [savingId, setSavingId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<AdminOrder | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<AdminOrder | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [hideAll, setHideAll] = useState(false);
   const [hideOverview, setHideOverview] = useState(false);
@@ -154,13 +161,33 @@ export function AdminDashboard() {
   }
 
   async function copyPhone(order: AdminOrder) {
-    const phone = order.phone_national || order.phone;
+    const phone = copyablePhone(order);
+    const ok = await copyText(phone);
+    if (!ok) {
+      setError("تعذر نسخ الرقم. انسخه يدوياً.");
+      return;
+    }
+    setCopiedId(order.order_id);
+    window.setTimeout(() => setCopiedId(null), 1800);
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    setError("");
     try {
-      await navigator.clipboard.writeText(phone);
-      setCopiedId(order.order_id);
-      window.setTimeout(() => setCopiedId(null), 1500);
+      const res = await fetch(`/api/admin/orders/${deleteTarget.order_id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("fail");
+      setOrders((list) => list.filter((o) => o.order_id !== deleteTarget.order_id));
+      setDeleteTarget(null);
+      await refreshStats();
     } catch {
-      setError("تعذر نسخ الرقم.");
+      setError("فشل حذف الطلبية. أعد المحاولة.");
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -201,13 +228,59 @@ export function AdminDashboard() {
     <div className="flex min-h-screen flex-col justify-between bg-cream text-royal antialiased transition-colors duration-300 dark:bg-brandDark dark:text-slate-100">
       <AddOrderModal
         open={modalOpen}
-        onClose={() => setModalOpen(false)}
+        editing={editing}
+        onClose={() => {
+          setModalOpen(false);
+          setEditing(null);
+        }}
         onCreated={(order) => {
           setOrders((list) => [order, ...list]);
           setPage(1);
           void refreshStats();
         }}
+        onUpdated={(order) => {
+          setOrders((list) => list.map((o) => (o.order_id === order.order_id ? order : o)));
+          void refreshStats();
+        }}
       />
+
+      {deleteTarget ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-3xl border-2 border-rose-200 bg-white p-6 shadow-2xl dark:border-rose-500/30 dark:bg-cardDark">
+            <div className="mb-4 flex items-center gap-2">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-rose-500/10 text-rose-500">
+                <Trash2 className="h-4 w-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-royal dark:text-white">حذف الطلبية</h3>
+                <p className="text-[11px] text-royal/60 dark:text-slate-400">هذا الإجراء لا يمكن التراجع عنه</p>
+              </div>
+            </div>
+            <p className="mb-5 text-xs font-bold leading-6 text-royal/80 dark:text-slate-200">
+              بغيتي تمسح طلبية <span className="text-gold">{deleteTarget.full_name}</span>
+              {deleteTarget.city ? ` — ${deleteTarget.city}` : ""}؟
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={() => void confirmDelete()}
+                className="flex-1 rounded-xl bg-rose-500 py-2.5 text-xs font-black text-white transition hover:bg-rose-600 disabled:opacity-60"
+              >
+                {deleting ? "جاري الحذف…" : "نعم، احذف"}
+              </button>
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={() => setDeleteTarget(null)}
+                className="rounded-xl border border-gold/20 bg-cream px-4 py-2.5 text-xs font-bold text-royal/70 dark:bg-brandDark dark:text-slate-300"
+              >
+                إلغاء
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <header className="sticky top-0 z-40 border-b border-gold/20 bg-white/95 px-4 py-3.5 shadow-sm backdrop-blur-md dark:bg-cardDark/95">
         <div className="mx-auto flex max-w-7xl items-center justify-between">
@@ -226,7 +299,10 @@ export function AdminDashboard() {
           <div className="flex items-center gap-2.5 sm:gap-3">
             <button
               type="button"
-              onClick={() => setModalOpen(true)}
+              onClick={() => {
+                setEditing(null);
+                setModalOpen(true);
+              }}
               className="flex items-center gap-1.5 rounded-xl bg-gold px-3.5 py-2 text-xs font-black text-royal shadow-sm transition hover:bg-gold-600 active:scale-95"
             >
               <Plus className="h-3.5 w-3.5" />
@@ -445,6 +521,7 @@ export function AdminDashboard() {
             <table className="w-full text-right text-xs text-royal dark:text-slate-200">
               <thead className="border-b border-gold/10 bg-cream font-bold text-royal/70 dark:bg-brandDark dark:text-slate-400">
                 <tr>
+                  <th className="p-3.5">إجراءات</th>
                   <th className="p-3.5">الرقم المرجعي</th>
                   <th className="p-3.5">الزبون</th>
                   <th className="p-3.5">المدينة</th>
@@ -457,23 +534,46 @@ export function AdminDashboard() {
               <tbody className="divide-y divide-gold/10 font-medium">
                 {loading ? (
                   <tr>
-                    <td colSpan={7} className="p-16 text-center text-royal/60 dark:text-slate-400">
+                    <td colSpan={8} className="p-16 text-center text-royal/60 dark:text-slate-400">
                       <Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin text-gold" />
                       جاري التحميل…
                     </td>
                   </tr>
                 ) : pageRows.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="p-16 text-center font-bold text-royal/50 dark:text-slate-400">
+                    <td colSpan={8} className="p-16 text-center font-bold text-royal/50 dark:text-slate-400">
                       لا توجد طلبات مطابقة.
                     </td>
                   </tr>
                 ) : (
                   pageRows.map((order) => {
                     const meta = statusMeta(order.status);
-                    const phone = order.phone_national || order.phone;
+                    const phone = copyablePhone(order);
                     return (
                       <tr key={order.order_id} className="transition hover:bg-cream/50 dark:hover:bg-brandDark/50">
+                        <td className="p-3.5">
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              title="تعديل الطلبية"
+                              onClick={() => {
+                                setEditing(order);
+                                setModalOpen(true);
+                              }}
+                              className="flex h-7 w-7 items-center justify-center rounded-lg bg-gold/10 text-gold transition hover:bg-gold hover:text-royal"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              title="حذف الطلبية"
+                              onClick={() => setDeleteTarget(order)}
+                              className="flex h-7 w-7 items-center justify-center rounded-lg bg-rose-500/10 text-rose-500 transition hover:bg-rose-500 hover:text-white"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </td>
                         <td className="p-3.5 font-mono text-[11px] text-royal/60 dark:text-slate-400" title={order.order_id}>
                           {shortOrderRef(order.order_id)}
                         </td>
@@ -483,9 +583,19 @@ export function AdminDashboard() {
                         </td>
                         <td className="p-3.5">
                           <div className="flex items-center gap-1.5">
-                            <span className={cn("ml-1 font-mono text-xs", hideTableNums && "blurred-number")} dir="ltr">
-                              {phone}
-                            </span>
+                            <button
+                              type="button"
+                              title="انقر لنسخ الرقم"
+                              onClick={() => void copyPhone(order)}
+                              className={cn(
+                                "ml-1 rounded-md px-1.5 py-0.5 text-left font-mono text-xs font-bold transition hover:bg-gold/15 hover:text-gold",
+                                hideTableNums && "blurred-number",
+                                copiedId === order.order_id && "text-emeraldCustom",
+                              )}
+                              dir="ltr"
+                            >
+                              {copiedId === order.order_id ? "تم النسخ" : phone}
+                            </button>
                             <button
                               type="button"
                               onClick={() => void copyPhone(order)}
@@ -497,6 +607,7 @@ export function AdminDashboard() {
                             <a
                               href={telHref(order.phone || order.phone_national)}
                               className="flex h-6 w-6 items-center justify-center rounded-md bg-blue-500/10 text-blue-500 transition hover:bg-blue-500 hover:text-white"
+                              title="اتصال"
                             >
                               <Phone className="h-3 w-3" />
                             </a>
@@ -505,6 +616,7 @@ export function AdminDashboard() {
                               target="_blank"
                               rel="noreferrer"
                               className="flex h-6 w-6 items-center justify-center rounded-md bg-emeraldCustom/10 text-emeraldCustom transition hover:bg-emeraldCustom hover:text-white"
+                              title="واتساب"
                             >
                               <WhatsAppIcon className="h-3.5 w-3.5" />
                             </a>
