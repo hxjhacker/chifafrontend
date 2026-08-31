@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { LoginForm } from "@/components/admin/LoginForm";
 
 export const metadata: Metadata = {
-  title: "دخول",
+  title: "تسجيل الدخول الإداري",
   robots: { index: false, follow: false, nocache: true },
 };
 
