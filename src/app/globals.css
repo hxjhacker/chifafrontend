@@ -148,3 +148,166 @@ html.dark body {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.07); }
 }
+
+#shipping-label-print {
+  box-sizing: border-box;
+  width: 100mm;
+  min-height: 150mm;
+  height: 150mm;
+  overflow: hidden;
+  padding: 4.5mm;
+  background: #fff;
+  color: #0b1322;
+  font-family: var(--font-tajawal), Tajawal, sans-serif;
+  border: 1px solid #1e293b;
+  display: flex;
+  flex-direction: column;
+  gap: 3.2mm;
+}
+
+#shipping-label-print .label-header {
+  text-align: center;
+  border-bottom: 2px solid #0b1322;
+  padding-bottom: 2.5mm;
+}
+
+#shipping-label-print .store-mark {
+  margin: 0;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  font-size: 13px;
+}
+
+#shipping-label-print .store-ar {
+  margin: 1px 0 0;
+  font-weight: 800;
+  font-size: 12px;
+}
+
+#shipping-label-print .store-tag,
+#shipping-label-print .store-contact {
+  margin: 1px 0 0;
+  font-size: 8px;
+  font-weight: 700;
+  color: #334155;
+}
+
+#shipping-label-print .barcode-block {
+  text-align: center;
+}
+
+#shipping-label-print .order-ref {
+  margin: 1.5mm 0 0;
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+
+#shipping-label-print .section-kicker {
+  margin: 0 0 1mm;
+  font-size: 8px;
+  font-weight: 800;
+  color: #64748b;
+}
+
+#shipping-label-print .receiver-name {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 900;
+  line-height: 1.25;
+}
+
+#shipping-label-print .receiver-city,
+#shipping-label-print .receiver-address,
+#shipping-label-print .receiver-parts,
+#shipping-label-print .receiver-phone {
+  margin: 1mm 0 0;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+#shipping-label-print .receiver-phone {
+  font-size: 12px;
+  font-weight: 900;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+#shipping-label-print .cod-box {
+  border: 2.5px solid #0b1322;
+  padding: 2.5mm 3mm;
+  text-align: center;
+  background: #f8fafc;
+}
+
+#shipping-label-print .cod-box p {
+  margin: 0;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+#shipping-label-print .cod-box strong {
+  display: block;
+  margin-top: 1mm;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+#shipping-label-print .pack-list ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+#shipping-label-print .pack-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 0.6mm 0;
+  border-bottom: 1px dashed #cbd5e1;
+}
+
+#shipping-label-print .driver-notes {
+  margin-top: auto;
+  border: 1px dashed #0b1322;
+  padding: 2mm 2.5mm;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+#shipping-label-print .driver-notes p:last-child {
+  margin: 0;
+}
+
+@media print {
+  @page {
+    size: 100mm 150mm;
+    margin: 0;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    color: #0b1322 !important;
+  }
+
+  .admin-print-root,
+  .no-print {
+    display: none !important;
+  }
+
+  #shipping-label-print {
+    position: fixed;
+    inset: 0;
+    width: 100mm;
+    height: 150mm;
+    border: none;
+    box-shadow: none;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

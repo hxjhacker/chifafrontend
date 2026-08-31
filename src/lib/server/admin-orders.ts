@@ -17,6 +17,12 @@ type OrderRow = {
   currency: string;
   status: string;
   created_at: Date;
+  updated_at: Date | null;
+  source: string | null;
+  confirmed_at: Date | null;
+  shipped_at: Date | null;
+  delivered_at: Date | null;
+  cancelled_at: Date | null;
   address: string | null;
   quartier: string | null;
   street: string | null;
@@ -33,7 +39,29 @@ const ALLOWED: AdminStatus[] = ["new", "confirmed", "shipped", "delivered", "can
 const WINDOWS: DeliveryWindow[] = ["anytime", "morning", "afternoon", "weekend"];
 const ORDER_COLS = `id, full_name, phone, phone_national, city, address, quartier, street, building, landmark,
       delivery_window, courier_notes, region_id, bundle_enabled, secondary_qty,
-      product_slug, tier_qty, cross_sell_slug, upsell_slug, total_cents, currency, status, created_at`;
+      product_slug, tier_qty, cross_sell_slug, upsell_slug, total_cents, currency, status, source,
+      created_at, updated_at, confirmed_at, shipped_at, delivered_at, cancelled_at`;
+
+function iso(value: Date | string | null | undefined): string | null {
+  if (!value) return null;
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value.toISOString();
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? String(value) : parsed.toISOString();
+}
+
+function stampReached(explicit: Date | string | null | undefined, fallback: Date | string | null | undefined, reached: boolean) {
+  const stamped = iso(explicit);
+  if (stamped) return stamped;
+  if (!reached) return null;
+  return iso(fallback);
+}
+
+function statusStampSql(param: string) {
+  return `confirmed_at = CASE WHEN ${param} IN ('confirmed','shipped','delivered') THEN COALESCE(confirmed_at, now()) ELSE confirmed_at END,
+         shipped_at = CASE WHEN ${param} IN ('shipped','delivered') THEN COALESCE(shipped_at, now()) ELSE shipped_at END,
+         delivered_at = CASE WHEN ${param} = 'delivered' THEN COALESCE(delivered_at, now()) ELSE delivered_at END,
+         cancelled_at = CASE WHEN ${param} = 'cancelled' THEN COALESCE(cancelled_at, now()) ELSE cancelled_at END`;
+}
 
 function asWindow(value: string | null | undefined): DeliveryWindow | null {
   if (!value) return null;
@@ -54,10 +82,14 @@ function composeAddress(parts: {
 }
 
 function serialize(row: OrderRow): AdminOrder {
-  const created = row.created_at instanceof Date ? row.created_at.toISOString() : String(row.created_at || "");
+  const status = displayStatus(row.status);
+  const created = iso(row.created_at);
+  const updated = iso(row.updated_at) || created;
+  const pastConfirmed = status === "confirmed" || status === "shipped" || status === "delivered";
+  const pastShipped = status === "shipped" || status === "delivered";
   return {
     order_id: row.id,
-    created_at: created || null,
+    created_at: created,
     full_name: row.full_name,
     city: row.city,
     phone: row.phone,
@@ -69,7 +101,7 @@ function serialize(row: OrderRow): AdminOrder {
     pack_label: packLabel(row),
     total: Math.round(row.total_cents) / 100,
     currency: row.currency || "MAD",
-    status: displayStatus(row.status),
+    status,
     raw_status: row.status,
     address: row.address || null,
     quartier: row.quartier || null,
@@ -88,6 +120,12 @@ function serialize(row: OrderRow): AdminOrder {
     secondary_product: row.cross_sell_slug,
     driver_comment: row.courier_notes || null,
     total_price: Math.round(row.total_cents) / 100,
+    source: row.source || "website",
+    updated_at: updated,
+    confirmed_at: stampReached(row.confirmed_at, updated, pastConfirmed),
+    shipped_at: stampReached(row.shipped_at, updated, pastShipped),
+    delivered_at: stampReached(row.delivered_at, updated, status === "delivered"),
+    cancelled_at: stampReached(row.cancelled_at, updated, status === "cancelled"),
   };
 }
 
@@ -241,7 +279,8 @@ export async function updateAdminOrder(
     const client = await getPool().connect();
     try {
       const result = await client.query<OrderRow>(
-        `UPDATE orders SET status = $2, updated_at = now() WHERE id = $1
+        `UPDATE orders SET status = $2, updated_at = now(), ${statusStampSql("$2")}
+         WHERE id = $1
          RETURNING ${ORDER_COLS}`,
         [orderId, patch.status],
       );
@@ -375,7 +414,7 @@ export async function updateAdminOrder(
          cross_sell_slug = $18,
          cross_sell_price_cents = COALESCE($19, cross_sell_price_cents),
          bundle_enabled = $20, secondary_qty = $21,
-         updated_at = now()
+         updated_at = now(), ${statusStampSql("$9")}
        WHERE id = $1
        RETURNING ${ORDER_COLS}`,
       [
@@ -467,9 +506,14 @@ export async function createAdminOrder(input: {
       `INSERT INTO orders (
          id, full_name, phone, phone_national, city, address, product_slug, tier_qty, tier_price_cents,
          cross_sell_slug, cross_sell_price_cents, upsell_slug, upsell_price_cents, subtotal_cents, total_cents,
-         currency, status, payment_method, event_id, source, created_at, updated_at
+         currency, status, payment_method, event_id, source, created_at, updated_at,
+         confirmed_at, shipped_at, delivered_at, cancelled_at
        ) VALUES (
-         $1,$2,$3,$4,$5,NULL,$6,$7,$8,NULL,0,NULL,0,$8,$8,'MAD',$9,'COD',$10,'admin', now(), now()
+         $1,$2,$3,$4,$5,NULL,$6,$7,$8,NULL,0,NULL,0,$8,$8,'MAD',$9,'COD',$10,'admin', now(), now(),
+         CASE WHEN $9 IN ('confirmed','shipped','delivered') THEN now() ELSE NULL END,
+         CASE WHEN $9 IN ('shipped','delivered') THEN now() ELSE NULL END,
+         CASE WHEN $9 = 'delivered' THEN now() ELSE NULL END,
+         CASE WHEN $9 = 'cancelled' THEN now() ELSE NULL END
        ) RETURNING ${ORDER_COLS}`,
       [orderId, fullName, e164, national, city.ar, slug, qty, cents, input.status, eventId],
     );

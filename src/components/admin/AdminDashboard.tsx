@@ -17,6 +17,7 @@ import {
   Phone,
   PieChart,
   Plus,
+  Printer,
   Search,
   SlidersHorizontal,
   Trash2,
@@ -28,6 +29,8 @@ import { AdminDoughnut } from "@/components/admin/AdminDoughnut";
 import { CompleteDetailsModal } from "@/components/admin/CompleteDetailsModal";
 import { IosSwitch } from "@/components/admin/IosSwitch";
 import { MoroccoMap } from "@/components/admin/MoroccoMap";
+import { OrderTimelineModal } from "@/components/admin/OrderTimelineModal";
+import { ShippingLabel } from "@/components/admin/ShippingLabel";
 import {
   ADMIN_STATUSES,
   copyText,
@@ -110,6 +113,8 @@ export function AdminDashboard() {
   const [error, setError] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [completing, setCompleting] = useState<AdminOrder | null>(null);
+  const [viewingId, setViewingId] = useState<string | null>(null);
+  const [printingId, setPrintingId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AdminOrder | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -122,6 +127,9 @@ export function AdminDashboard() {
   const [prefsOpen, setPrefsOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const prefsRef = useRef<HTMLDivElement>(null);
+
+  const closeTimeline = useCallback(() => setViewingId(null), []);
+  const closePrint = useCallback(() => setPrintingId(null), []);
 
   useEffect(() => {
     setPrefs(readPrefs());
@@ -299,13 +307,16 @@ export function AdminDashboard() {
   const start = filtered.length === 0 ? 0 : (currentPage - 1) * perPage;
   const end = Math.min(start + perPage, filtered.length);
   const pageRows = filtered.slice(start, end);
+  const viewing = useMemo(() => orders.find((o) => o.order_id === viewingId) ?? null, [orders, viewingId]);
+  const printing = useMemo(() => orders.find((o) => o.order_id === printingId) ?? null, [orders, printingId]);
 
   useEffect(() => {
     setPage(1);
   }, [q, status, perPage]);
 
   return (
-    <div className="flex min-h-screen flex-col justify-between bg-cream text-royal antialiased transition-colors duration-300 dark:bg-brandDark dark:text-slate-100">
+    <>
+    <div className="admin-print-root flex min-h-screen flex-col justify-between bg-cream text-royal antialiased transition-colors duration-300 dark:bg-brandDark dark:text-slate-100 print:hidden">
       <AddOrderModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
@@ -315,12 +326,21 @@ export function AdminDashboard() {
           void refreshStats();
         }}
       />
+      <OrderTimelineModal
+        order={viewing}
+        onClose={closeTimeline}
+        onEdit={(order) => {
+          setViewingId(null);
+          setCompleting(order);
+        }}
+      />
       <CompleteDetailsModal
         open={Boolean(completing)}
         order={completing}
         onClose={() => setCompleting(null)}
         onSaved={(order) => {
           setOrders((list) => list.map((o) => (o.order_id === order.order_id ? order : o)));
+          setCompleting(order);
           void refreshStats();
         }}
       />
@@ -701,9 +721,25 @@ export function AdminDashboard() {
                           <div className="flex items-center gap-1.5">
                             <button
                               type="button"
+                              title="طباعة بوليصة الشحن"
+                              onClick={() => setPrintingId(order.order_id)}
+                              className="flex h-8 w-8 items-center justify-center rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 transition hover:bg-emerald-500 hover:text-white"
+                            >
+                              <Printer className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              title="عرض التفاصيل ومسار الطلب"
+                              onClick={() => setViewingId(order.order_id)}
+                              className="flex h-8 w-8 items-center justify-center rounded-xl border border-sky-500/30 bg-sky-500/10 text-sky-400 transition hover:bg-sky-500 hover:text-white"
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              type="button"
                               title="إتمام وتأكيد المعلومات"
                               onClick={() => setCompleting(order)}
-                              className="flex h-7 w-7 items-center justify-center rounded-lg bg-gold/10 text-gold transition hover:bg-gold hover:text-royal"
+                              className="flex h-8 w-8 items-center justify-center rounded-xl border border-gold/30 bg-gold/10 text-gold transition hover:bg-gold hover:text-royal"
                             >
                               <Pencil className="h-3.5 w-3.5" />
                             </button>
@@ -711,7 +747,7 @@ export function AdminDashboard() {
                               type="button"
                               title="حذف الطلبية"
                               onClick={() => setDeleteTarget(order)}
-                              className="flex h-7 w-7 items-center justify-center rounded-lg bg-rose-500/10 text-rose-500 transition hover:bg-rose-500 hover:text-white"
+                              className="flex h-8 w-8 items-center justify-center rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-500 transition hover:bg-rose-500 hover:text-white"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
                             </button>
@@ -862,6 +898,8 @@ export function AdminDashboard() {
         © 2026 Chifaglow Admin Panel — نظام إدارة وتصنيف الطلبيات
       </footer>
     </div>
+    {printing ? <ShippingLabel order={printing} onClose={closePrint} /> : null}
+    </>
   );
 }
 

@@ -78,7 +78,11 @@ CREATE TABLE IF NOT EXISTS orders (
   landing_url text,
   source varchar(32) NOT NULL DEFAULT 'website',
   created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now()
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  confirmed_at timestamptz,
+  shipped_at timestamptz,
+  delivered_at timestamptz,
+  cancelled_at timestamptz
 );
 CREATE INDEX IF NOT EXISTS ix_orders_phone ON orders (phone);
 CREATE INDEX IF NOT EXISTS ix_orders_status ON orders (status);
@@ -128,6 +132,10 @@ const SCHEMA_ALTERS = [
   `ALTER TABLE orders ALTER COLUMN source SET DEFAULT 'website'`,
   `ALTER TABLE orders ALTER COLUMN created_at SET DEFAULT now()`,
   `ALTER TABLE orders ALTER COLUMN updated_at SET DEFAULT now()`,
+  `ALTER TABLE orders ADD COLUMN IF NOT EXISTS confirmed_at timestamptz`,
+  `ALTER TABLE orders ADD COLUMN IF NOT EXISTS shipped_at timestamptz`,
+  `ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivered_at timestamptz`,
+  `ALTER TABLE orders ADD COLUMN IF NOT EXISTS cancelled_at timestamptz`,
 ];
 
 const PRODUCT_SEED = [

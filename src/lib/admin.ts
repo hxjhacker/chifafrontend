@@ -35,6 +35,12 @@ export type AdminOrder = {
   secondary_product: string | null;
   driver_comment: string | null;
   total_price: number;
+  source: string | null;
+  updated_at: string | null;
+  confirmed_at: string | null;
+  shipped_at: string | null;
+  delivered_at: string | null;
+  cancelled_at: string | null;
 };
 
 export type AdminStats = {
@@ -88,7 +94,7 @@ export const ADMIN_STATUSES: {
   },
 ];
 
-const PACK_NAMES: Record<string, string> = {
+export const PACK_NAMES: Record<string, string> = {
   quran: "USB القرآن الكريم",
   kids: "USB تعليم الأطفال",
   music: "USB الأغاني والموسيقى",
@@ -115,6 +121,52 @@ export function packLabel(order: {
   if (order.upsell_slug) parts.push(`${PACK_NAMES[order.upsell_slug] || order.upsell_slug} (عرض)`);
   return parts.join(" + ");
 }
+
+export function orderLineItems(order: AdminOrder) {
+  const lines: { label: string; qty: number }[] = [
+    {
+      label: PACK_NAMES[order.product_slug] || order.product_slug,
+      qty: Math.max(1, order.tier_qty || order.primary_qty || 1),
+    },
+  ];
+  const extraSlug = order.cross_sell_slug || order.secondary_product;
+  if (order.bundle_enabled || extraSlug) {
+    lines.push({
+      label: PACK_NAMES[extraSlug || "extra"] || extraSlug || "عرض إضافي",
+      qty: Math.max(1, order.secondary_qty || 1),
+    });
+  }
+  if (order.upsell_slug && order.upsell_slug !== extraSlug) {
+    lines.push({ label: PACK_NAMES[order.upsell_slug] || order.upsell_slug, qty: 1 });
+  }
+  return lines;
+}
+
+export function sourceLabel(source: string | null | undefined) {
+  if (source === "admin") return "واتساب / لوحة التحكم";
+  if (source === "website") return "الموقع";
+  return source || "الموقع";
+}
+
+export function detailedAddress(order: AdminOrder) {
+  const stored = (order.address || order.full_address || "").trim();
+  if (stored) return stored;
+  const bits = [order.quartier, order.street, order.building, order.landmark]
+    .map((v) => (v || "").trim())
+    .filter(Boolean);
+  return bits.join("، ");
+}
+
+export const DEFAULT_DRIVER_NOTES = "الاتصال قبل الوصول / فتح المعاينة قبل الأداء";
+
+export const STORE_CONTACT = {
+  name: "CHIFAGLOW",
+  nameAr: "شيفا جلو",
+  tagline: "فلاشات القرآن والتعليم — الدفع عند الاستلام",
+  phone: "06 20 86 38 95",
+  phoneE164: "+212 620 86 38 95",
+  site: "chifaglow.com",
+};
 
 export function statusMeta(id: AdminStatus) {
   return ADMIN_STATUSES.find((s) => s.id === id) ?? ADMIN_STATUSES[0];
