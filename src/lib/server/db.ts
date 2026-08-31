@@ -129,6 +129,7 @@ const SCHEMA_ALTERS = [
   `ALTER TABLE orders ALTER COLUMN currency SET DEFAULT 'MAD'`,
   `ALTER TABLE orders ALTER COLUMN status SET DEFAULT 'pending'`,
   `ALTER TABLE orders ALTER COLUMN payment_method SET DEFAULT 'COD'`,
+  `ALTER TABLE orders ADD COLUMN IF NOT EXISTS source varchar(32) DEFAULT 'website'`,
   `ALTER TABLE orders ALTER COLUMN source SET DEFAULT 'website'`,
   `ALTER TABLE orders ALTER COLUMN created_at SET DEFAULT now()`,
   `ALTER TABLE orders ALTER COLUMN updated_at SET DEFAULT now()`,
@@ -173,19 +174,15 @@ const PRODUCT_SEED = [
   },
 ] as const;
 
+const SCHEMA_ALTER_VERSION = 5;
+let appliedAlterVersion = 0;
+
 export async function ensureSchema() {
   if (!schemaReady) {
     schemaReady = (async () => {
       const client = await getPool().connect();
       try {
         await client.query(SCHEMA_SQL);
-        for (const sql of SCHEMA_ALTERS) {
-          try {
-            await client.query(sql);
-          } catch (err) {
-            console.error("schema_alter_skipped", sql, err);
-          }
-        }
         for (const product of PRODUCT_SEED) {
           await client.query(
             `INSERT INTO products (id, slug, name_ar, name_en, tagline_ar, description_ar, accent, is_active, created_at)
@@ -217,4 +214,19 @@ export async function ensureSchema() {
     });
   }
   await schemaReady;
+  if (appliedAlterVersion < SCHEMA_ALTER_VERSION) {
+    const client = await getPool().connect();
+    try {
+      for (const sql of SCHEMA_ALTERS) {
+        try {
+          await client.query(sql);
+        } catch (err) {
+          console.error("schema_alter_skipped", sql, err);
+        }
+      }
+      appliedAlterVersion = SCHEMA_ALTER_VERSION;
+    } finally {
+      client.release();
+    }
+  }
 }

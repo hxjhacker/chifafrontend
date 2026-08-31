@@ -258,10 +258,12 @@ export async function updateAdminOrder(
     secondary_product?: string | null;
     driver_comment?: string;
     total_price?: number;
+    customer_name?: string;
   },
 ): Promise<AdminOrder | null> {
   patch = {
     ...patch,
+    full_name: patch.full_name ?? patch.customer_name,
     address: patch.address ?? patch.full_address,
     region_id: patch.region_id ?? patch.region,
     product_slug: patch.product_slug ?? patch.primary_product,
@@ -322,8 +324,8 @@ export async function updateAdminOrder(
     let bundleEnabled = Boolean(row.bundle_enabled || row.cross_sell_slug);
     let secondaryQty = Math.max(1, Number(row.secondary_qty) || 1);
 
-    if (patch.full_name !== undefined) {
-      fullName = patch.full_name.trim();
+    if (patch.full_name != null) {
+      fullName = String(patch.full_name).trim();
       if (fullName.length < 3) throw new Error("invalid_name");
     }
     if (patch.phone !== undefined) {
@@ -362,13 +364,13 @@ export async function updateAdminOrder(
       if (next && !WINDOWS.includes(next as DeliveryWindow)) throw new Error("invalid_delivery_window");
       deliveryWindow = next || null;
     }
-    if (patch.courier_notes !== undefined) courierNotes = patch.courier_notes.trim() || null;
-    if (patch.address !== undefined) address = patch.address.trim() || null;
+    if (patch.courier_notes !== undefined) courierNotes = String(patch.courier_notes ?? "").trim() || null;
+    if (patch.address !== undefined) address = String(patch.address ?? "").trim() || null;
     else if (patch.quartier !== undefined || patch.street !== undefined || patch.building !== undefined || patch.landmark !== undefined) {
       address = composeAddress({ quartier, street, building, landmark, city: cityAr });
     }
     if (patch.region_id !== undefined) {
-      const raw = patch.region_id.trim();
+      const raw = String(patch.region_id ?? "").trim();
       const byId = raw.toUpperCase();
       if (/^MA(0[1-9]|1[0-2])$/.test(byId)) {
         regionId = byId;

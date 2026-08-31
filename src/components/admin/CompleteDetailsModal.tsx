@@ -100,6 +100,7 @@ export function CompleteDetailsModal({ open, order, onClose, onSaved }: Props) {
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          customer_name: name,
           full_name: name,
           city,
           region_id: regionId,

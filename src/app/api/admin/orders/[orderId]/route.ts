@@ -10,6 +10,7 @@ const ALLOWED: AdminStatus[] = ["new", "confirmed", "shipped", "delivered", "can
 const WINDOWS: DeliveryWindow[] = ["anytime", "morning", "afternoon", "weekend"];
 
 type PatchBody = {
+  customer_name?: string;
   status?: AdminStatus;
   full_name?: string;
   phone?: string;
@@ -41,6 +42,7 @@ type PatchBody = {
 function normalizePatch(body: PatchBody) {
   return {
     ...body,
+    full_name: body.full_name ?? body.customer_name,
     address: body.address ?? body.full_address,
     region_id: body.region_id ?? body.region,
     product_slug: body.product_slug ?? body.primary_product,
