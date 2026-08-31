@@ -124,6 +124,7 @@ const SCHEMA_ALTERS = [
   `ALTER TABLE orders ADD COLUMN IF NOT EXISTS landmark varchar(160)`,
   `ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_window varchar(32)`,
   `ALTER TABLE orders ADD COLUMN IF NOT EXISTS courier_notes text`,
+  `ALTER TABLE orders ALTER COLUMN courier_notes TYPE text USING courier_notes::text`,
   `ALTER TABLE orders ADD COLUMN IF NOT EXISTS bundle_enabled boolean DEFAULT false`,
   `ALTER TABLE orders ADD COLUMN IF NOT EXISTS secondary_qty integer DEFAULT 1`,
   `ALTER TABLE orders ALTER COLUMN upsell_price_cents SET DEFAULT 0`,
@@ -177,7 +178,7 @@ const PRODUCT_SEED = [
   },
 ] as const;
 
-const SCHEMA_ALTER_VERSION = 6;
+const SCHEMA_ALTER_VERSION = 7;
 let appliedAlterVersion = 0;
 
 export async function ensureSchema() {

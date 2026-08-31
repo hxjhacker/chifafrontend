@@ -9,35 +9,16 @@ export const dynamic = "force-dynamic";
 const ALLOWED: AdminStatus[] = ["new", "confirmed", "shipped", "delivered", "cancelled"];
 const WINDOWS: DeliveryWindow[] = ["anytime", "morning", "afternoon", "weekend"];
 
-type PatchBody = {
-  customer_name?: string;
-  status?: string;
-  full_name?: string;
-  phone?: string;
-  city?: string;
-  product_slug?: string;
-  primary_product?: string;
-  tier_qty?: number | string;
-  primary_qty?: number | string;
-  total_mad?: number | string;
-  total_price?: number | string;
-  quartier?: string;
-  street?: string;
-  building?: string;
-  landmark?: string;
-  delivery_window?: string;
-  courier_notes?: string;
-  driver_comment?: string;
-  address?: string;
-  full_address?: string;
-  region_id?: string;
-  region?: string;
-  cross_sell_slug?: string | null;
-  secondary_product?: string | null;
-  cross_sell_price_mad?: number | string;
-  bundle_enabled?: boolean | string;
-  secondary_qty?: number | string;
-};
+type PatchBody = Record<string, unknown>;
+
+function pick(body: PatchBody, ...keys: string[]) {
+  for (const key of keys) {
+    if (Object.prototype.hasOwnProperty.call(body, key) && body[key] !== undefined) {
+      return body[key];
+    }
+  }
+  return undefined;
+}
 
 function asText(value: unknown) {
   if (value == null) return undefined;
@@ -60,55 +41,82 @@ function asBool(value: unknown) {
   return undefined;
 }
 
+function asNullableText(value: unknown) {
+  if (value === undefined) return undefined;
+  if (value == null) return null;
+  const text = String(value).trim();
+  return text ? text : null;
+}
+
 function normalizePatch(body: PatchBody) {
-  const statusRaw = asText(body.status);
+  const statusRaw = asText(pick(body, "status"));
   const status = statusRaw && ALLOWED.includes(statusRaw as AdminStatus) ? (statusRaw as AdminStatus) : undefined;
-  const windowRaw = asText(body.delivery_window);
+  const windowRaw = asText(pick(body, "delivery_window", "deliveryWindow"));
+  const cross = pick(body, "cross_sell_slug", "crossSellSlug", "secondary_product", "secondaryProduct");
   return {
-    full_name: asText(body.full_name) ?? asText(body.customer_name),
-    customer_name: asText(body.customer_name),
-    phone: asText(body.phone),
-    city: asText(body.city),
-    address: asText(body.address) ?? asText(body.full_address),
-    full_address: asText(body.full_address),
-    region_id: asText(body.region_id) ?? asText(body.region),
-    region: asText(body.region),
-    product_slug: asText(body.product_slug) ?? asText(body.primary_product),
-    primary_product: asText(body.primary_product),
-    tier_qty: asNumber(body.tier_qty) ?? asNumber(body.primary_qty),
-    primary_qty: asNumber(body.primary_qty),
-    total_mad: asNumber(body.total_mad) ?? asNumber(body.total_price),
-    total_price: asNumber(body.total_price),
-    courier_notes: body.courier_notes ?? body.driver_comment,
-    driver_comment: body.driver_comment,
-    cross_sell_slug: body.cross_sell_slug !== undefined ? body.cross_sell_slug : body.secondary_product,
-    secondary_product: body.secondary_product,
-    cross_sell_price_mad: asNumber(body.cross_sell_price_mad),
-    bundle_enabled: asBool(body.bundle_enabled),
-    secondary_qty: asNumber(body.secondary_qty),
-    quartier: asText(body.quartier),
-    street: asText(body.street),
-    building: asText(body.building),
-    landmark: asText(body.landmark),
+    full_name: asText(pick(body, "full_name", "fullName", "customer_name", "customerName")),
+    customer_name: asText(pick(body, "customer_name", "customerName")),
+    phone: asText(pick(body, "phone")),
+    city: asText(pick(body, "city")),
+    address: asText(pick(body, "address", "full_address", "fullAddress")),
+    full_address: asText(pick(body, "full_address", "fullAddress")),
+    region_id: asText(pick(body, "region_id", "regionId", "region")),
+    region: asText(pick(body, "region", "region_id", "regionId")),
+    product_slug: asText(pick(body, "product_slug", "productSlug", "primary_product", "primaryProduct")),
+    primary_product: asText(pick(body, "primary_product", "primaryProduct")),
+    tier_qty: asNumber(pick(body, "tier_qty", "tierQty", "primary_qty", "primaryQty")),
+    primary_qty: asNumber(pick(body, "primary_qty", "primaryQty")),
+    total_mad: asNumber(pick(body, "total_mad", "totalMad", "total_price", "totalPrice")),
+    total_price: asNumber(pick(body, "total_price", "totalPrice")),
+    courier_notes: pick(body, "courier_notes", "courierNotes", "driver_comment", "driverComment") as string | undefined,
+    driver_comment: pick(body, "driver_comment", "driverComment") as string | undefined,
+    cross_sell_slug: asNullableText(cross),
+    secondary_product: asNullableText(pick(body, "secondary_product", "secondaryProduct")),
+    cross_sell_price_mad: asNumber(pick(body, "cross_sell_price_mad", "crossSellPriceMad")),
+    bundle_enabled: asBool(pick(body, "bundle_enabled", "bundleEnabled")),
+    secondary_qty: asNumber(pick(body, "secondary_qty", "secondaryQty")),
+    quartier: asText(pick(body, "quartier")),
+    street: asText(pick(body, "street")),
+    building: asText(pick(body, "building")),
+    landmark: asText(pick(body, "landmark")),
     delivery_window: windowRaw && WINDOWS.includes(windowRaw as DeliveryWindow) ? (windowRaw as DeliveryWindow) : undefined,
     status,
   };
 }
 
-async function readOrderId(ctx: { params: Promise<{ orderId?: string; id?: string }> | { orderId?: string; id?: string } }) {
+async function readOrderId(
+  request: Request,
+  ctx: { params: Promise<{ orderId?: string; id?: string }> | { orderId?: string; id?: string } },
+) {
   const params = await Promise.resolve(ctx.params);
-  return String(params?.orderId || params?.id || "").trim();
+  const fromParams = String(params?.orderId || params?.id || "").trim();
+  if (fromParams) {
+    try {
+      return decodeURIComponent(fromParams);
+    } catch {
+      return fromParams;
+    }
+  }
+  try {
+    const parts = new URL(request.url).pathname.split("/").filter(Boolean);
+    const idx = parts.lastIndexOf("orders");
+    const raw = String((idx >= 0 ? parts[idx + 1] : parts.at(-1)) || "").trim();
+    return raw ? decodeURIComponent(raw) : "";
+  } catch {
+    return "";
+  }
 }
 
 export async function PATCH(request: Request, ctx: { params: Promise<{ orderId?: string; id?: string }> }) {
   const denied = await requireAdmin(request);
   if (denied instanceof NextResponse) return denied;
-  const orderId = await readOrderId(ctx);
+  const orderId = await readOrderId(request, ctx);
   if (!orderId) return NextResponse.json({ detail: "order_not_found" }, { status: 404 });
 
   let body: PatchBody = {};
   try {
-    body = (await request.json()) as PatchBody;
+    const parsed = await request.json();
+    body = parsed && typeof parsed === "object" && !Array.isArray(parsed) ? (parsed as PatchBody) : {};
   } catch {
     return NextResponse.json({ detail: "invalid_body" }, { status: 400 });
   }
@@ -119,18 +127,17 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ orderId?:
     return NextResponse.json(order);
   } catch (err) {
     const message = err instanceof Error ? err.message : "update_failed";
-    const status = ["invalid_name", "invalid_ma_phone", "invalid_price", "invalid_status", "invalid_delivery_window", "invalid_qty"].includes(message)
-      ? 422
-      : 500;
+    const known = ["invalid_name", "invalid_ma_phone", "invalid_price", "invalid_status", "invalid_delivery_window", "invalid_qty"];
+    const status = known.includes(message) ? 422 : 500;
     if (status === 500) console.error("admin_order_patch_failed", err);
-    return NextResponse.json({ detail: message }, { status });
+    return NextResponse.json({ detail: known.includes(message) ? message : "update_failed" }, { status });
   }
 }
 
 export async function DELETE(request: Request, ctx: { params: Promise<{ orderId?: string; id?: string }> }) {
   const denied = await requireAdmin(request);
   if (denied instanceof NextResponse) return denied;
-  const orderId = await readOrderId(ctx);
+  const orderId = await readOrderId(request, ctx);
   if (!orderId) return NextResponse.json({ detail: "order_not_found" }, { status: 404 });
   try {
     const ok = await deleteAdminOrder(orderId);

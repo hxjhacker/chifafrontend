@@ -95,41 +95,61 @@ export function CompleteDetailsModal({ open, order, onClose, onSaved }: Props) {
     setError("");
     setSaving(true);
     try {
-      const res = await fetch(`/api/admin/orders/${order.order_id}`, {
+      const orderId = encodeURIComponent(String(order.order_id || "").trim());
+      const payload = {
+        customer_name: name,
+        customerName: name,
+        full_name: name,
+        fullName: name,
+        phone: order.phone || order.phone_national,
+        city,
+        region_id: regionId,
+        regionId,
+        region: regionId,
+        address,
+        full_address: address,
+        fullAddress: address,
+        product_slug: primary.slug,
+        productSlug: primary.slug,
+        primary_product: primary.slug,
+        primaryProduct: primary.slug,
+        tier_qty: Math.max(1, primaryQty),
+        tierQty: Math.max(1, primaryQty),
+        primary_qty: Math.max(1, primaryQty),
+        primaryQty: Math.max(1, primaryQty),
+        bundle_enabled: bundleOn,
+        bundleEnabled: bundleOn,
+        cross_sell_slug: bundleOn ? secondary.slug : null,
+        crossSellSlug: bundleOn ? secondary.slug : null,
+        secondary_product: bundleOn ? secondary.slug : null,
+        secondaryProduct: bundleOn ? secondary.slug : null,
+        secondary_qty: bundleOn ? Math.max(1, secondaryQty) : 1,
+        secondaryQty: bundleOn ? Math.max(1, secondaryQty) : 1,
+        cross_sell_price_mad: bundleOn ? secondary.price * Math.max(1, secondaryQty) : 0,
+        crossSellPriceMad: bundleOn ? secondary.price * Math.max(1, secondaryQty) : 0,
+        courier_notes: notes,
+        courierNotes: notes,
+        driver_comment: notes,
+        driverComment: notes,
+        total_mad: Number(price),
+        totalMad: Number(price),
+        total_price: Number(price),
+        totalPrice: Number(price),
+        status: "confirmed",
+      };
+      const res = await fetch(`/api/admin/orders/${orderId}`, {
         method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          customer_name: name,
-          full_name: name,
-          phone: order.phone || order.phone_national,
-          city,
-          region_id: regionId,
-          region: regionId,
-          address,
-          full_address: address,
-          product_slug: primary.slug,
-          primary_product: primary.slug,
-          tier_qty: Math.max(1, primaryQty),
-          primary_qty: Math.max(1, primaryQty),
-          bundle_enabled: bundleOn,
-          cross_sell_slug: bundleOn ? secondary.slug : null,
-          secondary_product: bundleOn ? secondary.slug : null,
-          secondary_qty: bundleOn ? Math.max(1, secondaryQty) : 1,
-          cross_sell_price_mad: bundleOn ? secondary.price * Math.max(1, secondaryQty) : 0,
-          courier_notes: notes,
-          driver_comment: notes,
-          total_mad: Number(price),
-          total_price: Number(price),
-          status: "confirmed",
-        }),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as { detail?: unknown };
-        const raw = Array.isArray(body.detail)
-          ? String((body.detail[0] as { msg?: string } | undefined)?.msg || "")
-          : typeof body.detail === "string"
-            ? body.detail
+        const body = (await res.json().catch(() => ({}))) as { detail?: unknown; error?: unknown; message?: unknown };
+        const detail = body.detail ?? body.error ?? body.message;
+        const raw = Array.isArray(detail)
+          ? String((detail[0] as { msg?: string; detail?: string } | undefined)?.msg || (detail[0] as { detail?: string } | undefined)?.detail || "")
+          : typeof detail === "string"
+            ? detail
             : "";
         const map: Record<string, string> = {
           invalid_name: "الاسم قصير جداً.",
@@ -138,6 +158,7 @@ export function CompleteDetailsModal({ open, order, onClose, onSaved }: Props) {
           invalid_status: "حالة الطلب غير صالحة.",
           invalid_ma_phone: "رقم الهاتف غير صالح.",
           order_not_found: "الطلبية غير موجودة.",
+          update_failed: "تعذر حفظ وتأكيد المعلومات.",
         };
         throw new Error(map[raw] || "تعذر حفظ وتأكيد المعلومات.");
       }

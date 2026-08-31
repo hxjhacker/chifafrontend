@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import type { PoolClient } from "pg";
 import type { AdminOrder, AdminStats, AdminStatus, DeliveryWindow } from "@/lib/admin";
 import { displayStatus, packLabel } from "@/lib/admin";
 import { ensureSchema, getPool } from "./db";
@@ -57,14 +56,32 @@ function stampReached(explicit: Date | string | null | undefined, fallback: Date
   return iso(fallback);
 }
 
-async function existingColumns(client: PoolClient) {
-  const result = await client.query<{ column_name: string }>(
-    `SELECT column_name FROM information_schema.columns
-     WHERE table_name = 'orders'
-       AND table_schema NOT IN ('pg_catalog', 'information_schema')`,
-  );
-  return new Set(result.rows.map((row) => row.column_name.toLowerCase()));
+function columnsOf(result: { fields?: Array<{ name: string }> }) {
+  return new Set((result.fields || []).map((field) => String(field.name).toLowerCase()));
 }
+
+function pgCode(err: unknown) {
+  if (err && typeof err === "object" && "code" in err) return String((err as { code: unknown }).code);
+  return "";
+}
+
+function missingColumnName(err: unknown) {
+  const message = err instanceof Error ? err.message : String(err);
+  const hit = message.match(/column "([^"]+)"/i);
+  return hit?.[1]?.toLowerCase() || "";
+}
+
+const CORE_UPDATE_COLS = new Set([
+  "full_name",
+  "phone",
+  "phone_national",
+  "city",
+  "product_slug",
+  "tier_qty",
+  "total_cents",
+  "status",
+  "updated_at",
+]);
 
 function stampFragment(cols: Set<string>, param: string) {
   const parts: string[] = [];
@@ -112,17 +129,22 @@ function serialize(row: OrderRow): AdminOrder {
   const pastConfirmed = status === "confirmed" || status === "shipped" || status === "delivered";
   const pastShipped = status === "shipped" || status === "delivered";
   return {
-    order_id: row.id,
+    order_id: String(row.id),
     created_at: created,
-    full_name: row.full_name,
-    city: row.city,
-    phone: row.phone,
-    phone_national: row.phone_national,
-    product_slug: row.product_slug,
-    tier_qty: row.tier_qty,
+    full_name: row.full_name || "",
+    city: row.city || "",
+    phone: row.phone || "",
+    phone_national: row.phone_national || "",
+    product_slug: row.product_slug || "quran",
+    tier_qty: Number(row.tier_qty) || 1,
     cross_sell_slug: row.cross_sell_slug,
     upsell_slug: row.upsell_slug,
-    pack_label: packLabel(row),
+    pack_label: packLabel({
+      product_slug: row.product_slug || "quran",
+      tier_qty: Number(row.tier_qty) || 1,
+      cross_sell_slug: row.cross_sell_slug || null,
+      upsell_slug: row.upsell_slug || null,
+    }),
     total: Math.round(Number(row.total_cents) || 0) / 100,
     currency: row.currency || "MAD",
     status,
@@ -253,38 +275,63 @@ export async function updateAdminOrderStatus(orderId: string, status: AdminStatu
   return updateAdminOrder(orderId, { status });
 }
 
-export async function updateAdminOrder(
-  orderId: string,
-  patch: {
-    status?: AdminStatus;
-    full_name?: string;
-    phone?: string;
-    city?: string;
-    product_slug?: string;
-    tier_qty?: number;
-    total_mad?: number;
-    quartier?: string;
-    street?: string;
-    building?: string;
-    landmark?: string;
-    delivery_window?: DeliveryWindow | string;
-    courier_notes?: string;
-    address?: string;
-    region_id?: string;
-    cross_sell_slug?: string | null;
-    cross_sell_price_mad?: number;
-    bundle_enabled?: boolean;
-    secondary_qty?: number;
-    full_address?: string;
-    region?: string;
-    primary_product?: string;
-    primary_qty?: number;
-    secondary_product?: string | null;
-    driver_comment?: string;
-    total_price?: number;
-    customer_name?: string;
-  },
-): Promise<AdminOrder | null> {
+type OrderPatch = {
+  status?: AdminStatus;
+  full_name?: string;
+  phone?: string;
+  city?: string;
+  product_slug?: string;
+  tier_qty?: number;
+  total_mad?: number;
+  quartier?: string;
+  street?: string;
+  building?: string;
+  landmark?: string;
+  delivery_window?: DeliveryWindow | string;
+  courier_notes?: string;
+  address?: string;
+  region_id?: string;
+  cross_sell_slug?: string | null;
+  cross_sell_price_mad?: number;
+  bundle_enabled?: boolean;
+  secondary_qty?: number;
+  full_address?: string;
+  region?: string;
+  primary_product?: string;
+  primary_qty?: number;
+  secondary_product?: string | null;
+  driver_comment?: string;
+  total_price?: number;
+  customer_name?: string;
+};
+
+type SetItem = { column: string; value?: unknown; expr?: "now" | "coalesce" };
+
+function buildUpdate(orderId: string, sets: SetItem[], cols: Set<string>) {
+  const values: unknown[] = [orderId];
+  const assignments: string[] = [];
+  for (const item of sets) {
+    if (item.expr === "now") {
+      assignments.push(`${item.column} = now()`);
+      continue;
+    }
+    values.push(item.value);
+    if (item.expr === "coalesce") {
+      assignments.push(`${item.column} = COALESCE($${values.length}, ${item.column})`);
+    } else {
+      assignments.push(`${item.column} = $${values.length}`);
+    }
+  }
+  const statusAssign = assignments.find((part) => part.startsWith("status = "));
+  const statusParam = statusAssign ? statusAssign.slice(statusAssign.indexOf("$")) : "";
+  const stamp = statusParam ? stampFragment(cols, statusParam) : "";
+  return {
+    values,
+    sql: `UPDATE orders SET ${assignments.join(", ")}${stamp} WHERE id = $1 RETURNING *`,
+  };
+}
+
+export async function updateAdminOrder(orderId: string, patch: OrderPatch): Promise<AdminOrder | null> {
   patch = {
     ...patch,
     full_name: patch.full_name ?? patch.customer_name,
@@ -298,35 +345,24 @@ export async function updateAdminOrder(
   };
   if (patch.bundle_enabled === false) patch.cross_sell_slug = null;
 
-  const fields = Object.entries(patch).filter(([, value]) => value !== undefined);
-  if (fields.length === 1 && patch.status !== undefined) {
-    if (!ALLOWED.includes(patch.status)) throw new Error("invalid_status");
-    await ensureSchema();
-    const client = await getPool().connect();
-    try {
-      const cols = await existingColumns(client);
-      const result = await client.query<OrderRow>(
-        `UPDATE orders SET status = $2, updated_at = now()${stampFragment(cols, "$2")}
-         WHERE id = $1
-         RETURNING *`,
-        [orderId, patch.status],
-      );
-      const row = result.rows[0];
-      return row ? serialize(row) : null;
-    } finally {
-      client.release();
-    }
-  }
-
   await ensureSchema();
   const client = await getPool().connect();
   try {
-    const current = await client.query<OrderRow>(
-      `SELECT * FROM orders WHERE id = $1`,
-      [orderId],
-    );
+    const current = await client.query<OrderRow>(`SELECT * FROM orders WHERE id = $1`, [orderId]);
     const row = current.rows[0];
     if (!row) return null;
+    const cols = columnsOf(current);
+
+    const fields = Object.entries(patch).filter(([, value]) => value !== undefined);
+    if (fields.length === 1 && patch.status !== undefined) {
+      if (!ALLOWED.includes(patch.status)) throw new Error("invalid_status");
+      const statusSets: SetItem[] = [{ column: "status", value: patch.status }];
+      if (cols.size === 0 || cols.has("updated_at")) statusSets.push({ column: "updated_at", expr: "now" });
+      const built = buildUpdate(orderId, statusSets, cols);
+      const result = await client.query<OrderRow>(built.sql, built.values);
+      const saved = result.rows[0];
+      return saved ? serialize(saved) : null;
+    }
 
     let fullName = row.full_name;
     let phone = row.phone;
@@ -350,7 +386,7 @@ export async function updateAdminOrder(
     let secondaryQty = Math.max(1, Number(row.secondary_qty) || 1);
 
     if (patch.full_name != null) {
-      fullName = String(patch.full_name).trim().slice(0, 120);
+      fullName = String(patch.full_name).trim().slice(0, 160);
       if (fullName.length < 3) throw new Error("invalid_name");
     }
     if (patch.phone != null && String(patch.phone).trim()) {
@@ -363,7 +399,7 @@ export async function updateAdminOrder(
     }
     if (patch.city != null && String(patch.city).trim()) {
       const { resolveCity } = await import("@/lib/cities");
-      cityAr = (resolveCity(String(patch.city)).ar || String(patch.city).trim()).slice(0, 80);
+      cityAr = (resolveCity(String(patch.city)).ar || String(patch.city).trim()).slice(0, 120);
     }
     if (patch.product_slug !== undefined) {
       slug = ["quran", "kids", "music", "educative"].includes(patch.product_slug) ? patch.product_slug : slug;
@@ -432,56 +468,76 @@ export async function updateAdminOrder(
       crossCents = 0;
     }
 
-    await client.query("BEGIN");
-    const cols = await existingColumns(client);
-    const values: unknown[] = [orderId];
-    const assignments: string[] = [];
-    const put = (column: string, value: unknown) => {
-      if (cols.size > 0 && !cols.has(column)) return;
-      values.push(value);
-      assignments.push(`${column} = $${values.length}`);
+    const allow = (column: string) => (cols.size === 0 ? CORE_UPDATE_COLS.has(column) || column === "address" || column === "courier_notes" : cols.has(column));
+    const sets: SetItem[] = [];
+    const add = (column: string, value: unknown, expr?: SetItem["expr"]) => {
+      if (!allow(column)) return;
+      sets.push(expr ? { column, value, expr } : { column, value });
     };
-    put("full_name", fullName);
-    put("phone", phone);
-    put("phone_national", phoneNational);
-    put("city", cityAr);
-    put("product_slug", slug);
-    put("tier_qty", qty);
-    put("tier_price_cents", cents);
-    put("subtotal_cents", cents);
-    put("total_cents", cents);
-    put("status", status);
-    put("address", address);
-    put("quartier", quartier);
-    put("street", street);
-    put("building", building);
-    put("landmark", landmark);
-    put("delivery_window", deliveryWindow);
-    put("courier_notes", courierNotes);
-    put("region_id", regionId);
-    put(
+    add("full_name", fullName);
+    add("phone", phone);
+    add("phone_national", phoneNational);
+    add("city", cityAr);
+    add("product_slug", slug);
+    add("tier_qty", qty);
+    add("tier_price_cents", cents);
+    add("subtotal_cents", cents);
+    add("total_cents", cents);
+    add("status", status);
+    add("address", address);
+    add("quartier", quartier);
+    add("street", street);
+    add("building", building);
+    add("landmark", landmark);
+    add("delivery_window", deliveryWindow);
+    add("courier_notes", courierNotes);
+    add("region_id", regionId);
+    add(
       "cross_sell_slug",
       patch.cross_sell_slug !== undefined || patch.bundle_enabled !== undefined ? crossSlug : row.cross_sell_slug,
     );
-    if (cols.has("cross_sell_price_cents") && (patch.cross_sell_slug !== undefined || patch.bundle_enabled !== undefined)) {
-      values.push(crossCents ?? 0);
-      assignments.push(`cross_sell_price_cents = COALESCE($${values.length}, cross_sell_price_cents)`);
+    if (patch.cross_sell_slug !== undefined || patch.bundle_enabled !== undefined) {
+      add("cross_sell_price_cents", crossCents ?? 0, "coalesce");
     }
-    put("bundle_enabled", bundleEnabled);
-    put("secondary_qty", secondaryQty);
-    if (cols.size === 0 || cols.has("updated_at")) assignments.push("updated_at = now()");
-    if (assignments.length === 0) {
-      throw new Error("update_failed");
+    add("bundle_enabled", bundleEnabled);
+    add("secondary_qty", secondaryQty);
+    add("updated_at", undefined, "now");
+
+    let working = sets.filter((item) => item.column !== "updated_at" || allow("updated_at"));
+    if (working.length === 0) throw new Error("update_failed");
+    let workingCols = new Set(cols);
+    let truncated = false;
+    let saved: OrderRow | undefined;
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+      const built = buildUpdate(orderId, working, workingCols);
+      try {
+        const updated = await client.query<OrderRow>(built.sql, built.values);
+        saved = updated.rows[0];
+        break;
+      } catch (err) {
+        const code = pgCode(err);
+        const missing = missingColumnName(err);
+        if (code === "42703" && missing) {
+          working = working.filter((item) => item.column !== missing);
+          workingCols.delete(missing);
+          if (working.length === 0) throw err;
+          continue;
+        }
+        if (code === "22001" && !truncated) {
+          truncated = true;
+          working = working.map((item) =>
+            typeof item.value === "string" ? { ...item, value: item.value.slice(0, 80) } : item,
+          );
+          continue;
+        }
+        const core = working.filter((item) => CORE_UPDATE_COLS.has(item.column) || item.column === "address");
+        if (core.length && core.length < working.length) {
+          working = core;
+          continue;
+        }
+        throw err;
+      }
     }
-    const statusAssign = assignments.find((part) => part.startsWith("status = "));
-    const statusParam = statusAssign ? statusAssign.slice(statusAssign.indexOf("$")) : "";
-    const stamp = statusParam ? stampFragment(cols, statusParam) : "";
-    const updated = await client.query<OrderRow>(
-      `UPDATE orders SET ${assignments.join(", ")}${stamp} WHERE id = $1 RETURNING *`,
-      values,
-    );
-    await client.query("COMMIT");
-    const saved = updated.rows[0];
     if (!saved) return null;
     try {
       await client.query(
@@ -493,9 +549,6 @@ export async function updateAdminOrder(
       console.error("admin_order_items_update_skipped", err);
     }
     return serialize(saved);
-  } catch (err) {
-    await client.query("ROLLBACK").catch(() => undefined);
-    throw err;
   } finally {
     client.release();
   }
