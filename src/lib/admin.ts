@@ -1,5 +1,7 @@
 export type AdminStatus = "new" | "confirmed" | "shipped" | "delivered" | "cancelled";
 
+export type DeliveryWindow = "anytime" | "morning" | "afternoon" | "weekend";
+
 export type AdminOrder = {
   order_id: string;
   created_at: string | null;
@@ -16,6 +18,13 @@ export type AdminOrder = {
   currency: string;
   status: AdminStatus;
   raw_status: string;
+  address: string | null;
+  quartier: string | null;
+  street: string | null;
+  building: string | null;
+  landmark: string | null;
+  delivery_window: DeliveryWindow | null;
+  courier_notes: string | null;
 };
 
 export type AdminStats = {
@@ -139,9 +148,13 @@ export function telHref(phone: string) {
   return d ? `tel:+${d}` : `tel:${phone}`;
 }
 
-export function waHref(phone: string, name: string) {
+export function waHref(phone: string, name: string, product?: string, city?: string) {
   const d = whatsappDigits(phone);
-  const text = encodeURIComponent(`السلام عليكم ${name}، معكم شيفا جلو بخصوص طلبكم.`);
+  const productBit = product ? ` ديال ${product}` : "";
+  const cityBit = city ? ` للمدينة ديال ${city}` : "";
+  const text = encodeURIComponent(
+    `السلام عليكم ${name}، معكم شيفا جلو. بغينا نأكدو طلبية${productBit}${cityBit}. واش تقدرو تؤكدو لينا العنوان ووقت التوصيل؟ شكرا.`,
+  );
   return `https://wa.me/${d}?text=${text}`;
 }
 
@@ -161,6 +174,13 @@ export function ordersToCsv(orders: AdminOrder[]) {
     "Pack",
     "Total MAD",
     "Status",
+    "Address",
+    "Quartier",
+    "Street",
+    "Building",
+    "Landmark",
+    "Delivery Window",
+    "Courier Notes",
   ];
   const lines = [
     header.join(","),
@@ -174,6 +194,13 @@ export function ordersToCsv(orders: AdminOrder[]) {
         csvCell(o.pack_label),
         csvCell(o.total),
         csvCell(statusMeta(o.status).label),
+        csvCell(o.address || ""),
+        csvCell(o.quartier || ""),
+        csvCell(o.street || ""),
+        csvCell(o.building || ""),
+        csvCell(o.landmark || ""),
+        csvCell(o.delivery_window || ""),
+        csvCell(o.courier_notes || ""),
       ].join(","),
     ),
   ];

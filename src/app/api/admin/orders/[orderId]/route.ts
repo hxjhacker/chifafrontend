@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import type { AdminStatus } from "@/lib/admin";
+import type { AdminStatus, DeliveryWindow } from "@/lib/admin";
 import { requireAdmin } from "@/lib/admin-auth";
 import { deleteAdminOrder, updateAdminOrder } from "@/lib/server/admin-orders";
 
@@ -7,6 +7,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const ALLOWED: AdminStatus[] = ["new", "confirmed", "shipped", "delivered", "cancelled"];
+const WINDOWS: DeliveryWindow[] = ["anytime", "morning", "afternoon", "weekend"];
 
 type PatchBody = {
   status?: AdminStatus;
@@ -16,6 +17,12 @@ type PatchBody = {
   product_slug?: string;
   tier_qty?: number;
   total_mad?: number;
+  quartier?: string;
+  street?: string;
+  building?: string;
+  landmark?: string;
+  delivery_window?: DeliveryWindow;
+  courier_notes?: string;
 };
 
 export async function PATCH(request: Request, ctx: { params: Promise<{ orderId: string }> }) {
@@ -33,6 +40,9 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ orderId: 
   if (body.status && !ALLOWED.includes(body.status)) {
     return NextResponse.json({ detail: "invalid_status" }, { status: 422 });
   }
+  if (body.delivery_window && !WINDOWS.includes(body.delivery_window)) {
+    return NextResponse.json({ detail: "invalid_delivery_window" }, { status: 422 });
+  }
 
   try {
     const order = await updateAdminOrder(orderId, body);
@@ -40,7 +50,9 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ orderId: 
     return NextResponse.json(order);
   } catch (err) {
     const message = err instanceof Error ? err.message : "update_failed";
-    const status = ["invalid_name", "invalid_ma_phone", "invalid_price", "invalid_status"].includes(message) ? 422 : 500;
+    const status = ["invalid_name", "invalid_ma_phone", "invalid_price", "invalid_status", "invalid_delivery_window"].includes(message)
+      ? 422
+      : 500;
     if (status === 500) console.error("admin_status_failed", err);
     return NextResponse.json({ detail: message }, { status });
   }

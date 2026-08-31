@@ -10,20 +10,21 @@ type Props = {
   stats: RegionStat[];
   hideNumbers: boolean;
   onToggleNumbers: () => void;
+  className?: string;
 };
 
-export function MoroccoMap({ stats, hideNumbers, onToggleNumbers }: Props) {
+export function MoroccoMap({ stats, hideNumbers, onToggleNumbers, className }: Props) {
   const [active, setActive] = useState<RegionStat | null>(null);
   const [zoom, setZoom] = useState(1);
 
   const byName = useMemo(() => new Map(stats.map((s) => [s.name, s])), [stats]);
 
   function select(name: string) {
-    setActive(byName.get(name) || { name, total: 0, confirmed: 0, unconfirmed: 0 });
+    setActive(byName.get(name) || { id: "", name, total: 0, confirmed: 0, unconfirmed: 0 });
   }
 
   return (
-    <div className="relative flex flex-col justify-between overflow-hidden rounded-3xl border border-gold/20 bg-white p-6 shadow-luxury dark:bg-cardDark lg:col-span-5">
+    <div className={cn("relative flex flex-col justify-between overflow-hidden rounded-3xl border border-gold/20 bg-white p-6 shadow-luxury dark:bg-cardDark", className)}>
       <div className="mb-2 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <h3 className="text-base font-black text-royal dark:text-white">الخرائط</h3>
@@ -75,7 +76,10 @@ export function MoroccoMap({ stats, hideNumbers, onToggleNumbers }: Props) {
           <div className="mb-2 flex items-center justify-between border-b border-gold/10 pb-2">
             <div className="flex items-center gap-2">
               <span className="h-2.5 w-2.5 animate-ping rounded-full bg-emeraldCustom" />
-              <h4 className="text-xs font-black text-royal dark:text-white">جهة {active?.name}</h4>
+              <div>
+                <h4 className="text-xs font-black text-royal dark:text-white">جهة {active?.name}</h4>
+                {active?.id ? <span className="text-[10px] font-bold text-gold">{active.id}</span> : null}
+              </div>
             </div>
             <button type="button" onClick={() => setActive(null)} className="text-xs text-royal/40 hover:text-rose-500 dark:text-slate-400">
               <X className="h-3.5 w-3.5" />

@@ -46,7 +46,13 @@ CREATE TABLE IF NOT EXISTS orders (
   phone varchar(20) NOT NULL,
   phone_national varchar(20) NOT NULL DEFAULT '',
   city varchar(80) NOT NULL,
-  address varchar(240),
+  address varchar(500),
+  quartier varchar(120),
+  street varchar(160),
+  building varchar(80),
+  landmark varchar(160),
+  delivery_window varchar(32),
+  courier_notes text,
   product_slug varchar(64) NOT NULL,
   tier_qty integer NOT NULL,
   tier_price_cents integer NOT NULL,
@@ -97,7 +103,14 @@ CREATE TABLE IF NOT EXISTS tracking_events (
 );
 CREATE INDEX IF NOT EXISTS ix_tracking_events_event_id ON tracking_events (event_id);
 
-ALTER TABLE orders ADD COLUMN IF NOT EXISTS address varchar(240);
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS address varchar(500);
+ALTER TABLE orders ALTER COLUMN address TYPE varchar(500);
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS quartier varchar(120);
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS street varchar(160);
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS building varchar(80);
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS landmark varchar(160);
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_window varchar(32);
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS courier_notes text;
 ALTER TABLE orders ALTER COLUMN upsell_price_cents SET DEFAULT 0;
 ALTER TABLE orders ALTER COLUMN cross_sell_price_cents SET DEFAULT 0;
 ALTER TABLE orders ALTER COLUMN phone_national SET DEFAULT '';

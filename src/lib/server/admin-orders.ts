@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { AdminOrder, AdminStats, AdminStatus } from "@/lib/admin";
+import type { AdminOrder, AdminStats, AdminStatus, DeliveryWindow } from "@/lib/admin";
 import { displayStatus, packLabel } from "@/lib/admin";
 import { ensureSchema, getPool } from "./db";
 
@@ -17,9 +17,37 @@ type OrderRow = {
   currency: string;
   status: string;
   created_at: Date;
+  address: string | null;
+  quartier: string | null;
+  street: string | null;
+  building: string | null;
+  landmark: string | null;
+  delivery_window: string | null;
+  courier_notes: string | null;
 };
 
 const ALLOWED: AdminStatus[] = ["new", "confirmed", "shipped", "delivered", "cancelled"];
+const WINDOWS: DeliveryWindow[] = ["anytime", "morning", "afternoon", "weekend"];
+const ORDER_COLS = `id, full_name, phone, phone_national, city, address, quartier, street, building, landmark,
+      delivery_window, courier_notes, product_slug, tier_qty, cross_sell_slug, upsell_slug, total_cents, currency, status, created_at`;
+
+function asWindow(value: string | null | undefined): DeliveryWindow | null {
+  if (!value) return null;
+  return WINDOWS.includes(value as DeliveryWindow) ? (value as DeliveryWindow) : null;
+}
+
+function composeAddress(parts: {
+  quartier: string | null;
+  street: string | null;
+  building: string | null;
+  landmark: string | null;
+  city: string;
+}) {
+  const bits = [parts.quartier, parts.street, parts.building, parts.landmark, parts.city]
+    .map((v) => (v || "").trim())
+    .filter(Boolean);
+  return bits.join("، ") || null;
+}
 
 function serialize(row: OrderRow): AdminOrder {
   const created = row.created_at instanceof Date ? row.created_at.toISOString() : String(row.created_at || "");
@@ -39,6 +67,13 @@ function serialize(row: OrderRow): AdminOrder {
     currency: row.currency || "MAD",
     status: displayStatus(row.status),
     raw_status: row.status,
+    address: row.address || null,
+    quartier: row.quartier || null,
+    street: row.street || null,
+    building: row.building || null,
+    landmark: row.landmark || null,
+    delivery_window: asWindow(row.delivery_window),
+    courier_notes: row.courier_notes || null,
   };
 }
 
@@ -71,8 +106,7 @@ export async function listAdminOrders(filters: { q?: string; city?: string; stat
   }
 
   params.push(limit);
-  const sql = `SELECT id, full_name, phone, phone_national, city, product_slug, tier_qty,
-      cross_sell_slug, upsell_slug, total_cents, currency, status, created_at
+  const sql = `SELECT ${ORDER_COLS}
     FROM orders
     ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
     ORDER BY created_at DESC
@@ -153,6 +187,12 @@ export async function updateAdminOrder(
     product_slug?: string;
     tier_qty?: number;
     total_mad?: number;
+    quartier?: string;
+    street?: string;
+    building?: string;
+    landmark?: string;
+    delivery_window?: DeliveryWindow | string;
+    courier_notes?: string;
   },
 ): Promise<AdminOrder | null> {
   const fields = Object.entries(patch).filter(([, value]) => value !== undefined);
@@ -163,8 +203,7 @@ export async function updateAdminOrder(
     try {
       const result = await client.query<OrderRow>(
         `UPDATE orders SET status = $2, updated_at = now() WHERE id = $1
-         RETURNING id, full_name, phone, phone_national, city, product_slug, tier_qty,
-           cross_sell_slug, upsell_slug, total_cents, currency, status, created_at`,
+         RETURNING ${ORDER_COLS}`,
         [orderId, patch.status],
       );
       const row = result.rows[0];
@@ -178,9 +217,7 @@ export async function updateAdminOrder(
   const client = await getPool().connect();
   try {
     const current = await client.query<OrderRow>(
-      `SELECT id, full_name, phone, phone_national, city, product_slug, tier_qty,
-         cross_sell_slug, upsell_slug, total_cents, currency, status, created_at
-       FROM orders WHERE id = $1`,
+      `SELECT ${ORDER_COLS} FROM orders WHERE id = $1`,
       [orderId],
     );
     const row = current.rows[0];
@@ -194,6 +231,12 @@ export async function updateAdminOrder(
     let qty = row.tier_qty;
     let cents = Number(row.total_cents);
     let status = displayStatus(row.status);
+    let quartier = row.quartier;
+    let street = row.street;
+    let building = row.building;
+    let landmark = row.landmark;
+    let deliveryWindow = row.delivery_window;
+    let courierNotes = row.courier_notes;
 
     if (patch.full_name !== undefined) {
       fullName = patch.full_name.trim();
@@ -222,17 +265,46 @@ export async function updateAdminOrder(
       if (!ALLOWED.includes(patch.status)) throw new Error("invalid_status");
       status = patch.status;
     }
+    if (patch.quartier !== undefined) quartier = patch.quartier.trim() || null;
+    if (patch.street !== undefined) street = patch.street.trim() || null;
+    if (patch.building !== undefined) building = patch.building.trim() || null;
+    if (patch.landmark !== undefined) landmark = patch.landmark.trim() || null;
+    if (patch.delivery_window !== undefined) {
+      const next = String(patch.delivery_window || "").trim();
+      if (next && !WINDOWS.includes(next as DeliveryWindow)) throw new Error("invalid_delivery_window");
+      deliveryWindow = next || null;
+    }
+    if (patch.courier_notes !== undefined) courierNotes = patch.courier_notes.trim() || null;
+
+    const address = composeAddress({ quartier, street, building, landmark, city: cityAr });
 
     await client.query("BEGIN");
     const updated = await client.query<OrderRow>(
       `UPDATE orders SET
          full_name = $2, phone = $3, phone_national = $4, city = $5,
          product_slug = $6, tier_qty = $7, tier_price_cents = $8, subtotal_cents = $8, total_cents = $8,
-         status = $9, updated_at = now()
+         status = $9, address = $10, quartier = $11, street = $12, building = $13, landmark = $14,
+         delivery_window = $15, courier_notes = $16, updated_at = now()
        WHERE id = $1
-       RETURNING id, full_name, phone, phone_national, city, product_slug, tier_qty,
-         cross_sell_slug, upsell_slug, total_cents, currency, status, created_at`,
-      [orderId, fullName, phone, phoneNational, cityAr, slug, qty, cents, status],
+       RETURNING ${ORDER_COLS}`,
+      [
+        orderId,
+        fullName,
+        phone,
+        phoneNational,
+        cityAr,
+        slug,
+        qty,
+        cents,
+        status,
+        address,
+        quartier,
+        street,
+        building,
+        landmark,
+        deliveryWindow,
+        courierNotes,
+      ],
     );
     await client.query(
       `UPDATE order_items SET product_slug = $2, quantity = $3, unit_price_cents = $4, line_total_cents = $5
@@ -302,8 +374,7 @@ export async function createAdminOrder(input: {
          currency, status, payment_method, event_id, source, created_at, updated_at
        ) VALUES (
          $1,$2,$3,$4,$5,NULL,$6,$7,$8,NULL,0,NULL,0,$8,$8,'MAD',$9,'COD',$10,'admin', now(), now()
-       ) RETURNING id, full_name, phone, phone_national, city, product_slug, tier_qty,
-         cross_sell_slug, upsell_slug, total_cents, currency, status, created_at`,
+       ) RETURNING ${ORDER_COLS}`,
       [orderId, fullName, e164, national, city.ar, slug, qty, cents, input.status, eventId],
     );
     await client.query(

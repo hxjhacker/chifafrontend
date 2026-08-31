@@ -1,3 +1,5 @@
+import { bestFuzzyMatch } from "@/lib/fuzzy";
+
 export type City = { ar: string; fr: string; aliases: string[] };
 
 export const CITIES: City[] = [
@@ -84,6 +86,13 @@ export const CITIES: City[] = [
   { ar: "بوسكورة", fr: "Bouskoura", aliases: ["bouskoura"] },
   { ar: "مديونة", fr: "Mediouna", aliases: ["mediouna"] },
   { ar: "النواصر", fr: "Nouaceur", aliases: ["nouaceur"] },
+  { ar: "إيموزار كندر", fr: "Imouzzer Kandar", aliases: ["imouzzer", "imouzzer kandar", "inouzer", "inouuzer kbdr", "imozer"] },
+  { ar: "قصبة تادلة", fr: "Kasba Tadla", aliases: ["kasba tadla", "kasbat tadla"] },
+  { ar: "الريصاني", fr: "Rissani", aliases: ["rissani"] },
+  { ar: "تافراوت", fr: "Tafraout", aliases: ["tafraout"] },
+  { ar: "عين عودة", fr: "Ain Aouda", aliases: ["ain aouda"] },
+  { ar: "سلا الجديدة", fr: "Sala Al Jadida", aliases: ["sala al jadida"] },
+  { ar: "الداخلة الجديدة", fr: "Dakhla Centre", aliases: [] },
 ];
 
 function norm(value: string) {
@@ -114,6 +123,8 @@ export function resolveCity(raw: string): { ar: string; fr: string } {
     }
   }
 
+  const fuzzy = bestFuzzyMatch(raw, CITIES, (c) => [c.ar, c.fr, ...c.aliases], 0.6);
+  if (fuzzy) return { ar: fuzzy.ar, fr: fuzzy.fr };
   return fallback;
 }
 

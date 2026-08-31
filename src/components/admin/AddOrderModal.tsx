@@ -136,9 +136,7 @@ export function AddOrderModal({ open, editing, onClose, onCreated, onUpdated }: 
               {isEdit ? <Pencil className="h-4 w-4" /> : <ShoppingCart className="h-4 w-4" />}
             </div>
             <div>
-              <h3 className="text-sm font-black text-royal dark:text-white">
-                {isEdit ? "تعديل الطلبية" : "إضافة طلبية جديدة (واتساب / هاتف)"}
-              </h3>
+              <h3 className="text-sm font-black text-royal dark:text-white">إضافة طلبية جديدة</h3>
               <p className="text-[11px] text-royal/60 dark:text-slate-400">
                 {isEdit ? "تحديث بيانات الزبون والمنتج والحالة" : "إدخال طلب يدوي وتحديث الجدول والإحصائيات مباشرة"}
               </p>

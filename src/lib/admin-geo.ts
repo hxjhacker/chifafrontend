@@ -1,4 +1,5 @@
-import { resolveCity } from "@/lib/cities";
+import { CITIES, resolveCity } from "@/lib/cities";
+import { bestFuzzyMatch } from "@/lib/fuzzy";
 
 export const MANUAL_PRODUCTS = [
   { id: "quran", label: "USB القرآن الكريم كامل", price: 199, slug: "quran", qty: 1 },
@@ -10,21 +11,21 @@ export const MANUAL_PRODUCTS = [
 export const CITY_CHART_COLORS = ["#84bfce", "#e3fb71", "#d050cf", "#6ece55", "#4eaff7", "#22df36", "#f59e0b", "#e11d48", "#0A192F", "#D4AF37"];
 
 export const MOROCCO_REGIONS = [
-  { name: "طنجة - تطوان - الحسيمة", cities: ["طنجة", "تطوان", "الحسيمة", "العرائش", "القصر الكبير", "شفشاون", "وزان", "أصيلة", "الفنيدق", "المضيق", "مرتيل"] },
-  { name: "الشرق", cities: ["وجدة", "الناظور", "بركان", "تاوريرت", "جرسيف", "جرادة", "الدريوش", "زايو"] },
-  { name: "فاس - مكناس", cities: ["فاس", "مكناس", "تازة", "صفرو", "إفران", "أزرو", "الحاجب", "تاونات"] },
-  { name: "الرباط - سلا - القنيطرة", cities: ["الرباط", "سلا", "تمارة", "القنيطرة", "سيدي قاسم", "سيدي سليمان", "تيفلت", "الخميسات", "الصخيرات", "سوق الأربعاء"] },
-  { name: "بني ملال - خنيفرة", cities: ["بني ملال", "خريبكة", "خنيفرة", "أزيلال", "الفقيه بن صالح", "وادي زم", "ميدلت"] },
-  { name: "الدار البيضاء - سطات", cities: ["الدار البيضاء", "المحمدية", "سطات", "برشيد", "الجديدة", "بنسليمان", "بوزنيقة", "سيدي بنور", "عين حرودة", "بوسكورة"] },
-  { name: "مراكش - آسفي", cities: ["مراكش", "آسفي", "الصويرة", "قلعة السراغنة", "شيشاوة", "اليوسفية"] },
-  { name: "درعة - تافيلالت", cities: ["الرشيدية", "ورزازات", "زاكورة", "تنغير", "أرفود", "كلميمة", "الريش"] },
-  { name: "سوس - ماسة", cities: ["أكادير", "تارودانت", "إنزكان", "أيت ملول", "تيزنيت", "أولاد تايمة", "بيوكرى"] },
-  { name: "كلميم - واد نون", cities: ["كلميم", "طانطان", "سيدي إفني"] },
-  { name: "العيون - الساقية الحمراء", cities: ["العيون", "بوجدور", "السمارة"] },
-  { name: "الداخلة - وادي الذهب", cities: ["الداخلة"] },
+  { id: "MA01", name: "طنجة - تطوان - الحسيمة", cities: ["طنجة", "تطوان", "الحسيمة", "العرائش", "القصر الكبير", "شفشاون", "وزان", "أصيلة", "الفنيدق", "المضيق", "مرتيل"] },
+  { id: "MA02", name: "الشرق", cities: ["وجدة", "الناظور", "بركان", "تاوريرت", "جرسيف", "جرادة", "الدريوش", "زايو"] },
+  { id: "MA03", name: "فاس - مكناس", cities: ["فاس", "مكناس", "تازة", "صفرو", "إفران", "أزرو", "الحاجب", "تاونات", "إيموزار كندر"] },
+  { id: "MA04", name: "الرباط - سلا - القنيطرة", cities: ["الرباط", "سلا", "تمارة", "القنيطرة", "سيدي قاسم", "سيدي سليمان", "تيفلت", "الخميسات", "الصخيرات", "سوق الأربعاء", "عين عودة", "سلا الجديدة"] },
+  { id: "MA05", name: "بني ملال - خنيفرة", cities: ["بني ملال", "خريبكة", "خنيفرة", "أزيلال", "الفقيه بن صالح", "وادي زم", "ميدلت", "قصبة تادلة"] },
+  { id: "MA06", name: "الدار البيضاء - سطات", cities: ["الدار البيضاء", "المحمدية", "سطات", "برشيد", "الجديدة", "بنسليمان", "بوزنيقة", "سيدي بنور", "عين حرودة", "بوسكورة", "مديونة", "النواصر"] },
+  { id: "MA07", name: "مراكش - آسفي", cities: ["مراكش", "آسفي", "الصويرة", "قلعة السراغنة", "شيشاوة", "اليوسفية"] },
+  { id: "MA08", name: "درعة - تافيلالت", cities: ["الرشيدية", "ورزازات", "زاكورة", "تنغير", "أرفود", "كلميمة", "الريش", "الريصاني"] },
+  { id: "MA09", name: "سوس - ماسة", cities: ["أكادير", "تارودانت", "إنزكان", "أيت ملول", "تيزنيت", "أولاد تايمة", "بيوكرى", "تافراوت"] },
+  { id: "MA10", name: "كلميم - واد نون", cities: ["كلميم", "طانطان", "سيدي إفني"] },
+  { id: "MA11", name: "العيون - الساقية الحمراء", cities: ["العيون", "بوجدور", "السمارة"] },
+  { id: "MA12", name: "الداخلة - وادي الذهب", cities: ["الداخلة", "الداخلة الجديدة"] },
 ] as const;
 
-export type RegionStat = { name: string; total: number; confirmed: number; unconfirmed: number };
+export type RegionStat = { id: string; name: string; total: number; confirmed: number; unconfirmed: number };
 
 const CITY_TO_REGION = new Map<string, string>();
 for (const region of MOROCCO_REGIONS) {
@@ -35,29 +36,33 @@ export function regionForCity(city: string) {
   const resolved = resolveCity(city).ar;
   if (CITY_TO_REGION.has(resolved)) return CITY_TO_REGION.get(resolved)!;
   if (CITY_TO_REGION.has(city)) return CITY_TO_REGION.get(city)!;
-  const n = (city || "").trim().toLowerCase();
-  for (const region of MOROCCO_REGIONS) {
-    if (region.cities.some((c) => n.includes(c.toLowerCase()) || c.toLowerCase().includes(n))) return region.name;
-  }
+
+  const fuzzyCity = bestFuzzyMatch(city, CITIES, (c) => [c.ar, c.fr, ...c.aliases], 0.6);
+  if (fuzzyCity && CITY_TO_REGION.has(fuzzyCity.ar)) return CITY_TO_REGION.get(fuzzyCity.ar)!;
+
+  const regionHit = bestFuzzyMatch(
+    city,
+    [...MOROCCO_REGIONS],
+    (region) => [...region.cities, region.name],
+    0.6,
+  );
+  if (regionHit) return regionHit.name;
+
   return "الدار البيضاء - سطات";
 }
 
 export function buildRegionStats(orders: { city: string; status: string }[]): RegionStat[] {
   const map = new Map<string, RegionStat>();
   for (const region of MOROCCO_REGIONS) {
-    map.set(region.name, { name: region.name, total: 0, confirmed: 0, unconfirmed: 0 });
+    map.set(region.name, { id: region.id, name: region.name, total: 0, confirmed: 0, unconfirmed: 0 });
   }
   for (const order of orders) {
     const name = regionForCity(order.city);
     const row = map.get(name);
     if (!row) continue;
     row.total += 1;
-    if (order.status === "cancelled") row.unconfirmed += 1;
-    else if (order.status === "new") {
-      /* pending confirmation — count in total only */
-    } else {
-      row.confirmed += 1;
-    }
+    if (order.status === "cancelled" || order.status === "new") row.unconfirmed += 1;
+    else row.confirmed += 1;
   }
   return MOROCCO_REGIONS.map((r) => map.get(r.name)!);
 }
