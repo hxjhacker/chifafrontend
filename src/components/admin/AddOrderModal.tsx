@@ -5,6 +5,8 @@ import { Pencil, Plus, ShoppingCart, X } from "lucide-react";
 import { CITIES } from "@/lib/cities";
 import { MANUAL_PRODUCTS } from "@/lib/admin-geo";
 import { copyablePhone, type AdminOrder, type AdminStatus } from "@/lib/admin";
+import { digitsOnly, isTenDigitMaPhone } from "@/lib/phone";
+import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import { cn } from "@/lib/cn";
 
 type ProductId = (typeof MANUAL_PRODUCTS)[number]["id"] | string;
@@ -31,6 +33,13 @@ function productFromOrder(order: AdminOrder | null | undefined) {
   return MANUAL_PRODUCTS.find((p) => p.slug === order.product_slug) || MANUAL_PRODUCTS[0];
 }
 
+function nationalTenDigits(raw: string) {
+  let digits = digitsOnly(raw);
+  if (digits.startsWith("00212")) digits = digits.slice(2);
+  if (digits.startsWith("212") && digits.length >= 12) digits = `0${digits.slice(3)}`;
+  return digits;
+}
+
 export function AddOrderModal({ open, editing, onClose, onCreated, onUpdated }: Props) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -40,17 +49,27 @@ export function AddOrderModal({ open, editing, onClose, onCreated, onUpdated }: 
   const [status, setStatus] = useState<AdminStatus>("confirmed");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [phoneTouched, setPhoneTouched] = useState(false);
+  useLockBodyScroll(open);
 
   const isEdit = Boolean(editing);
   const product = MANUAL_PRODUCTS.find((p) => p.id === productId) || productFromOrder(editing);
+  const phoneDigits = digitsOnly(phone);
+  const phoneLengthError = phoneTouched && phoneDigits.length !== 10;
+  const phoneError = phoneLengthError
+    ? "رقم الهاتف يجب أن يتكون من 10 أرقام بالضبط"
+    : phoneTouched && phoneDigits.length === 10 && !isTenDigitMaPhone(phone)
+      ? "رقم الهاتف المغربي غير صالح."
+      : "";
 
   useEffect(() => {
     if (!open) return;
     setError("");
+    setPhoneTouched(false);
     if (editing) {
       const matched = productFromOrder(editing);
       setName(editing.full_name);
-      setPhone(copyablePhone(editing));
+      setPhone(nationalTenDigits(copyablePhone(editing)));
       setCity(editing.city);
       setProductId(matched.id);
       setPrice(Math.round(editing.total));
@@ -73,6 +92,15 @@ export function AddOrderModal({ open, editing, onClose, onCreated, onUpdated }: 
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setPhoneTouched(true);
+    if (phoneDigits.length !== 10) {
+      setError("رقم الهاتف يجب أن يتكون من 10 أرقام بالضبط");
+      return;
+    }
+    if (!isTenDigitMaPhone(phone)) {
+      setError("رقم الهاتف المغربي غير صالح.");
+      return;
+    }
     setError("");
     setSaving(true);
     try {
@@ -117,8 +145,9 @@ export function AddOrderModal({ open, editing, onClose, onCreated, onUpdated }: 
 
   return (
     <div
+      id="add-order-modal"
       className={cn(
-        "fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm transition-all duration-300",
+        "fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/60 p-3 backdrop-blur-sm transition-all duration-300 sm:p-4",
         open ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0",
       )}
       aria-hidden={!open}
@@ -126,7 +155,7 @@ export function AddOrderModal({ open, editing, onClose, onCreated, onUpdated }: 
     >
       <div
         className={cn(
-          "relative w-full max-w-lg rounded-3xl border-2 border-gold/40 bg-white p-6 shadow-2xl transition-all duration-300 dark:bg-cardDark",
+          "relative my-auto w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl border-2 border-gold/40 bg-white p-5 shadow-2xl transition-all duration-300 dark:bg-cardDark sm:p-6",
           open ? "scale-100" : "scale-95",
         )}
         onClick={(e) => e.stopPropagation()}
@@ -165,18 +194,30 @@ export function AddOrderModal({ open, editing, onClose, onCreated, onUpdated }: 
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="mb-1 block font-bold text-royal/80 dark:text-slate-200">رقم الهاتف *</label>
               <input
                 type="tel"
+                inputMode="numeric"
+                autoComplete="tel-national"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={(e) => {
+                  setPhone(nationalTenDigits(e.target.value));
+                  setPhoneTouched(true);
+                }}
+                onBlur={() => setPhoneTouched(true)}
                 required
+                maxLength={15}
                 dir="ltr"
                 placeholder="06XXXXXXXX"
-                className="w-full rounded-xl border border-gold/20 bg-cream px-3.5 py-2.5 text-left font-mono text-royal placeholder-royal/30 transition focus:border-gold focus:outline-none dark:bg-brandDark dark:text-white dark:placeholder-slate-500"
+                aria-invalid={Boolean(phoneError)}
+                className={cn(
+                  "w-full rounded-xl border bg-cream px-3.5 py-2.5 text-left font-mono text-royal placeholder-royal/30 transition focus:outline-none dark:bg-brandDark dark:text-white dark:placeholder-slate-500",
+                  phoneError ? "border-rose-400 focus:border-rose-500" : "border-gold/20 focus:border-gold",
+                )}
               />
+              {phoneError ? <p className="mt-1 font-bold text-rose-500">{phoneError}</p> : null}
             </div>
             <div>
               <label className="mb-1 block font-bold text-royal/80 dark:text-slate-200">المدينة *</label>

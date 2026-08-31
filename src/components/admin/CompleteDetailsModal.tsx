@@ -6,6 +6,7 @@ import { CITIES } from "@/lib/cities";
 import { copyablePhone, shortOrderRef, type AdminOrder } from "@/lib/admin";
 import { MOROCCO_REGIONS, regionIdForCity } from "@/lib/admin-geo";
 import { IosSwitch } from "@/components/admin/IosSwitch";
+import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import { cn } from "@/lib/cn";
 
 type Props = {
@@ -47,6 +48,7 @@ export function CompleteDetailsModal({ open, order, onClose, onSaved }: Props) {
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  useLockBodyScroll(open);
 
   const primary = PRIMARY_PRODUCTS.find((p) => p.slug === primarySlug) || PRIMARY_PRODUCTS[0];
   const secondary = SECONDARY_PRODUCTS.find((p) => p.slug === secondarySlug) || SECONDARY_PRODUCTS[0];
@@ -178,7 +180,7 @@ export function CompleteDetailsModal({ open, order, onClose, onSaved }: Props) {
     <div
       id="order-confirm-modal"
       className={cn(
-        "fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm transition-all duration-300",
+        "fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/80 p-3 backdrop-blur-sm transition-all duration-300 sm:p-4",
         open ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0",
       )}
       aria-hidden={!open}
@@ -186,7 +188,7 @@ export function CompleteDetailsModal({ open, order, onClose, onSaved }: Props) {
     >
       <div
         className={cn(
-          "custom-scrollbar relative max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-3xl border border-[#1e293b] bg-[#0b1322] p-6 text-white shadow-2xl transition-all duration-300",
+          "custom-scrollbar relative my-auto max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl border border-[#1e293b] bg-[#0b1322] p-5 text-white shadow-2xl transition-all duration-300 sm:p-6",
           open ? "scale-100" : "scale-95",
         )}
         onClick={(e) => e.stopPropagation()}

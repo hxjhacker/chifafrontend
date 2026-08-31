@@ -15,6 +15,7 @@ import {
   type AdminStatus,
 } from "@/lib/admin";
 import { regionNameForId } from "@/lib/admin-geo";
+import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import { cn } from "@/lib/cn";
 
 type Props = {
@@ -86,6 +87,7 @@ function stageStamp(order: AdminOrder, stage: (typeof STAGES)[number]["id"] | "c
 }
 
 export function OrderTimelineModal({ order, onClose, onEdit }: Props) {
+  useLockBodyScroll(Boolean(order));
   useEffect(() => {
     if (!order) return;
     function onKey(e: KeyboardEvent) {
@@ -108,11 +110,11 @@ export function OrderTimelineModal({ order, onClose, onEdit }: Props) {
   return (
     <div
       id="order-timeline-modal"
-      className="fixed inset-0 z-[60] flex items-stretch justify-end bg-black/70 p-0 backdrop-blur-sm sm:items-center sm:justify-center sm:p-4"
+      className="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-black/70 p-3 backdrop-blur-sm sm:p-4"
       onClick={onClose}
     >
       <div
-        className="custom-scrollbar relative flex h-full w-full max-w-xl flex-col overflow-y-auto border-[#1e293b] bg-[#0b1322] text-white shadow-2xl sm:h-auto sm:max-h-[92vh] sm:rounded-3xl sm:border"
+        className="custom-scrollbar relative my-auto flex max-h-[90vh] w-full max-w-xl flex-col overflow-y-auto rounded-3xl border border-[#1e293b] bg-[#0b1322] text-white shadow-2xl"
         onClick={(e) => e.stopPropagation()}
         dir="rtl"
       >

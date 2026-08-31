@@ -446,16 +446,15 @@ export async function updateAdminOrder(orderId: string, patch: OrderPatch): Prom
       if (fullName.length < 3) throw new Error("invalid_name");
     }
     if (patch.phone != null && String(patch.phone).trim()) {
-      try {
-        const { normalizeMaPhone } = await import("@/lib/phone");
-        const e164 = normalizeMaPhone(String(patch.phone));
-        if (e164) {
-          phone = e164;
-          phoneNational = e164.startsWith("+212") && e164.length === 13 ? `0${e164.slice(4)}` : e164;
-        }
-      } catch (err) {
-        console.error("admin_order_phone_skipped", err);
+      const { digitsOnly, isTenDigitMaPhone, normalizeMaPhone } = await import("@/lib/phone");
+      const rawPhone = String(patch.phone);
+      if (digitsOnly(rawPhone).length !== 10 || !isTenDigitMaPhone(rawPhone)) {
+        throw new Error("invalid_ma_phone");
       }
+      const e164 = normalizeMaPhone(rawPhone);
+      if (!e164) throw new Error("invalid_ma_phone");
+      phone = e164;
+      phoneNational = e164.startsWith("+212") && e164.length === 13 ? `0${e164.slice(4)}` : e164;
     }
     if (patch.city != null && String(patch.city).trim()) {
       try {
@@ -660,9 +659,12 @@ export async function createAdminOrder(input: {
   if (!ALLOWED.includes(input.status)) throw new Error("invalid_status");
   const fullName = input.full_name.trim().slice(0, 120);
   if (fullName.length < 3) throw new Error("invalid_name");
+  const { digitsOnly, isTenDigitMaPhone, normalizeMaPhone } = await import("@/lib/phone");
+  if (digitsOnly(input.phone).length !== 10 || !isTenDigitMaPhone(input.phone)) {
+    throw new Error("invalid_ma_phone");
+  }
   let e164 = "";
   try {
-    const { normalizeMaPhone } = await import("@/lib/phone");
     e164 = normalizeMaPhone(input.phone) || "";
   } catch (err) {
     console.error("admin_create_phone_parse_failed", err);

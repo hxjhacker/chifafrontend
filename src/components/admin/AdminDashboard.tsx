@@ -48,6 +48,7 @@ import {
   type AdminStatus,
 } from "@/lib/admin";
 import { buildRegionStats, CITY_CHART_COLORS } from "@/lib/admin-geo";
+import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import { cn } from "@/lib/cn";
 import { applyTheme, resolveIsDark, THEME_STORAGE_KEY } from "@/lib/theme";
 
@@ -117,6 +118,7 @@ export function AdminDashboard() {
   const [printingId, setPrintingId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AdminOrder | null>(null);
   const [deleting, setDeleting] = useState(false);
+  useLockBodyScroll(Boolean(deleteTarget));
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [hideAll, setHideAll] = useState(false);
   const [hideOverview, setHideOverview] = useState(false);
@@ -355,8 +357,8 @@ export function AdminDashboard() {
       />
 
       {deleteTarget ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-3xl border-2 border-rose-200 bg-white p-6 shadow-2xl dark:border-rose-500/30 dark:bg-cardDark">
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/60 p-3 backdrop-blur-sm sm:p-4">
+          <div className="relative my-auto max-h-[90vh] w-full max-w-sm overflow-y-auto rounded-3xl border-2 border-rose-200 bg-white p-6 shadow-2xl dark:border-rose-500/30 dark:bg-cardDark">
             <div className="mb-4 flex items-center gap-2">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-rose-500/10 text-rose-500">
                 <Trash2 className="h-4 w-4" />
