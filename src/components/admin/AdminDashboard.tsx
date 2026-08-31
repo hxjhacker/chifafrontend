@@ -20,11 +20,13 @@ import {
   Search,
   SlidersHorizontal,
   Trash2,
+  Moon,
 } from "lucide-react";
 import { ThemeToggle, WhatsAppIcon } from "@/components/Chrome";
 import { AddOrderModal } from "@/components/admin/AddOrderModal";
 import { AdminDoughnut } from "@/components/admin/AdminDoughnut";
 import { CompleteDetailsModal } from "@/components/admin/CompleteDetailsModal";
+import { IosSwitch } from "@/components/admin/IosSwitch";
 import { MoroccoMap } from "@/components/admin/MoroccoMap";
 import {
   ADMIN_STATUSES,
@@ -44,6 +46,7 @@ import {
 } from "@/lib/admin";
 import { buildRegionStats, CITY_CHART_COLORS } from "@/lib/admin-geo";
 import { cn } from "@/lib/cn";
+import { applyTheme, resolveIsDark, THEME_STORAGE_KEY } from "@/lib/theme";
 
 const EMPTY_STATS: AdminStats = {
   revenue: 0,
@@ -66,16 +69,28 @@ const STATUS_OPTIONS: { id: AdminStatus; label: string }[] = [
   { id: "cancelled", label: "🔴 ملغاة" },
 ];
 
-const PREFS_KEY = "cg_admin_sections";
-type SectionPrefs = { overview: boolean; cities: boolean; map: boolean; table: boolean };
-const DEFAULT_PREFS: SectionPrefs = { overview: true, cities: true, map: true, table: true };
+const PREFS_KEY = "chifaglow_view_prefs";
+const LEGACY_PREFS_KEY = "cg_admin_sections";
+type SectionPrefs = { overview: boolean; cities: boolean; map: boolean; orders: boolean };
+const DEFAULT_PREFS: SectionPrefs = { overview: true, cities: true, map: true, orders: true };
+
+const SECTION_ITEMS: { key: keyof SectionPrefs; label: string }[] = [
+  { key: "overview", label: "نظرة عامة على الطلبات" },
+  { key: "cities", label: "الطرود حسب المدن" },
+  { key: "map", label: "خريطة المغرب" },
+  { key: "orders", label: "جدول الطلبات" },
+];
 
 function readPrefs(): SectionPrefs {
   try {
-    const raw = localStorage.getItem(PREFS_KEY);
+    const raw = localStorage.getItem(PREFS_KEY) || localStorage.getItem(LEGACY_PREFS_KEY);
     if (!raw) return DEFAULT_PREFS;
-    const parsed = JSON.parse(raw) as Partial<SectionPrefs>;
-    return { ...DEFAULT_PREFS, ...parsed };
+    const parsed = JSON.parse(raw) as Partial<SectionPrefs> & { table?: boolean };
+    return {
+      ...DEFAULT_PREFS,
+      ...parsed,
+      orders: parsed.orders ?? parsed.table ?? DEFAULT_PREFS.orders,
+    };
   } catch {
     return DEFAULT_PREFS;
   }
@@ -105,26 +120,51 @@ export function AdminDashboard() {
   const [showAllCities, setShowAllCities] = useState(false);
   const [prefs, setPrefs] = useState<SectionPrefs>(DEFAULT_PREFS);
   const [prefsOpen, setPrefsOpen] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
   const prefsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setPrefs(readPrefs());
+    setDarkMode(resolveIsDark());
+    function onTheme(e: Event) {
+      setDarkMode(Boolean((e as CustomEvent<{ dark: boolean }>).detail?.dark));
+    }
+    window.addEventListener("chifaglow-theme", onTheme);
+    return () => window.removeEventListener("chifaglow-theme", onTheme);
   }, []);
 
   useEffect(() => {
     function onDocClick(e: MouseEvent) {
       if (prefsRef.current && !prefsRef.current.contains(e.target as Node)) setPrefsOpen(false);
     }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setPrefsOpen(false);
+    }
     document.addEventListener("mousedown", onDocClick);
-    return () => document.removeEventListener("mousedown", onDocClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDocClick);
+      document.removeEventListener("keydown", onKey);
+    };
   }, []);
+
+  function persistPrefs(next: SectionPrefs) {
+    localStorage.setItem(PREFS_KEY, JSON.stringify(next));
+  }
 
   function toggleSection(key: keyof SectionPrefs) {
     setPrefs((prev) => {
       const next = { ...prev, [key]: !prev[key] };
-      localStorage.setItem(PREFS_KEY, JSON.stringify(next));
+      persistPrefs(next);
       return next;
     });
+  }
+
+  function toggleDarkMode() {
+    const next = !document.documentElement.classList.contains("dark");
+    applyTheme(next);
+    localStorage.setItem(THEME_STORAGE_KEY, next ? "dark" : "light");
+    setDarkMode(next);
   }
 
   const load = useCallback(async () => {
@@ -350,34 +390,50 @@ export function AdminDashboard() {
             <div className="relative" ref={prefsRef}>
               <button
                 type="button"
-                aria-label="تخصيص العرض"
+                aria-label="تخصيص الواجهة"
+                aria-expanded={prefsOpen}
                 onClick={() => setPrefsOpen((v) => !v)}
                 className="flex h-9 w-9 items-center justify-center rounded-xl border border-gold/30 bg-gold/10 text-gold-600 transition hover:bg-gold hover:text-royal md:h-auto md:w-auto md:gap-1.5 md:px-3 md:py-2 dark:text-gold"
               >
                 <SlidersHorizontal className="h-3.5 w-3.5" />
-                <span className="hidden text-xs font-bold md:inline">العرض</span>
+                <span className="hidden text-xs font-bold md:inline">تخصيص الواجهة</span>
               </button>
               {prefsOpen ? (
-                <div className="absolute left-0 top-11 z-50 w-56 rounded-2xl border border-gold/30 bg-white p-3 shadow-2xl dark:bg-cardDark">
-                  <p className="mb-2 text-[11px] font-black text-royal dark:text-white">أقسام اللوحة</p>
-                  {(
-                    [
-                      ["overview", "نظرة عامة على الطلبات"],
-                      ["cities", "الطرود حسب المدن"],
-                      ["map", "خريطة المغرب"],
-                      ["table", "جدول الطلبات"],
-                    ] as const
-                  ).map(([key, label]) => (
-                    <label key={key} className="flex cursor-pointer items-center gap-2 rounded-xl px-2 py-1.5 text-xs font-bold text-royal/80 hover:bg-gold/10 dark:text-slate-200">
-                      <input
-                        type="checkbox"
-                        checked={prefs[key]}
-                        onChange={() => toggleSection(key)}
-                        className="accent-gold"
-                      />
-                      {label}
-                    </label>
-                  ))}
+                <div
+                  role="menu"
+                  className="absolute left-0 top-11 z-50 w-64 rounded-2xl border border-gold/20 bg-[#0F1E33] p-4 text-white shadow-2xl dark:bg-[#0F1E33]"
+                >
+                  <p className="mb-3 text-sm font-black text-white">أقسام اللوحة</p>
+                  <div className="space-y-1">
+                    {SECTION_ITEMS.map((item) => (
+                      <button
+                        key={item.key}
+                        type="button"
+                        role="switch"
+                        aria-checked={prefs[item.key]}
+                        onClick={() => toggleSection(item.key)}
+                        className="flex w-full items-center justify-between gap-3 rounded-xl px-1 py-2.5 text-right transition hover:bg-white/5"
+                      >
+                        <span className="text-[13px] font-bold text-white">{item.label}</span>
+                        <IosSwitch checked={prefs[item.key]} />
+                      </button>
+                    ))}
+                  </div>
+                  <div className="mt-2 border-t border-white/10 pt-2">
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={darkMode}
+                      onClick={toggleDarkMode}
+                      className="flex w-full items-center justify-between gap-3 rounded-xl px-1 py-2.5 text-right transition hover:bg-white/5"
+                    >
+                      <span className="flex items-center gap-2 text-[13px] font-bold text-white">
+                        <Moon className="h-3.5 w-3.5 text-gold" />
+                        الوضع الداكن
+                      </span>
+                      <IosSwitch checked={darkMode} />
+                    </button>
+                  </div>
                 </div>
               ) : null}
             </div>
@@ -558,7 +614,7 @@ export function AdminDashboard() {
         </div>
         ) : null}
 
-        {prefs.table ? (
+        {prefs.orders ? (
         <>
         <div className="flex flex-col items-center justify-between gap-3 rounded-2xl border border-gold/20 bg-white p-4 shadow-luxury dark:bg-cardDark md:flex-row">
           <div className="relative w-full md:w-80">

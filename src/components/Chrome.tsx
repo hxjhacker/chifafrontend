@@ -47,7 +47,15 @@ export function ThemeToggle() {
       setDark(e.matches);
     };
     media.addEventListener("change", onPrefChange);
-    return () => media.removeEventListener("change", onPrefChange);
+    const onTheme = (e: Event) => {
+      const dark = Boolean((e as CustomEvent<{ dark: boolean }>).detail?.dark);
+      setDark(dark);
+    };
+    window.addEventListener("chifaglow-theme", onTheme);
+    return () => {
+      media.removeEventListener("change", onPrefChange);
+      window.removeEventListener("chifaglow-theme", onTheme);
+    };
   }, []);
 
   function toggle() {
