@@ -60,9 +60,10 @@ function stampReached(explicit: Date | string | null | undefined, fallback: Date
 async function existingColumns(client: PoolClient) {
   const result = await client.query<{ column_name: string }>(
     `SELECT column_name FROM information_schema.columns
-     WHERE table_schema = current_schema() AND table_name = 'orders'`,
+     WHERE table_name = 'orders'
+       AND table_schema NOT IN ('pg_catalog', 'information_schema')`,
   );
-  return new Set(result.rows.map((row) => row.column_name));
+  return new Set(result.rows.map((row) => row.column_name.toLowerCase()));
 }
 
 function stampFragment(cols: Set<string>, param: string) {
@@ -349,7 +350,7 @@ export async function updateAdminOrder(
     let secondaryQty = Math.max(1, Number(row.secondary_qty) || 1);
 
     if (patch.full_name != null) {
-      fullName = String(patch.full_name).trim().slice(0, 160);
+      fullName = String(patch.full_name).trim().slice(0, 120);
       if (fullName.length < 3) throw new Error("invalid_name");
     }
     if (patch.phone != null && String(patch.phone).trim()) {
@@ -362,7 +363,7 @@ export async function updateAdminOrder(
     }
     if (patch.city != null && String(patch.city).trim()) {
       const { resolveCity } = await import("@/lib/cities");
-      cityAr = (resolveCity(String(patch.city)).ar || String(patch.city).trim()).slice(0, 120);
+      cityAr = (resolveCity(String(patch.city)).ar || String(patch.city).trim()).slice(0, 80);
     }
     if (patch.product_slug !== undefined) {
       slug = ["quran", "kids", "music", "educative"].includes(patch.product_slug) ? patch.product_slug : slug;
@@ -380,10 +381,10 @@ export async function updateAdminOrder(
       if (!ALLOWED.includes(patch.status)) throw new Error("invalid_status");
       status = patch.status;
     }
-    if (patch.quartier !== undefined) quartier = patch.quartier.trim() || null;
-    if (patch.street !== undefined) street = patch.street.trim() || null;
-    if (patch.building !== undefined) building = patch.building.trim() || null;
-    if (patch.landmark !== undefined) landmark = patch.landmark.trim() || null;
+    if (patch.quartier != null) quartier = String(patch.quartier).trim() || null;
+    if (patch.street != null) street = String(patch.street).trim() || null;
+    if (patch.building != null) building = String(patch.building).trim() || null;
+    if (patch.landmark != null) landmark = String(patch.landmark).trim() || null;
     if (patch.delivery_window !== undefined) {
       const next = String(patch.delivery_window || "").trim();
       if (next && !WINDOWS.includes(next as DeliveryWindow)) throw new Error("invalid_delivery_window");
@@ -436,7 +437,7 @@ export async function updateAdminOrder(
     const values: unknown[] = [orderId];
     const assignments: string[] = [];
     const put = (column: string, value: unknown) => {
-      if (!cols.has(column)) return;
+      if (cols.size > 0 && !cols.has(column)) return;
       values.push(value);
       assignments.push(`${column} = $${values.length}`);
     };
@@ -468,9 +469,13 @@ export async function updateAdminOrder(
     }
     put("bundle_enabled", bundleEnabled);
     put("secondary_qty", secondaryQty);
-    if (cols.has("updated_at")) assignments.push("updated_at = now()");
-    const statusParam = assignments.find((part) => part.startsWith("status = "))?.split("$")[1];
-    const stamp = statusParam ? stampFragment(cols, `$${statusParam}`) : "";
+    if (cols.size === 0 || cols.has("updated_at")) assignments.push("updated_at = now()");
+    if (assignments.length === 0) {
+      throw new Error("update_failed");
+    }
+    const statusAssign = assignments.find((part) => part.startsWith("status = "));
+    const statusParam = statusAssign ? statusAssign.slice(statusAssign.indexOf("$")) : "";
+    const stamp = statusParam ? stampFragment(cols, statusParam) : "";
     const updated = await client.query<OrderRow>(
       `UPDATE orders SET ${assignments.join(", ")}${stamp} WHERE id = $1 RETURNING *`,
       values,
