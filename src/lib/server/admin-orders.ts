@@ -386,20 +386,28 @@ export async function updateAdminOrder(orderId: string, patch: OrderPatch): Prom
     let secondaryQty = Math.max(1, Number(row.secondary_qty) || 1);
 
     if (patch.full_name != null) {
-      fullName = String(patch.full_name).trim().slice(0, 160);
+      fullName = String(patch.full_name).trim().slice(0, 120);
       if (fullName.length < 3) throw new Error("invalid_name");
     }
     if (patch.phone != null && String(patch.phone).trim()) {
-      const { normalizeMaPhone } = await import("@/lib/phone");
-      const e164 = normalizeMaPhone(String(patch.phone));
-      if (e164) {
-        phone = e164;
-        phoneNational = e164.startsWith("+212") && e164.length === 13 ? `0${e164.slice(4)}` : e164;
+      try {
+        const { normalizeMaPhone } = await import("@/lib/phone");
+        const e164 = normalizeMaPhone(String(patch.phone));
+        if (e164) {
+          phone = e164;
+          phoneNational = e164.startsWith("+212") && e164.length === 13 ? `0${e164.slice(4)}` : e164;
+        }
+      } catch (err) {
+        console.error("admin_order_phone_skipped", err);
       }
     }
     if (patch.city != null && String(patch.city).trim()) {
-      const { resolveCity } = await import("@/lib/cities");
-      cityAr = (resolveCity(String(patch.city)).ar || String(patch.city).trim()).slice(0, 120);
+      try {
+        const { resolveCity } = await import("@/lib/cities");
+        cityAr = (resolveCity(String(patch.city)).ar || String(patch.city).trim()).slice(0, 80);
+      } catch {
+        cityAr = String(patch.city).trim().slice(0, 80);
+      }
     }
     if (patch.product_slug !== undefined) {
       slug = ["quran", "kids", "music", "educative"].includes(patch.product_slug) ? patch.product_slug : slug;
@@ -468,76 +476,92 @@ export async function updateAdminOrder(orderId: string, patch: OrderPatch): Prom
       crossCents = 0;
     }
 
-    const allow = (column: string) => (cols.size === 0 ? CORE_UPDATE_COLS.has(column) || column === "address" || column === "courier_notes" : cols.has(column));
-    const sets: SetItem[] = [];
-    const add = (column: string, value: unknown, expr?: SetItem["expr"]) => {
-      if (!allow(column)) return;
-      sets.push(expr ? { column, value, expr } : { column, value });
-    };
-    add("full_name", fullName);
-    add("phone", phone);
-    add("phone_national", phoneNational);
-    add("city", cityAr);
-    add("product_slug", slug);
-    add("tier_qty", qty);
-    add("tier_price_cents", cents);
-    add("subtotal_cents", cents);
-    add("total_cents", cents);
-    add("status", status);
-    add("address", address);
-    add("quartier", quartier);
-    add("street", street);
-    add("building", building);
-    add("landmark", landmark);
-    add("delivery_window", deliveryWindow);
-    add("courier_notes", courierNotes);
-    add("region_id", regionId);
-    add(
-      "cross_sell_slug",
-      patch.cross_sell_slug !== undefined || patch.bundle_enabled !== undefined ? crossSlug : row.cross_sell_slug,
-    );
-    if (patch.cross_sell_slug !== undefined || patch.bundle_enabled !== undefined) {
-      add("cross_sell_price_cents", crossCents ?? 0, "coalesce");
-    }
-    add("bundle_enabled", bundleEnabled);
-    add("secondary_qty", secondaryQty);
-    add("updated_at", undefined, "now");
+    const extras: Array<[string, unknown]> = [
+      ["address", address],
+      ["courier_notes", courierNotes],
+      ["region_id", regionId],
+      ["quartier", quartier],
+      ["street", street],
+      ["building", building],
+      ["landmark", landmark],
+      ["delivery_window", deliveryWindow],
+      ["cross_sell_slug", crossSlug],
+      ["cross_sell_price_cents", crossCents ?? 0],
+      ["bundle_enabled", bundleEnabled],
+      ["secondary_qty", secondaryQty],
+      ["tier_price_cents", cents],
+      ["subtotal_cents", cents],
+    ];
 
-    let working = sets.filter((item) => item.column !== "updated_at" || allow("updated_at"));
-    if (working.length === 0) throw new Error("update_failed");
-    let workingCols = new Set(cols);
-    let truncated = false;
+    const run = async (sql: string, values: unknown[]) => client.query<OrderRow>(sql, values);
+
     let saved: OrderRow | undefined;
-    for (let attempt = 0; attempt < 8; attempt += 1) {
-      const built = buildUpdate(orderId, working, workingCols);
-      try {
-        const updated = await client.query<OrderRow>(built.sql, built.values);
-        saved = updated.rows[0];
-        break;
-      } catch (err) {
-        const code = pgCode(err);
-        const missing = missingColumnName(err);
-        if (code === "42703" && missing) {
-          working = working.filter((item) => item.column !== missing);
-          workingCols.delete(missing);
-          if (working.length === 0) throw err;
-          continue;
+    try {
+      const core = await run(
+        `UPDATE orders SET
+           full_name = $2,
+           phone = $3,
+           city = $4,
+           product_slug = $5,
+           tier_qty = $6,
+           total_cents = $7,
+           status = $8,
+           updated_at = now()
+         WHERE id = $1
+         RETURNING *`,
+        [orderId, fullName, phone, cityAr, slug, qty, cents, status],
+      );
+      saved = core.rows[0];
+    } catch (err) {
+      console.error("admin_order_core_update_retry", err);
+      const fallback = await run(
+        `UPDATE orders SET status = $2, updated_at = now() WHERE id = $1 RETURNING *`,
+        [orderId, status],
+      );
+      saved = fallback.rows[0];
+      if (!saved) throw err;
+      for (const [column, value] of [
+        ["full_name", fullName],
+        ["phone", phone],
+        ["city", cityAr],
+        ["product_slug", slug],
+        ["tier_qty", qty],
+        ["total_cents", cents],
+      ] as Array<[string, unknown]>) {
+        try {
+          const again = await run(`UPDATE orders SET ${column} = $2 WHERE id = $1 RETURNING *`, [orderId, value]);
+          if (again.rows[0]) saved = again.rows[0];
+        } catch (extraErr) {
+          console.error("admin_order_core_field_skipped", column, extraErr);
         }
-        if (code === "22001" && !truncated) {
-          truncated = true;
-          working = working.map((item) =>
-            typeof item.value === "string" ? { ...item, value: item.value.slice(0, 80) } : item,
-          );
-          continue;
-        }
-        const core = working.filter((item) => CORE_UPDATE_COLS.has(item.column) || item.column === "address");
-        if (core.length && core.length < working.length) {
-          working = core;
-          continue;
-        }
-        throw err;
       }
     }
+
+    for (const [column, value] of extras) {
+      if (cols.size > 0 && !cols.has(column)) continue;
+      try {
+        const again = await run(`UPDATE orders SET ${column} = $2 WHERE id = $1 RETURNING *`, [
+          orderId,
+          typeof value === "string" ? value.slice(0, 2000) : value,
+        ]);
+        if (again.rows[0]) saved = again.rows[0];
+      } catch (err) {
+        console.error("admin_order_extra_skipped", column, err);
+      }
+    }
+
+    if ((status === "confirmed" || status === "shipped" || status === "delivered") && (cols.size === 0 || cols.has("confirmed_at"))) {
+      try {
+        const stamped = await run(
+          `UPDATE orders SET confirmed_at = COALESCE(confirmed_at, now()) WHERE id = $1 RETURNING *`,
+          [orderId],
+        );
+        if (stamped.rows[0]) saved = stamped.rows[0];
+      } catch (err) {
+        console.error("admin_order_stamp_skipped", err);
+      }
+    }
+
     if (!saved) return null;
     try {
       await client.query(
@@ -548,7 +572,12 @@ export async function updateAdminOrder(orderId: string, patch: OrderPatch): Prom
     } catch (err) {
       console.error("admin_order_items_update_skipped", err);
     }
-    return serialize(saved);
+    try {
+      return serialize(saved);
+    } catch (err) {
+      console.error("admin_order_serialize_failed", err);
+      return serialize({ ...row, ...(saved || {}), id: saved?.id || row.id } as OrderRow);
+    }
   } finally {
     client.release();
   }

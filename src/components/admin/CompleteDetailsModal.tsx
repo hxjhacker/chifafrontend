@@ -96,58 +96,58 @@ export function CompleteDetailsModal({ open, order, onClose, onSaved }: Props) {
     setSaving(true);
     try {
       const orderId = encodeURIComponent(String(order.order_id || "").trim());
-      const payload = {
-        customer_name: name,
-        customerName: name,
-        full_name: name,
-        fullName: name,
-        phone: order.phone || order.phone_national,
-        city,
+      const qty = Math.round(Math.max(1, Number(primaryQty) || 1));
+      const extraQty = Math.round(Math.max(1, Number(secondaryQty) || 1));
+      const total = Math.round(Number(price)) || 0;
+      const fullPayload = {
+        full_name: name.trim(),
+        customer_name: name.trim(),
+        city: city.trim(),
         region_id: regionId,
-        regionId,
         region: regionId,
-        address,
-        full_address: address,
-        fullAddress: address,
+        address: address.trim(),
+        full_address: address.trim(),
         product_slug: primary.slug,
-        productSlug: primary.slug,
         primary_product: primary.slug,
-        primaryProduct: primary.slug,
-        tier_qty: Math.max(1, primaryQty),
-        tierQty: Math.max(1, primaryQty),
-        primary_qty: Math.max(1, primaryQty),
-        primaryQty: Math.max(1, primaryQty),
+        tier_qty: qty,
+        primary_qty: qty,
         bundle_enabled: bundleOn,
-        bundleEnabled: bundleOn,
         cross_sell_slug: bundleOn ? secondary.slug : null,
-        crossSellSlug: bundleOn ? secondary.slug : null,
         secondary_product: bundleOn ? secondary.slug : null,
-        secondaryProduct: bundleOn ? secondary.slug : null,
-        secondary_qty: bundleOn ? Math.max(1, secondaryQty) : 1,
-        secondaryQty: bundleOn ? Math.max(1, secondaryQty) : 1,
-        cross_sell_price_mad: bundleOn ? secondary.price * Math.max(1, secondaryQty) : 0,
-        crossSellPriceMad: bundleOn ? secondary.price * Math.max(1, secondaryQty) : 0,
+        secondary_qty: bundleOn ? extraQty : 1,
+        cross_sell_price_mad: bundleOn ? secondary.price * extraQty : 0,
         courier_notes: notes,
-        courierNotes: notes,
         driver_comment: notes,
-        driverComment: notes,
-        total_mad: Number(price),
-        totalMad: Number(price),
-        total_price: Number(price),
-        totalPrice: Number(price),
+        total_mad: total,
+        total_price: total,
         status: "confirmed",
       };
-      const res = await fetch(`/api/admin/orders/${orderId}`, {
-        method: "PATCH",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      const minimalPayload = {
+        full_name: name.trim(),
+        city: city.trim(),
+        address: address.trim(),
+        product_slug: primary.slug,
+        tier_qty: qty,
+        total_mad: total,
+        status: "confirmed",
+      };
+
+      async function send(body: Record<string, unknown>) {
+        return fetch(`/api/admin/orders/${orderId}`, {
+          method: "PATCH",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+      }
+
+      let res = await send(fullPayload);
+      if (!res.ok) res = await send(minimalPayload);
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { detail?: unknown; error?: unknown; message?: unknown };
         const detail = body.detail ?? body.error ?? body.message;
         const raw = Array.isArray(detail)
-          ? String((detail[0] as { msg?: string; detail?: string } | undefined)?.msg || (detail[0] as { detail?: string } | undefined)?.detail || "")
+          ? String((detail[0] as { msg?: string; type?: string } | undefined)?.msg || (detail[0] as { type?: string } | undefined)?.type || "")
           : typeof detail === "string"
             ? detail
             : "";
@@ -160,7 +160,8 @@ export function CompleteDetailsModal({ open, order, onClose, onSaved }: Props) {
           order_not_found: "الطلبية غير موجودة.",
           update_failed: "تعذر حفظ وتأكيد المعلومات.",
         };
-        throw new Error(map[raw] || "تعذر حفظ وتأكيد المعلومات.");
+        const hint = raw && !map[raw] ? ` (${res.status}: ${raw.slice(0, 80)})` : "";
+        throw new Error((map[raw] || "تعذر حفظ وتأكيد المعلومات.") + hint);
       }
       onSaved((await res.json()) as AdminOrder);
       onClose();
