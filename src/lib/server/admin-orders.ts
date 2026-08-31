@@ -24,12 +24,13 @@ type OrderRow = {
   landmark: string | null;
   delivery_window: string | null;
   courier_notes: string | null;
+  region_id: string | null;
 };
 
 const ALLOWED: AdminStatus[] = ["new", "confirmed", "shipped", "delivered", "cancelled"];
 const WINDOWS: DeliveryWindow[] = ["anytime", "morning", "afternoon", "weekend"];
 const ORDER_COLS = `id, full_name, phone, phone_national, city, address, quartier, street, building, landmark,
-      delivery_window, courier_notes, product_slug, tier_qty, cross_sell_slug, upsell_slug, total_cents, currency, status, created_at`;
+      delivery_window, courier_notes, region_id, product_slug, tier_qty, cross_sell_slug, upsell_slug, total_cents, currency, status, created_at`;
 
 function asWindow(value: string | null | undefined): DeliveryWindow | null {
   if (!value) return null;
@@ -74,6 +75,7 @@ function serialize(row: OrderRow): AdminOrder {
     landmark: row.landmark || null,
     delivery_window: asWindow(row.delivery_window),
     courier_notes: row.courier_notes || null,
+    region_id: row.region_id || null,
   };
 }
 
@@ -193,6 +195,10 @@ export async function updateAdminOrder(
     landmark?: string;
     delivery_window?: DeliveryWindow | string;
     courier_notes?: string;
+    address?: string;
+    region_id?: string;
+    cross_sell_slug?: string | null;
+    cross_sell_price_mad?: number;
   },
 ): Promise<AdminOrder | null> {
   const fields = Object.entries(patch).filter(([, value]) => value !== undefined);
@@ -237,6 +243,10 @@ export async function updateAdminOrder(
     let landmark = row.landmark;
     let deliveryWindow = row.delivery_window;
     let courierNotes = row.courier_notes;
+    let address = row.address;
+    let regionId = row.region_id;
+    let crossSlug = row.cross_sell_slug;
+    let crossCents: number | null = null;
 
     if (patch.full_name !== undefined) {
       fullName = patch.full_name.trim();
@@ -251,12 +261,16 @@ export async function updateAdminOrder(
     }
     if (patch.city !== undefined) {
       const { resolveCity } = await import("@/lib/cities");
-      cityAr = resolveCity(patch.city).ar;
+      cityAr = resolveCity(patch.city).ar || patch.city.trim();
     }
     if (patch.product_slug !== undefined) {
       slug = ["quran", "kids", "music", "educative"].includes(patch.product_slug) ? patch.product_slug : slug;
     }
-    if (patch.tier_qty !== undefined) qty = patch.tier_qty >= 2 ? 2 : 1;
+    if (patch.tier_qty !== undefined) {
+      const nextQty = Math.round(Number(patch.tier_qty));
+      if (!Number.isFinite(nextQty) || nextQty < 1 || nextQty > 20) throw new Error("invalid_qty");
+      qty = nextQty;
+    }
     if (patch.total_mad !== undefined) {
       cents = Math.round(Number(patch.total_mad) * 100);
       if (!Number.isFinite(cents) || cents < 100) throw new Error("invalid_price");
@@ -275,8 +289,27 @@ export async function updateAdminOrder(
       deliveryWindow = next || null;
     }
     if (patch.courier_notes !== undefined) courierNotes = patch.courier_notes.trim() || null;
-
-    const address = composeAddress({ quartier, street, building, landmark, city: cityAr });
+    if (patch.address !== undefined) address = patch.address.trim() || null;
+    else if (patch.quartier !== undefined || patch.street !== undefined || patch.building !== undefined || patch.landmark !== undefined) {
+      address = composeAddress({ quartier, street, building, landmark, city: cityAr });
+    }
+    if (patch.region_id !== undefined) {
+      const next = patch.region_id.trim().toUpperCase();
+      regionId = /^MA(0[1-9]|1[0-2])$/.test(next) ? next : regionId;
+    }
+    if (patch.cross_sell_slug !== undefined) {
+      const allowedCross = ["quran", "kids", "music", "educative", "extra"];
+      if (!patch.cross_sell_slug) {
+        crossSlug = null;
+        crossCents = 0;
+      } else if (allowedCross.includes(patch.cross_sell_slug)) {
+        crossSlug = patch.cross_sell_slug;
+        if (patch.cross_sell_price_mad !== undefined) {
+          crossCents = Math.round(Number(patch.cross_sell_price_mad) * 100);
+          if (!Number.isFinite(crossCents) || crossCents < 0) throw new Error("invalid_price");
+        }
+      }
+    }
 
     await client.query("BEGIN");
     const updated = await client.query<OrderRow>(
@@ -284,7 +317,10 @@ export async function updateAdminOrder(
          full_name = $2, phone = $3, phone_national = $4, city = $5,
          product_slug = $6, tier_qty = $7, tier_price_cents = $8, subtotal_cents = $8, total_cents = $8,
          status = $9, address = $10, quartier = $11, street = $12, building = $13, landmark = $14,
-         delivery_window = $15, courier_notes = $16, updated_at = now()
+         delivery_window = $15, courier_notes = $16, region_id = $17,
+         cross_sell_slug = $18,
+         cross_sell_price_cents = COALESCE($19, cross_sell_price_cents),
+         updated_at = now()
        WHERE id = $1
        RETURNING ${ORDER_COLS}`,
       [
@@ -304,6 +340,9 @@ export async function updateAdminOrder(
         landmark,
         deliveryWindow,
         courierNotes,
+        regionId,
+        patch.cross_sell_slug !== undefined ? crossSlug : row.cross_sell_slug,
+        patch.cross_sell_slug !== undefined ? (crossCents ?? 0) : null,
       ],
     );
     await client.query(

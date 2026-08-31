@@ -86,7 +86,7 @@ export const CITIES: City[] = [
   { ar: "بوسكورة", fr: "Bouskoura", aliases: ["bouskoura"] },
   { ar: "مديونة", fr: "Mediouna", aliases: ["mediouna"] },
   { ar: "النواصر", fr: "Nouaceur", aliases: ["nouaceur"] },
-  { ar: "إيموزار كندر", fr: "Imouzzer Kandar", aliases: ["imouzzer", "imouzzer kandar", "inouzer", "inouuzer kbdr", "imozer"] },
+  { ar: "إيموزار كندر", fr: "Imouzzer Kandar", aliases: ["imouzzer", "imouzzer kandar", "inouzer", "inouuzer kbdr", "imozer", "اموزار كندر", "اموزار"] },
   { ar: "قصبة تادلة", fr: "Kasba Tadla", aliases: ["kasba tadla", "kasbat tadla"] },
   { ar: "الريصاني", fr: "Rissani", aliases: ["rissani"] },
   { ar: "تافراوت", fr: "Tafraout", aliases: ["tafraout"] },

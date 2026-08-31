@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS orders (
   landmark varchar(160),
   delivery_window varchar(32),
   courier_notes text,
+  region_id varchar(8),
   product_slug varchar(64) NOT NULL,
   tier_qty integer NOT NULL,
   tier_price_cents integer NOT NULL,
@@ -111,6 +112,7 @@ ALTER TABLE orders ADD COLUMN IF NOT EXISTS building varchar(80);
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS landmark varchar(160);
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_window varchar(32);
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS courier_notes text;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS region_id varchar(8);
 ALTER TABLE orders ALTER COLUMN upsell_price_cents SET DEFAULT 0;
 ALTER TABLE orders ALTER COLUMN cross_sell_price_cents SET DEFAULT 0;
 ALTER TABLE orders ALTER COLUMN phone_national SET DEFAULT '';

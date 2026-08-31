@@ -23,6 +23,10 @@ type PatchBody = {
   landmark?: string;
   delivery_window?: DeliveryWindow;
   courier_notes?: string;
+  address?: string;
+  region_id?: string;
+  cross_sell_slug?: string | null;
+  cross_sell_price_mad?: number;
 };
 
 export async function PATCH(request: Request, ctx: { params: Promise<{ orderId: string }> }) {
@@ -50,7 +54,7 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ orderId: 
     return NextResponse.json(order);
   } catch (err) {
     const message = err instanceof Error ? err.message : "update_failed";
-    const status = ["invalid_name", "invalid_ma_phone", "invalid_price", "invalid_status", "invalid_delivery_window"].includes(message)
+    const status = ["invalid_name", "invalid_ma_phone", "invalid_price", "invalid_status", "invalid_delivery_window", "invalid_qty"].includes(message)
       ? 422
       : 500;
     if (status === 500) console.error("admin_status_failed", err);

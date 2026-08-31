@@ -19,8 +19,8 @@ export function IosSwitch({ checked, className }: Props) {
     >
       <span
         className={cn(
-          "absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow-md transition-transform duration-200",
-          checked ? "translate-x-5" : "translate-x-0",
+          "absolute top-0.5 start-0.5 h-5 w-5 rounded-full bg-white shadow-md transition-transform duration-200",
+          checked ? "translate-x-5 rtl:-translate-x-5" : "translate-x-0",
         )}
       />
     </span>

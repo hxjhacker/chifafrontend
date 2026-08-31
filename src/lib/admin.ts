@@ -25,6 +25,7 @@ export type AdminOrder = {
   landmark: string | null;
   delivery_window: DeliveryWindow | null;
   courier_notes: string | null;
+  region_id: string | null;
 };
 
 export type AdminStats = {
@@ -83,6 +84,7 @@ const PACK_NAMES: Record<string, string> = {
   kids: "USB تعليم الأطفال",
   music: "USB الأغاني والموسيقى",
   educative: "الفلاشة التعليمية الذكية",
+  extra: "مفتاح إضافي بسعر العرض",
 };
 
 export const NEW_EQUIV = new Set(["pending", "upsell_accepted", "new"]);

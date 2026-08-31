@@ -51,13 +51,27 @@ export function regionForCity(city: string) {
   return "الدار البيضاء - سطات";
 }
 
-export function buildRegionStats(orders: { city: string; status: string }[]): RegionStat[] {
+export function regionIdForName(name: string) {
+  return MOROCCO_REGIONS.find((r) => r.name === name)?.id ?? "MA06";
+}
+
+export function regionIdForCity(city: string) {
+  return regionIdForName(regionForCity(city));
+}
+
+export function regionNameForId(id: string) {
+  return MOROCCO_REGIONS.find((r) => r.id === id)?.name ?? regionForCity("");
+}
+
+export function buildRegionStats(orders: { city: string; status: string; region_id?: string | null }[]): RegionStat[] {
   const map = new Map<string, RegionStat>();
   for (const region of MOROCCO_REGIONS) {
     map.set(region.name, { id: region.id, name: region.name, total: 0, confirmed: 0, unconfirmed: 0 });
   }
   for (const order of orders) {
-    const name = regionForCity(order.city);
+    const name = order.region_id
+      ? MOROCCO_REGIONS.find((r) => r.id === order.region_id)?.name || regionForCity(order.city)
+      : regionForCity(order.city);
     const row = map.get(name);
     if (!row) continue;
     row.total += 1;

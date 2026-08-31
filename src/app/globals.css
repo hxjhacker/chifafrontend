@@ -87,6 +87,17 @@ html.dark body {
   border-radius: 99px;
 }
 
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #060b14;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 4px;
+}
+
 .check-glow {
   box-shadow: 0 0 30px rgba(16, 185, 129, 0.35);
 }

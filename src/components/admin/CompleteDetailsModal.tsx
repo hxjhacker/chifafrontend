@@ -1,9 +1,11 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
-import { CheckCircle2, Pencil, X } from "lucide-react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { CheckCircle2, Layers, MessageCircle, Pencil, X } from "lucide-react";
 import { CITIES } from "@/lib/cities";
-import { copyablePhone, type AdminOrder, type DeliveryWindow } from "@/lib/admin";
+import { copyablePhone, shortOrderRef, type AdminOrder } from "@/lib/admin";
+import { MOROCCO_REGIONS, regionIdForCity } from "@/lib/admin-geo";
+import { IosSwitch } from "@/components/admin/IosSwitch";
 import { cn } from "@/lib/cn";
 
 type Props = {
@@ -13,37 +15,76 @@ type Props = {
   onSaved: (order: AdminOrder) => void;
 };
 
-const WINDOWS: { id: DeliveryWindow; label: string }[] = [
-  { id: "anytime", label: "أي وقت" },
-  { id: "morning", label: "صباحاً" },
-  { id: "afternoon", label: "بعد الزوال" },
-  { id: "weekend", label: "نهاية الأسبوع" },
-];
+const PRIMARY_PRODUCTS = [
+  { slug: "quran", label: "USB القرآن الكريم كامل (199 درهم)", price: 199 },
+  { slug: "educative", label: "الفلاشة التعليمية الذكية (149 درهم)", price: 149 },
+  { slug: "kids", label: "USB تعليم الأطفال (149 درهم)", price: 149 },
+  { slug: "music", label: "USB الموسيقى والأغاني (199 درهم)", price: 199 },
+] as const;
+
+const SECONDARY_PRODUCTS = [
+  { slug: "extra", label: "مفتاح إضافي بسعر العرض (+100 درهم)", price: 100 },
+  { slug: "educative", label: "الفلاشة التعليمية الذكية (+149 درهم)", price: 149 },
+  { slug: "quran", label: "USB القرآن الكريم كامل (+199 درهم)", price: 199 },
+  { slug: "music", label: "USB الموسيقى والأغاني (+199 درهم)", price: 199 },
+] as const;
+
+const fieldClass =
+  "w-full rounded-xl border border-[#1e293b] bg-[#060b14] px-3.5 py-2.5 font-bold text-white transition placeholder:font-normal placeholder:text-slate-600 focus:border-[#0284c7] focus:outline-none";
 
 export function CompleteDetailsModal({ open, order, onClose, onSaved }: Props) {
-  const [quartier, setQuartier] = useState("");
-  const [street, setStreet] = useState("");
-  const [building, setBuilding] = useState("");
-  const [landmark, setLandmark] = useState("");
+  const [name, setName] = useState("");
   const [city, setCity] = useState("");
-  const [windowId, setWindowId] = useState<DeliveryWindow>("anytime");
-  const [price, setPrice] = useState(0);
+  const [regionId, setRegionId] = useState("MA06");
+  const [address, setAddress] = useState("");
+  const [primarySlug, setPrimarySlug] = useState("quran");
+  const [primaryQty, setPrimaryQty] = useState(1);
+  const [bundleOn, setBundleOn] = useState(false);
+  const [secondarySlug, setSecondarySlug] = useState("extra");
+  const [secondaryQty, setSecondaryQty] = useState(1);
+  const [price, setPrice] = useState(199);
+  const [priceDirty, setPriceDirty] = useState(false);
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
+  const primary = PRIMARY_PRODUCTS.find((p) => p.slug === primarySlug) || PRIMARY_PRODUCTS[0];
+  const secondary = SECONDARY_PRODUCTS.find((p) => p.slug === secondarySlug) || SECONDARY_PRODUCTS[0];
+
+  const computedTotal = useMemo(() => {
+    let total = primary.price * Math.max(1, primaryQty);
+    if (bundleOn) total += secondary.price * Math.max(1, secondaryQty);
+    return total;
+  }, [primary.price, primaryQty, bundleOn, secondary.price, secondaryQty]);
+
+  useEffect(() => {
+    if (!priceDirty) setPrice(computedTotal);
+  }, [computedTotal, priceDirty]);
+
   useEffect(() => {
     if (!open || !order) return;
     setError("");
-    setQuartier(order.quartier || "");
-    setStreet(order.street || "");
-    setBuilding(order.building || "");
-    setLandmark(order.landmark || "");
-    setCity(order.city || "");
-    setWindowId(order.delivery_window || "anytime");
-    setPrice(Math.round(order.total));
-    setNotes(order.courier_notes || "");
+    setName(order.full_name);
+    setCity(order.city);
+    setRegionId(order.region_id || regionIdForCity(order.city));
+    setAddress("");
+    setNotes("");
+    setPrimarySlug(PRIMARY_PRODUCTS.some((p) => p.slug === order.product_slug) ? order.product_slug : "quran");
+    setPrimaryQty(Math.max(1, order.tier_qty || 1));
+    const hasBundle = Boolean(order.cross_sell_slug);
+    setBundleOn(hasBundle);
+    setSecondarySlug(
+      SECONDARY_PRODUCTS.some((p) => p.slug === order.cross_sell_slug) ? order.cross_sell_slug! : "extra",
+    );
+    setSecondaryQty(1);
+    setPrice(Math.round(order.total) || 199);
+    setPriceDirty(true);
   }, [open, order]);
+
+  function changeCity(next: string) {
+    setCity(next);
+    setRegionId(regionIdForCity(next));
+  }
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -56,12 +97,14 @@ export function CompleteDetailsModal({ open, order, onClose, onSaved }: Props) {
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          full_name: name,
           city,
-          quartier,
-          street,
-          building,
-          landmark,
-          delivery_window: windowId,
+          region_id: regionId,
+          address,
+          product_slug: primary.slug,
+          tier_qty: Math.max(1, primaryQty),
+          cross_sell_slug: bundleOn ? secondary.slug : null,
+          cross_sell_price_mad: bundleOn ? secondary.price * Math.max(1, secondaryQty) : 0,
           courier_notes: notes,
           total_mad: Number(price),
           status: "confirmed",
@@ -70,8 +113,9 @@ export function CompleteDetailsModal({ open, order, onClose, onSaved }: Props) {
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { detail?: string };
         const map: Record<string, string> = {
+          invalid_name: "الاسم قصير جداً.",
           invalid_price: "المبلغ غير صالح.",
-          invalid_delivery_window: "وقت التوصيل غير صالح.",
+          invalid_qty: "الكمية غير صالحة.",
         };
         throw new Error(map[body.detail || ""] || "تعذر حفظ وتأكيد المعلومات.");
       }
@@ -84,10 +128,13 @@ export function CompleteDetailsModal({ open, order, onClose, onSaved }: Props) {
     }
   }
 
+  const phone = order ? copyablePhone(order) : "";
+
   return (
     <div
+      id="order-confirm-modal"
       className={cn(
-        "fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm transition-all duration-300",
+        "fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm transition-all duration-300",
         open ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0",
       )}
       aria-hidden={!open}
@@ -95,74 +142,58 @@ export function CompleteDetailsModal({ open, order, onClose, onSaved }: Props) {
     >
       <div
         className={cn(
-          "relative max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-3xl border-2 border-gold/40 bg-white p-6 shadow-2xl transition-all duration-300 dark:bg-cardDark",
+          "custom-scrollbar relative max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-3xl border border-[#1e293b] bg-[#0b1322] p-6 text-white shadow-2xl transition-all duration-300",
           open ? "scale-100" : "scale-95",
         )}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-gold/10 pb-3.5">
-          <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-500/10 text-sky-500">
+        <div className="mb-5 flex items-center justify-between border-b border-[#1e293b]/80 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-[#0284c7]/30 bg-[#0369a1]/20 text-[#0284c7]">
               <Pencil className="h-4 w-4" />
             </div>
             <div>
-              <h3 className="text-sm font-black text-royal dark:text-white">إتمام وتأكيد المعلومات</h3>
-              <p className="text-[11px] text-royal/60 dark:text-slate-400">
-                {order ? `${order.full_name} · ${copyablePhone(order)}` : "عنوان التوصيل وملاحظات الموزع"}
+              <h3 className="text-base font-black text-white">إتمام وتأكيد المعلومات</h3>
+              <p className="mt-0.5 text-xs text-slate-400">
+                {order ? (
+                  <>
+                    {shortOrderRef(order.order_id)} · {order.full_name} ·{" "}
+                    <span dir="ltr" className="font-mono">
+                      {phone}
+                    </span>
+                  </>
+                ) : (
+                  "عنوان التوصيل وملاحظات الموزع"
+                )}
               </p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-xl bg-cream text-royal/50 transition hover:text-rose-500 dark:bg-brandDark dark:text-slate-400"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#1e293b] bg-[#0f172a] text-slate-400 transition hover:text-white"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        <form onSubmit={(e) => void onSubmit(e)} className="mt-4 space-y-3.5 text-xs">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="mb-1 block font-bold text-royal/80 dark:text-slate-200">الحي / الحي السكني</label>
-              <input
-                value={quartier}
-                onChange={(e) => setQuartier(e.target.value)}
-                placeholder="مثال: حي الرياض"
-                className="w-full rounded-xl border border-gold/20 bg-cream px-3.5 py-2.5 text-royal placeholder-royal/30 transition focus:border-gold focus:outline-none dark:bg-brandDark dark:text-white dark:placeholder-slate-500"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block font-bold text-royal/80 dark:text-slate-200">الشارع</label>
-              <input
-                value={street}
-                onChange={(e) => setStreet(e.target.value)}
-                placeholder="اسم الشارع"
-                className="w-full rounded-xl border border-gold/20 bg-cream px-3.5 py-2.5 text-royal placeholder-royal/30 transition focus:border-gold focus:outline-none dark:bg-brandDark dark:text-white dark:placeholder-slate-500"
-              />
-            </div>
+        <form onSubmit={(e) => void onSubmit(e)} className="space-y-4 text-xs">
+          <div>
+            <label className="mb-1.5 block text-right font-bold text-slate-300">اسم الزبون الكامل *</label>
+            <input value={name} onChange={(e) => setName(e.target.value)} required minLength={3} className={fieldClass} />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block font-bold text-royal/80 dark:text-slate-200">العمارة / الشقة</label>
-              <input
-                value={building}
-                onChange={(e) => setBuilding(e.target.value)}
-                placeholder="رقم العمارة أو الشقة"
-                className="w-full rounded-xl border border-gold/20 bg-cream px-3.5 py-2.5 text-royal placeholder-royal/30 transition focus:border-gold focus:outline-none dark:bg-brandDark dark:text-white dark:placeholder-slate-500"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block font-bold text-royal/80 dark:text-slate-200">المدينة</label>
+              <label className="mb-1.5 block text-right font-bold text-slate-300">المدينة *</label>
               <input
                 value={city}
-                onChange={(e) => setCity(e.target.value)}
+                onChange={(e) => changeCity(e.target.value)}
                 required
-                list="complete-cities"
-                className="w-full rounded-xl border border-gold/20 bg-cream px-3.5 py-2.5 text-royal placeholder-royal/30 transition focus:border-gold focus:outline-none dark:bg-brandDark dark:text-white dark:placeholder-slate-500"
+                list="confirm-cities"
+                className={fieldClass}
               />
-              <datalist id="complete-cities">
+              <datalist id="confirm-cities">
                 {CITIES.map((c) => (
                   <option key={c.ar} value={c.ar}>
                     {c.fr}
@@ -170,84 +201,177 @@ export function CompleteDetailsModal({ open, order, onClose, onSaved }: Props) {
                 ))}
               </datalist>
             </div>
-          </div>
-
-          <div>
-            <label className="mb-1 block font-bold text-royal/80 dark:text-slate-200">علامة مميزة / معلم قريب</label>
-            <input
-              value={landmark}
-              onChange={(e) => setLandmark(e.target.value)}
-              placeholder="قرب المسجد، السوق، محطة…"
-              className="w-full rounded-xl border border-gold/20 bg-cream px-3.5 py-2.5 text-royal placeholder-royal/30 transition focus:border-gold focus:outline-none dark:bg-brandDark dark:text-white dark:placeholder-slate-500"
-            />
-          </div>
-
-          <div>
-            <label className="mb-1 block font-bold text-royal/80 dark:text-slate-200">وقت التوصيل المفضل</label>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {WINDOWS.map((w) => (
-                <button
-                  key={w.id}
-                  type="button"
-                  onClick={() => setWindowId(w.id)}
-                  className={cn(
-                    "rounded-xl border px-2 py-2 font-bold transition",
-                    windowId === w.id
-                      ? "border-sky-400 bg-sky-500/15 text-sky-600 dark:text-sky-300"
-                      : "border-gold/20 bg-cream text-royal/70 dark:bg-brandDark dark:text-slate-300",
-                  )}
-                >
-                  {w.label}
-                </button>
-              ))}
+            <div>
+              <label className="mb-1.5 block text-right font-bold text-slate-300">الجهة (لإحصائيات الخريطة) *</label>
+              <select value={regionId} onChange={(e) => setRegionId(e.target.value)} required className={fieldClass}>
+                {MOROCCO_REGIONS.map((region) => (
+                  <option key={region.id} value={region.id}>
+                    {region.name}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
           <div>
-            <label className="mb-1 block font-bold text-royal/80 dark:text-slate-200">تعديل السعر / عرض إضافي (درهم)</label>
-            <input
-              type="number"
+            <label className="mb-1.5 block text-right font-bold text-slate-300">
+              العنوان الكامل (الحي، الشارع، رقم المنزل/العمارة) *
+            </label>
+            <textarea
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
               required
-              min={1}
-              dir="ltr"
-              value={price}
-              onChange={(e) => setPrice(Number(e.target.value))}
-              className="w-full rounded-xl border border-gold/20 bg-cream px-3.5 py-2.5 text-left font-mono font-bold text-royal transition focus:border-gold focus:outline-none dark:bg-brandDark dark:text-white"
+              rows={2}
+              placeholder="أدخل العنوان المفصل بعد تأكيد الطلب مع الزبون في الهاتف..."
+              className={`${fieldClass} resize-none p-3 font-normal`}
             />
           </div>
 
+          <div className="space-y-3 rounded-2xl border border-[#1e293b]/70 bg-[#060b14] p-3.5">
+            <span className="block text-[11px] font-bold text-[#38bdf8]">المنتج الأساسي للطلبية</span>
+            <div className="grid grid-cols-1 items-center gap-3 sm:grid-cols-12">
+              <div className="sm:col-span-8">
+                <select
+                  value={primarySlug}
+                  onChange={(e) => {
+                    setPrimarySlug(e.target.value);
+                    setPriceDirty(false);
+                  }}
+                  className="w-full rounded-xl border border-[#1e293b] bg-[#0b1322] px-3 py-2 font-bold text-white focus:border-[#0284c7] focus:outline-none"
+                >
+                  {PRIMARY_PRODUCTS.map((p) => (
+                    <option key={p.slug} value={p.slug}>
+                      {p.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-center gap-2 sm:col-span-4">
+                <span className="whitespace-nowrap font-bold text-slate-400">الكمية:</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={20}
+                  value={primaryQty}
+                  onChange={(e) => {
+                    setPrimaryQty(Number(e.target.value) || 1);
+                    setPriceDirty(false);
+                  }}
+                  className="w-full rounded-xl border border-[#1e293b] bg-[#0b1322] px-3 py-2 text-center font-mono font-bold text-white focus:border-[#0284c7] focus:outline-none"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-3 rounded-2xl border border-[#1e293b] bg-[#060b14] p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Layers className="h-3.5 w-3.5 text-amber-400" />
+                <span className="font-bold text-slate-200">ازدواجية المنتج / إضافة منتج آخر (Upsell)</span>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={bundleOn}
+                onClick={() => {
+                  setBundleOn((v) => !v);
+                  setPriceDirty(false);
+                }}
+              >
+                <IosSwitch checked={bundleOn} className={bundleOn ? undefined : "border border-white/10 bg-slate-800"} />
+              </button>
+            </div>
+
+            {bundleOn ? (
+              <div className="space-y-3 border-t border-[#1e293b] pt-3">
+                <div className="grid grid-cols-1 items-center gap-3 sm:grid-cols-12">
+                  <div className="sm:col-span-8">
+                    <label className="mb-1 block font-semibold text-slate-400">المنتج الإضافي:</label>
+                    <select
+                      value={secondarySlug}
+                      onChange={(e) => {
+                        setSecondarySlug(e.target.value);
+                        setPriceDirty(false);
+                      }}
+                      className="w-full rounded-xl border border-[#1e293b] bg-[#0b1322] px-3 py-2 font-bold text-white focus:border-[#0284c7] focus:outline-none"
+                    >
+                      {SECONDARY_PRODUCTS.map((p) => (
+                        <option key={p.slug} value={p.slug}>
+                          {p.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="sm:col-span-4">
+                    <label className="mb-1 block font-semibold text-slate-400">الكمية الإضافية:</label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={20}
+                      value={secondaryQty}
+                      onChange={(e) => {
+                        setSecondaryQty(Number(e.target.value) || 1);
+                        setPriceDirty(false);
+                      }}
+                      className="w-full rounded-xl border border-[#1e293b] bg-[#0b1322] px-3 py-2 text-center font-mono font-bold text-white focus:border-[#0284c7] focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="flex items-center justify-between rounded-2xl border border-[#1e293b] bg-[#060b14] p-3.5">
+            <label className="font-bold text-slate-300">المبلغ النهائي للتحصيل عند التسليم:</label>
+            <div className="flex items-center gap-1.5">
+              <input
+                type="number"
+                min={1}
+                dir="ltr"
+                value={price}
+                onChange={(e) => {
+                  setPrice(Number(e.target.value));
+                  setPriceDirty(true);
+                }}
+                className="w-24 rounded-xl border border-[#0284c7] bg-[#0b1322] px-3 py-2 text-left font-mono text-sm font-black text-emerald-400 focus:outline-none"
+              />
+              <span className="font-bold text-slate-400">درهم</span>
+            </div>
+          </div>
+
           <div>
-            <label className="mb-1 block font-bold text-royal/80 dark:text-slate-200">ملاحظات للمُوزّع</label>
+            <label className="mb-1.5 block text-right font-bold text-slate-300">
+              <MessageCircle className="ml-1 inline h-3.5 w-3.5 text-[#38bdf8]" />
+              ملاحظات خاصة بالطلبية / تعليمات للموزّع
+            </label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              rows={3}
-              placeholder="Notes pour le livreur"
-              className="w-full resize-none rounded-xl border border-gold/20 bg-cream px-3.5 py-2.5 text-royal placeholder-royal/30 transition focus:border-gold focus:outline-none dark:bg-brandDark dark:text-white dark:placeholder-slate-500"
+              rows={2}
+              placeholder="مثال: الزبون يطلب الاتصال قبل الوصول بنصف ساعة / التسليم بعد الساعة 5 مساءً..."
+              className={`${fieldClass} resize-none p-3 font-normal`}
             />
           </div>
 
           {error ? (
-            <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 font-bold text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200">
-              {error}
-            </p>
+            <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 font-bold text-red-200">{error}</p>
           ) : null}
 
-          <div className="flex items-center gap-2 pt-2">
-            <button
-              type="submit"
-              disabled={saving || !order}
-              className="flex-1 rounded-xl bg-sky-600 py-3 text-xs font-black text-white shadow-md transition hover:bg-sky-700 active:scale-95 disabled:opacity-60"
-            >
-              <CheckCircle2 className="ml-1 inline h-3.5 w-3.5" />
-              {saving ? "جاري الحفظ…" : "حفظ وتأكيد الطلبية"}
-            </button>
+          <div className="flex items-center gap-3 pt-2">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl border border-gold/20 bg-cream px-4 py-3 text-xs font-bold text-royal/70 transition hover:text-rose-500 dark:bg-brandDark dark:text-slate-400"
+              className="w-24 rounded-xl border border-[#1e293b] bg-[#0f172a] py-3 font-bold text-slate-300 transition hover:bg-slate-800"
             >
               إلغاء
+            </button>
+            <button
+              type="submit"
+              disabled={saving || !order}
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#0284c7] py-3 text-xs font-black text-white shadow-lg shadow-[#0284c7]/25 transition hover:bg-[#0369a1] active:scale-95 disabled:opacity-60"
+            >
+              <CheckCircle2 className="h-4 w-4" />
+              {saving ? "جاري الحفظ…" : "حفظ وتأكيد الطلبية (Confirmed 🔵)"}
             </button>
           </div>
         </form>

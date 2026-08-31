@@ -664,7 +664,7 @@ export function AdminDashboard() {
 
         <div className="overflow-hidden rounded-2xl border border-gold/20 bg-white shadow-luxury dark:bg-cardDark">
           <div className="overflow-x-auto">
-            <table className="w-full text-right text-xs text-royal dark:text-slate-200">
+            <table id="orders-table" className="w-full text-right text-xs text-royal dark:text-slate-200">
               <thead className="border-b border-gold/10 bg-cream font-bold text-royal/70 dark:bg-brandDark dark:text-slate-400">
                 <tr>
                   <th className="p-3.5">إجراءات</th>
