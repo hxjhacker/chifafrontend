@@ -102,6 +102,7 @@ export function CompleteDetailsModal({ open, order, onClose, onSaved }: Props) {
         body: JSON.stringify({
           customer_name: name,
           full_name: name,
+          phone: order.phone || order.phone_national,
           city,
           region_id: regionId,
           region: regionId,
@@ -124,13 +125,21 @@ export function CompleteDetailsModal({ open, order, onClose, onSaved }: Props) {
         }),
       });
       if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as { detail?: string };
+        const body = (await res.json().catch(() => ({}))) as { detail?: unknown };
+        const raw = Array.isArray(body.detail)
+          ? String((body.detail[0] as { msg?: string } | undefined)?.msg || "")
+          : typeof body.detail === "string"
+            ? body.detail
+            : "";
         const map: Record<string, string> = {
           invalid_name: "الاسم قصير جداً.",
           invalid_price: "المبلغ غير صالح.",
           invalid_qty: "الكمية غير صالحة.",
+          invalid_status: "حالة الطلب غير صالحة.",
+          invalid_ma_phone: "رقم الهاتف غير صالح.",
+          order_not_found: "الطلبية غير موجودة.",
         };
-        throw new Error(map[body.detail || ""] || "تعذر حفظ وتأكيد المعلومات.");
+        throw new Error(map[raw] || "تعذر حفظ وتأكيد المعلومات.");
       }
       onSaved((await res.json()) as AdminOrder);
       onClose();

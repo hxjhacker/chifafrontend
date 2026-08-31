@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import type { PoolClient } from "pg";
 import type { AdminOrder, AdminStats, AdminStatus, DeliveryWindow } from "@/lib/admin";
 import { displayStatus, packLabel } from "@/lib/admin";
 import { ensureSchema, getPool } from "./db";
@@ -56,11 +57,33 @@ function stampReached(explicit: Date | string | null | undefined, fallback: Date
   return iso(fallback);
 }
 
-function statusStampSql(param: string) {
-  return `confirmed_at = CASE WHEN ${param} IN ('confirmed','shipped','delivered') THEN COALESCE(confirmed_at, now()) ELSE confirmed_at END,
-         shipped_at = CASE WHEN ${param} IN ('shipped','delivered') THEN COALESCE(shipped_at, now()) ELSE shipped_at END,
-         delivered_at = CASE WHEN ${param} = 'delivered' THEN COALESCE(delivered_at, now()) ELSE delivered_at END,
-         cancelled_at = CASE WHEN ${param} = 'cancelled' THEN COALESCE(cancelled_at, now()) ELSE cancelled_at END`;
+async function existingColumns(client: PoolClient) {
+  const result = await client.query<{ column_name: string }>(
+    `SELECT column_name FROM information_schema.columns
+     WHERE table_schema = current_schema() AND table_name = 'orders'`,
+  );
+  return new Set(result.rows.map((row) => row.column_name));
+}
+
+function stampFragment(cols: Set<string>, param: string) {
+  const parts: string[] = [];
+  if (cols.has("confirmed_at")) {
+    parts.push(
+      `confirmed_at = CASE WHEN ${param} IN ('confirmed','shipped','delivered') THEN COALESCE(confirmed_at, now()) ELSE confirmed_at END`,
+    );
+  }
+  if (cols.has("shipped_at")) {
+    parts.push(
+      `shipped_at = CASE WHEN ${param} IN ('shipped','delivered') THEN COALESCE(shipped_at, now()) ELSE shipped_at END`,
+    );
+  }
+  if (cols.has("delivered_at")) {
+    parts.push(`delivered_at = CASE WHEN ${param} = 'delivered' THEN COALESCE(delivered_at, now()) ELSE delivered_at END`);
+  }
+  if (cols.has("cancelled_at")) {
+    parts.push(`cancelled_at = CASE WHEN ${param} = 'cancelled' THEN COALESCE(cancelled_at, now()) ELSE cancelled_at END`);
+  }
+  return parts.length ? `, ${parts.join(", ")}` : "";
 }
 
 function asWindow(value: string | null | undefined): DeliveryWindow | null {
@@ -99,7 +122,7 @@ function serialize(row: OrderRow): AdminOrder {
     cross_sell_slug: row.cross_sell_slug,
     upsell_slug: row.upsell_slug,
     pack_label: packLabel(row),
-    total: Math.round(row.total_cents) / 100,
+    total: Math.round(Number(row.total_cents) || 0) / 100,
     currency: row.currency || "MAD",
     status,
     raw_status: row.status,
@@ -119,7 +142,7 @@ function serialize(row: OrderRow): AdminOrder {
     primary_qty: row.tier_qty,
     secondary_product: row.cross_sell_slug,
     driver_comment: row.courier_notes || null,
-    total_price: Math.round(row.total_cents) / 100,
+    total_price: Math.round(Number(row.total_cents) || 0) / 100,
     source: row.source || "website",
     updated_at: updated,
     confirmed_at: stampReached(row.confirmed_at, updated, pastConfirmed),
@@ -158,7 +181,7 @@ export async function listAdminOrders(filters: { q?: string; city?: string; stat
   }
 
   params.push(limit);
-  const sql = `SELECT ${ORDER_COLS}
+  const sql = `SELECT *
     FROM orders
     ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
     ORDER BY created_at DESC
@@ -280,10 +303,11 @@ export async function updateAdminOrder(
     await ensureSchema();
     const client = await getPool().connect();
     try {
+      const cols = await existingColumns(client);
       const result = await client.query<OrderRow>(
-        `UPDATE orders SET status = $2, updated_at = now(), ${statusStampSql("$2")}
+        `UPDATE orders SET status = $2, updated_at = now()${stampFragment(cols, "$2")}
          WHERE id = $1
-         RETURNING ${ORDER_COLS}`,
+         RETURNING *`,
         [orderId, patch.status],
       );
       const row = result.rows[0];
@@ -297,7 +321,7 @@ export async function updateAdminOrder(
   const client = await getPool().connect();
   try {
     const current = await client.query<OrderRow>(
-      `SELECT ${ORDER_COLS} FROM orders WHERE id = $1`,
+      `SELECT * FROM orders WHERE id = $1`,
       [orderId],
     );
     const row = current.rows[0];
@@ -325,19 +349,20 @@ export async function updateAdminOrder(
     let secondaryQty = Math.max(1, Number(row.secondary_qty) || 1);
 
     if (patch.full_name != null) {
-      fullName = String(patch.full_name).trim();
+      fullName = String(patch.full_name).trim().slice(0, 160);
       if (fullName.length < 3) throw new Error("invalid_name");
     }
-    if (patch.phone !== undefined) {
+    if (patch.phone != null && String(patch.phone).trim()) {
       const { normalizeMaPhone } = await import("@/lib/phone");
-      const e164 = normalizeMaPhone(patch.phone);
-      if (!e164) throw new Error("invalid_ma_phone");
-      phone = e164;
-      phoneNational = e164.startsWith("+212") && e164.length === 13 ? `0${e164.slice(4)}` : e164;
+      const e164 = normalizeMaPhone(String(patch.phone));
+      if (e164) {
+        phone = e164;
+        phoneNational = e164.startsWith("+212") && e164.length === 13 ? `0${e164.slice(4)}` : e164;
+      }
     }
-    if (patch.city !== undefined) {
+    if (patch.city != null && String(patch.city).trim()) {
       const { resolveCity } = await import("@/lib/cities");
-      cityAr = resolveCity(patch.city).ar || patch.city.trim();
+      cityAr = (resolveCity(String(patch.city)).ar || String(patch.city).trim()).slice(0, 120);
     }
     if (patch.product_slug !== undefined) {
       slug = ["quran", "kids", "music", "educative"].includes(patch.product_slug) ? patch.product_slug : slug;
@@ -407,49 +432,62 @@ export async function updateAdminOrder(
     }
 
     await client.query("BEGIN");
-    const updated = await client.query<OrderRow>(
-      `UPDATE orders SET
-         full_name = $2, phone = $3, phone_national = $4, city = $5,
-         product_slug = $6, tier_qty = $7, tier_price_cents = $8, subtotal_cents = $8, total_cents = $8,
-         status = $9, address = $10, quartier = $11, street = $12, building = $13, landmark = $14,
-         delivery_window = $15, courier_notes = $16, region_id = $17,
-         cross_sell_slug = $18,
-         cross_sell_price_cents = COALESCE($19, cross_sell_price_cents),
-         bundle_enabled = $20, secondary_qty = $21,
-         updated_at = now(), ${statusStampSql("$9")}
-       WHERE id = $1
-       RETURNING ${ORDER_COLS}`,
-      [
-        orderId,
-        fullName,
-        phone,
-        phoneNational,
-        cityAr,
-        slug,
-        qty,
-        cents,
-        status,
-        address,
-        quartier,
-        street,
-        building,
-        landmark,
-        deliveryWindow,
-        courierNotes,
-        regionId,
-        patch.cross_sell_slug !== undefined || patch.bundle_enabled !== undefined ? crossSlug : row.cross_sell_slug,
-        patch.cross_sell_slug !== undefined || patch.bundle_enabled !== undefined ? (crossCents ?? 0) : null,
-        bundleEnabled,
-        secondaryQty,
-      ],
+    const cols = await existingColumns(client);
+    const values: unknown[] = [orderId];
+    const assignments: string[] = [];
+    const put = (column: string, value: unknown) => {
+      if (!cols.has(column)) return;
+      values.push(value);
+      assignments.push(`${column} = $${values.length}`);
+    };
+    put("full_name", fullName);
+    put("phone", phone);
+    put("phone_national", phoneNational);
+    put("city", cityAr);
+    put("product_slug", slug);
+    put("tier_qty", qty);
+    put("tier_price_cents", cents);
+    put("subtotal_cents", cents);
+    put("total_cents", cents);
+    put("status", status);
+    put("address", address);
+    put("quartier", quartier);
+    put("street", street);
+    put("building", building);
+    put("landmark", landmark);
+    put("delivery_window", deliveryWindow);
+    put("courier_notes", courierNotes);
+    put("region_id", regionId);
+    put(
+      "cross_sell_slug",
+      patch.cross_sell_slug !== undefined || patch.bundle_enabled !== undefined ? crossSlug : row.cross_sell_slug,
     );
-    await client.query(
-      `UPDATE order_items SET product_slug = $2, quantity = $3, unit_price_cents = $4, line_total_cents = $5
-       WHERE order_id = $1 AND role = 'primary'`,
-      [orderId, slug, qty, Math.floor(cents / Math.max(qty, 1)), cents],
+    if (cols.has("cross_sell_price_cents") && (patch.cross_sell_slug !== undefined || patch.bundle_enabled !== undefined)) {
+      values.push(crossCents ?? 0);
+      assignments.push(`cross_sell_price_cents = COALESCE($${values.length}, cross_sell_price_cents)`);
+    }
+    put("bundle_enabled", bundleEnabled);
+    put("secondary_qty", secondaryQty);
+    if (cols.has("updated_at")) assignments.push("updated_at = now()");
+    const statusParam = assignments.find((part) => part.startsWith("status = "))?.split("$")[1];
+    const stamp = statusParam ? stampFragment(cols, `$${statusParam}`) : "";
+    const updated = await client.query<OrderRow>(
+      `UPDATE orders SET ${assignments.join(", ")}${stamp} WHERE id = $1 RETURNING *`,
+      values,
     );
     await client.query("COMMIT");
-    return serialize(updated.rows[0]);
+    const saved = updated.rows[0];
+    if (!saved) return null;
+    try {
+      await client.query(
+        `UPDATE order_items SET product_slug = $2, quantity = $3, unit_price_cents = $4, line_total_cents = $5
+         WHERE order_id = $1 AND role = 'primary'`,
+        [orderId, slug, qty, Math.floor(cents / Math.max(qty, 1)), cents],
+      );
+    } catch (err) {
+      console.error("admin_order_items_update_skipped", err);
+    }
+    return serialize(saved);
   } catch (err) {
     await client.query("ROLLBACK").catch(() => undefined);
     throw err;

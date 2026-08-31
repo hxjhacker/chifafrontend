@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS orders (
   landmark varchar(160),
   delivery_window varchar(32),
   courier_notes text,
-  region_id varchar(8),
+  region_id varchar(32),
   bundle_enabled boolean NOT NULL DEFAULT false,
   secondary_qty integer NOT NULL DEFAULT 1,
   product_slug varchar(64) NOT NULL,
@@ -113,14 +113,17 @@ CREATE INDEX IF NOT EXISTS ix_tracking_events_event_id ON tracking_events (event
 
 const SCHEMA_ALTERS = [
   `ALTER TABLE orders ADD COLUMN IF NOT EXISTS address text`,
-  `ALTER TABLE orders ALTER COLUMN address TYPE text`,
+  `ALTER TABLE orders ALTER COLUMN address TYPE text USING address::text`,
+  `ALTER TABLE orders ADD COLUMN IF NOT EXISTS region_id varchar(32)`,
+  `ALTER TABLE orders ALTER COLUMN region_id TYPE varchar(32)`,
+  `ALTER TABLE orders ALTER COLUMN full_name TYPE varchar(160)`,
+  `ALTER TABLE orders ALTER COLUMN city TYPE varchar(120)`,
   `ALTER TABLE orders ADD COLUMN IF NOT EXISTS quartier varchar(120)`,
   `ALTER TABLE orders ADD COLUMN IF NOT EXISTS street varchar(160)`,
   `ALTER TABLE orders ADD COLUMN IF NOT EXISTS building varchar(80)`,
   `ALTER TABLE orders ADD COLUMN IF NOT EXISTS landmark varchar(160)`,
   `ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_window varchar(32)`,
   `ALTER TABLE orders ADD COLUMN IF NOT EXISTS courier_notes text`,
-  `ALTER TABLE orders ADD COLUMN IF NOT EXISTS region_id varchar(8)`,
   `ALTER TABLE orders ADD COLUMN IF NOT EXISTS bundle_enabled boolean DEFAULT false`,
   `ALTER TABLE orders ADD COLUMN IF NOT EXISTS secondary_qty integer DEFAULT 1`,
   `ALTER TABLE orders ALTER COLUMN upsell_price_cents SET DEFAULT 0`,
@@ -174,7 +177,7 @@ const PRODUCT_SEED = [
   },
 ] as const;
 
-const SCHEMA_ALTER_VERSION = 5;
+const SCHEMA_ALTER_VERSION = 6;
 let appliedAlterVersion = 0;
 
 export async function ensureSchema() {
@@ -214,19 +217,21 @@ export async function ensureSchema() {
     });
   }
   await schemaReady;
-  if (appliedAlterVersion < SCHEMA_ALTER_VERSION) {
-    const client = await getPool().connect();
-    try {
-      for (const sql of SCHEMA_ALTERS) {
-        try {
-          await client.query(sql);
-        } catch (err) {
-          console.error("schema_alter_skipped", sql, err);
-        }
+  await ensureOrderAlters();
+}
+
+export async function ensureOrderAlters() {
+  const client = await getPool().connect();
+  try {
+    for (const sql of SCHEMA_ALTERS) {
+      try {
+        await client.query(sql);
+      } catch (err) {
+        console.error("schema_alter_skipped", sql, err);
       }
-      appliedAlterVersion = SCHEMA_ALTER_VERSION;
-    } finally {
-      client.release();
     }
+    appliedAlterVersion = SCHEMA_ALTER_VERSION;
+  } finally {
+    client.release();
   }
 }
