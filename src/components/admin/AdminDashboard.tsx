@@ -225,6 +225,15 @@ export function AdminDashboard() {
     router.refresh();
   }
 
+  function onStatusSelect(order: AdminOrder, next: AdminStatus, selectEl: HTMLSelectElement) {
+    if (next === "confirmed" && order.status !== "confirmed") {
+      selectEl.value = order.status;
+      setCompleting(order);
+      return;
+    }
+    void changeStatus(order, next);
+  }
+
   async function changeStatus(order: AdminOrder, next: AdminStatus) {
     const prev = order.status;
     setOrders((list) => list.map((o) => (o.order_id === order.order_id ? { ...o, status: next } : o)));
@@ -810,7 +819,7 @@ export function AdminDashboard() {
                             <select
                               value={order.status}
                               disabled={savingId === order.order_id}
-                              onChange={(e) => void changeStatus(order, e.target.value as AdminStatus)}
+                              onChange={(e) => onStatusSelect(order, e.target.value as AdminStatus, e.currentTarget)}
                               className={cn("rounded-lg border px-2 py-1 text-[11px] font-bold focus:outline-none", meta.selectClass)}
                             >
                               {STATUS_OPTIONS.map((s) => (
