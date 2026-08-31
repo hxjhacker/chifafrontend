@@ -66,18 +66,21 @@ export function CompleteDetailsModal({ open, order, onClose, onSaved }: Props) {
     setError("");
     setName(order.full_name);
     setCity(order.city);
-    setRegionId(order.region_id || regionIdForCity(order.city));
-    setAddress("");
-    setNotes("");
-    setPrimarySlug(PRIMARY_PRODUCTS.some((p) => p.slug === order.product_slug) ? order.product_slug : "quran");
-    setPrimaryQty(Math.max(1, order.tier_qty || 1));
-    const hasBundle = Boolean(order.cross_sell_slug);
-    setBundleOn(hasBundle);
-    setSecondarySlug(
-      SECONDARY_PRODUCTS.some((p) => p.slug === order.cross_sell_slug) ? order.cross_sell_slug! : "extra",
+    setRegionId(order.region_id || order.region || regionIdForCity(order.city));
+    setAddress(order.address || order.full_address || "");
+    setNotes(order.courier_notes || order.driver_comment || "");
+    setPrimarySlug(
+      PRIMARY_PRODUCTS.some((p) => p.slug === (order.product_slug || order.primary_product))
+        ? order.product_slug || order.primary_product
+        : "quran",
     );
-    setSecondaryQty(1);
-    setPrice(Math.round(order.total) || 199);
+    setPrimaryQty(Math.max(1, order.tier_qty || order.primary_qty || 1));
+    const hasBundle = Boolean(order.bundle_enabled || order.cross_sell_slug || order.secondary_product);
+    setBundleOn(hasBundle);
+    const secondary = order.cross_sell_slug || order.secondary_product || "extra";
+    setSecondarySlug(SECONDARY_PRODUCTS.some((p) => p.slug === secondary) ? secondary : "extra");
+    setSecondaryQty(Math.max(1, order.secondary_qty || 1));
+    setPrice(Math.round(order.total ?? order.total_price) || 199);
     setPriceDirty(true);
   }, [open, order]);
 
@@ -100,13 +103,22 @@ export function CompleteDetailsModal({ open, order, onClose, onSaved }: Props) {
           full_name: name,
           city,
           region_id: regionId,
+          region: regionId,
           address,
+          full_address: address,
           product_slug: primary.slug,
+          primary_product: primary.slug,
           tier_qty: Math.max(1, primaryQty),
+          primary_qty: Math.max(1, primaryQty),
+          bundle_enabled: bundleOn,
           cross_sell_slug: bundleOn ? secondary.slug : null,
+          secondary_product: bundleOn ? secondary.slug : null,
+          secondary_qty: bundleOn ? Math.max(1, secondaryQty) : 1,
           cross_sell_price_mad: bundleOn ? secondary.price * Math.max(1, secondaryQty) : 0,
           courier_notes: notes,
+          driver_comment: notes,
           total_mad: Number(price),
+          total_price: Number(price),
           status: "confirmed",
         }),
       });

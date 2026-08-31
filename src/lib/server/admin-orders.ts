@@ -25,12 +25,15 @@ type OrderRow = {
   delivery_window: string | null;
   courier_notes: string | null;
   region_id: string | null;
+  bundle_enabled: boolean;
+  secondary_qty: number;
 };
 
 const ALLOWED: AdminStatus[] = ["new", "confirmed", "shipped", "delivered", "cancelled"];
 const WINDOWS: DeliveryWindow[] = ["anytime", "morning", "afternoon", "weekend"];
 const ORDER_COLS = `id, full_name, phone, phone_national, city, address, quartier, street, building, landmark,
-      delivery_window, courier_notes, region_id, product_slug, tier_qty, cross_sell_slug, upsell_slug, total_cents, currency, status, created_at`;
+      delivery_window, courier_notes, region_id, bundle_enabled, secondary_qty,
+      product_slug, tier_qty, cross_sell_slug, upsell_slug, total_cents, currency, status, created_at`;
 
 function asWindow(value: string | null | undefined): DeliveryWindow | null {
   if (!value) return null;
@@ -76,6 +79,15 @@ function serialize(row: OrderRow): AdminOrder {
     delivery_window: asWindow(row.delivery_window),
     courier_notes: row.courier_notes || null,
     region_id: row.region_id || null,
+    bundle_enabled: Boolean(row.bundle_enabled || row.cross_sell_slug),
+    secondary_qty: Math.max(1, Number(row.secondary_qty) || 1),
+    full_address: row.address || null,
+    region: row.region_id || null,
+    primary_product: row.product_slug,
+    primary_qty: row.tier_qty,
+    secondary_product: row.cross_sell_slug,
+    driver_comment: row.courier_notes || null,
+    total_price: Math.round(row.total_cents) / 100,
   };
 }
 
@@ -199,8 +211,29 @@ export async function updateAdminOrder(
     region_id?: string;
     cross_sell_slug?: string | null;
     cross_sell_price_mad?: number;
+    bundle_enabled?: boolean;
+    secondary_qty?: number;
+    full_address?: string;
+    region?: string;
+    primary_product?: string;
+    primary_qty?: number;
+    secondary_product?: string | null;
+    driver_comment?: string;
+    total_price?: number;
   },
 ): Promise<AdminOrder | null> {
+  patch = {
+    ...patch,
+    address: patch.address ?? patch.full_address,
+    region_id: patch.region_id ?? patch.region,
+    product_slug: patch.product_slug ?? patch.primary_product,
+    tier_qty: patch.tier_qty ?? patch.primary_qty,
+    cross_sell_slug: patch.cross_sell_slug !== undefined ? patch.cross_sell_slug : patch.secondary_product,
+    courier_notes: patch.courier_notes ?? patch.driver_comment,
+    total_mad: patch.total_mad ?? patch.total_price,
+  };
+  if (patch.bundle_enabled === false) patch.cross_sell_slug = null;
+
   const fields = Object.entries(patch).filter(([, value]) => value !== undefined);
   if (fields.length === 1 && patch.status !== undefined) {
     if (!ALLOWED.includes(patch.status)) throw new Error("invalid_status");
@@ -247,6 +280,8 @@ export async function updateAdminOrder(
     let regionId = row.region_id;
     let crossSlug = row.cross_sell_slug;
     let crossCents: number | null = null;
+    let bundleEnabled = Boolean(row.bundle_enabled || row.cross_sell_slug);
+    let secondaryQty = Math.max(1, Number(row.secondary_qty) || 1);
 
     if (patch.full_name !== undefined) {
       fullName = patch.full_name.trim();
@@ -294,21 +329,40 @@ export async function updateAdminOrder(
       address = composeAddress({ quartier, street, building, landmark, city: cityAr });
     }
     if (patch.region_id !== undefined) {
-      const next = patch.region_id.trim().toUpperCase();
-      regionId = /^MA(0[1-9]|1[0-2])$/.test(next) ? next : regionId;
+      const raw = patch.region_id.trim();
+      const byId = raw.toUpperCase();
+      if (/^MA(0[1-9]|1[0-2])$/.test(byId)) {
+        regionId = byId;
+      } else {
+        const { MOROCCO_REGIONS } = await import("@/lib/admin-geo");
+        const hit = MOROCCO_REGIONS.find((r) => r.id === byId || r.name === raw);
+        if (hit) regionId = hit.id;
+      }
     }
     if (patch.cross_sell_slug !== undefined) {
       const allowedCross = ["quran", "kids", "music", "educative", "extra"];
       if (!patch.cross_sell_slug) {
         crossSlug = null;
         crossCents = 0;
+        bundleEnabled = false;
       } else if (allowedCross.includes(patch.cross_sell_slug)) {
         crossSlug = patch.cross_sell_slug;
+        bundleEnabled = true;
         if (patch.cross_sell_price_mad !== undefined) {
           crossCents = Math.round(Number(patch.cross_sell_price_mad) * 100);
           if (!Number.isFinite(crossCents) || crossCents < 0) throw new Error("invalid_price");
         }
       }
+    }
+    if (patch.bundle_enabled !== undefined) bundleEnabled = Boolean(patch.bundle_enabled);
+    if (patch.secondary_qty !== undefined) {
+      const next = Math.round(Number(patch.secondary_qty));
+      if (!Number.isFinite(next) || next < 1 || next > 20) throw new Error("invalid_qty");
+      secondaryQty = next;
+    }
+    if (!bundleEnabled) {
+      crossSlug = null;
+      crossCents = 0;
     }
 
     await client.query("BEGIN");
@@ -320,6 +374,7 @@ export async function updateAdminOrder(
          delivery_window = $15, courier_notes = $16, region_id = $17,
          cross_sell_slug = $18,
          cross_sell_price_cents = COALESCE($19, cross_sell_price_cents),
+         bundle_enabled = $20, secondary_qty = $21,
          updated_at = now()
        WHERE id = $1
        RETURNING ${ORDER_COLS}`,
@@ -341,8 +396,10 @@ export async function updateAdminOrder(
         deliveryWindow,
         courierNotes,
         regionId,
-        patch.cross_sell_slug !== undefined ? crossSlug : row.cross_sell_slug,
-        patch.cross_sell_slug !== undefined ? (crossCents ?? 0) : null,
+        patch.cross_sell_slug !== undefined || patch.bundle_enabled !== undefined ? crossSlug : row.cross_sell_slug,
+        patch.cross_sell_slug !== undefined || patch.bundle_enabled !== undefined ? (crossCents ?? 0) : null,
+        bundleEnabled,
+        secondaryQty,
       ],
     );
     await client.query(

@@ -26,6 +26,15 @@ export type AdminOrder = {
   delivery_window: DeliveryWindow | null;
   courier_notes: string | null;
   region_id: string | null;
+  bundle_enabled: boolean;
+  secondary_qty: number;
+  full_address: string | null;
+  region: string | null;
+  primary_product: string;
+  primary_qty: number;
+  secondary_product: string | null;
+  driver_comment: string | null;
+  total_price: number;
 };
 
 export type AdminStats = {

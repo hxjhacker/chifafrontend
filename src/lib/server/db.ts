@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS orders (
   phone varchar(20) NOT NULL,
   phone_national varchar(20) NOT NULL DEFAULT '',
   city varchar(80) NOT NULL,
-  address varchar(500),
+  address text,
   quartier varchar(120),
   street varchar(160),
   building varchar(80),
@@ -54,6 +54,8 @@ CREATE TABLE IF NOT EXISTS orders (
   delivery_window varchar(32),
   courier_notes text,
   region_id varchar(8),
+  bundle_enabled boolean NOT NULL DEFAULT false,
+  secondary_qty integer NOT NULL DEFAULT 1,
   product_slug varchar(64) NOT NULL,
   tier_qty integer NOT NULL,
   tier_price_cents integer NOT NULL,
@@ -103,26 +105,30 @@ CREATE TABLE IF NOT EXISTS tracking_events (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS ix_tracking_events_event_id ON tracking_events (event_id);
-
-ALTER TABLE orders ADD COLUMN IF NOT EXISTS address varchar(500);
-ALTER TABLE orders ALTER COLUMN address TYPE varchar(500);
-ALTER TABLE orders ADD COLUMN IF NOT EXISTS quartier varchar(120);
-ALTER TABLE orders ADD COLUMN IF NOT EXISTS street varchar(160);
-ALTER TABLE orders ADD COLUMN IF NOT EXISTS building varchar(80);
-ALTER TABLE orders ADD COLUMN IF NOT EXISTS landmark varchar(160);
-ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_window varchar(32);
-ALTER TABLE orders ADD COLUMN IF NOT EXISTS courier_notes text;
-ALTER TABLE orders ADD COLUMN IF NOT EXISTS region_id varchar(8);
-ALTER TABLE orders ALTER COLUMN upsell_price_cents SET DEFAULT 0;
-ALTER TABLE orders ALTER COLUMN cross_sell_price_cents SET DEFAULT 0;
-ALTER TABLE orders ALTER COLUMN phone_national SET DEFAULT '';
-ALTER TABLE orders ALTER COLUMN currency SET DEFAULT 'MAD';
-ALTER TABLE orders ALTER COLUMN status SET DEFAULT 'pending';
-ALTER TABLE orders ALTER COLUMN payment_method SET DEFAULT 'COD';
-ALTER TABLE orders ALTER COLUMN source SET DEFAULT 'website';
-ALTER TABLE orders ALTER COLUMN created_at SET DEFAULT now();
-ALTER TABLE orders ALTER COLUMN updated_at SET DEFAULT now();
 `;
+
+const SCHEMA_ALTERS = [
+  `ALTER TABLE orders ADD COLUMN IF NOT EXISTS address text`,
+  `ALTER TABLE orders ALTER COLUMN address TYPE text`,
+  `ALTER TABLE orders ADD COLUMN IF NOT EXISTS quartier varchar(120)`,
+  `ALTER TABLE orders ADD COLUMN IF NOT EXISTS street varchar(160)`,
+  `ALTER TABLE orders ADD COLUMN IF NOT EXISTS building varchar(80)`,
+  `ALTER TABLE orders ADD COLUMN IF NOT EXISTS landmark varchar(160)`,
+  `ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_window varchar(32)`,
+  `ALTER TABLE orders ADD COLUMN IF NOT EXISTS courier_notes text`,
+  `ALTER TABLE orders ADD COLUMN IF NOT EXISTS region_id varchar(8)`,
+  `ALTER TABLE orders ADD COLUMN IF NOT EXISTS bundle_enabled boolean DEFAULT false`,
+  `ALTER TABLE orders ADD COLUMN IF NOT EXISTS secondary_qty integer DEFAULT 1`,
+  `ALTER TABLE orders ALTER COLUMN upsell_price_cents SET DEFAULT 0`,
+  `ALTER TABLE orders ALTER COLUMN cross_sell_price_cents SET DEFAULT 0`,
+  `ALTER TABLE orders ALTER COLUMN phone_national SET DEFAULT ''`,
+  `ALTER TABLE orders ALTER COLUMN currency SET DEFAULT 'MAD'`,
+  `ALTER TABLE orders ALTER COLUMN status SET DEFAULT 'pending'`,
+  `ALTER TABLE orders ALTER COLUMN payment_method SET DEFAULT 'COD'`,
+  `ALTER TABLE orders ALTER COLUMN source SET DEFAULT 'website'`,
+  `ALTER TABLE orders ALTER COLUMN created_at SET DEFAULT now()`,
+  `ALTER TABLE orders ALTER COLUMN updated_at SET DEFAULT now()`,
+];
 
 const PRODUCT_SEED = [
   {
@@ -165,6 +171,13 @@ export async function ensureSchema() {
       const client = await getPool().connect();
       try {
         await client.query(SCHEMA_SQL);
+        for (const sql of SCHEMA_ALTERS) {
+          try {
+            await client.query(sql);
+          } catch (err) {
+            console.error("schema_alter_skipped", sql, err);
+          }
+        }
         for (const product of PRODUCT_SEED) {
           await client.query(
             `INSERT INTO products (id, slug, name_ar, name_en, tagline_ar, description_ar, accent, is_active, created_at)
