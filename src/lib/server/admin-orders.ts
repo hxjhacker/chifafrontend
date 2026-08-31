@@ -331,6 +331,69 @@ function buildUpdate(orderId: string, sets: SetItem[], cols: Set<string>) {
   };
 }
 
+function isStatusOnlyPatch(patch: OrderPatch) {
+  const defined = Object.entries(patch).filter(([, value]) => value !== undefined);
+  return defined.length === 1 && defined[0][0] === "status" && patch.status !== undefined;
+}
+
+async function stampStatusColumns(
+  client: { query: (sql: string, values?: unknown[]) => Promise<{ rows: OrderRow[] }> },
+  orderId: string,
+  status: AdminStatus,
+  cols: Set<string>,
+  saved: OrderRow,
+) {
+  const stamps: string[] = [];
+  if (status === "confirmed" || status === "shipped" || status === "delivered") stamps.push("confirmed_at");
+  if (status === "shipped" || status === "delivered") stamps.push("shipped_at");
+  if (status === "delivered") stamps.push("delivered_at");
+  if (status === "cancelled") stamps.push("cancelled_at");
+  let current = saved;
+  for (const column of stamps) {
+    if (cols.size > 0 && !cols.has(column)) continue;
+    try {
+      const result = await client.query(
+        `UPDATE orders SET ${column} = COALESCE(${column}, now()) WHERE id = $1 RETURNING *`,
+        [orderId],
+      );
+      if (result.rows[0]) current = result.rows[0];
+    } catch (err) {
+      console.error("admin_order_stamp_skipped", column, err);
+    }
+  }
+  return current;
+}
+
+async function applyStatusOnly(
+  client: { query: (sql: string, values?: unknown[]) => Promise<{ rows: OrderRow[] }> },
+  orderId: string,
+  status: AdminStatus,
+  cols: Set<string>,
+) {
+  if (!ALLOWED.includes(status)) throw new Error("invalid_status");
+  let saved: OrderRow | undefined;
+  try {
+    const withUpdated =
+      cols.size === 0 || cols.has("updated_at")
+        ? `UPDATE orders SET status = $2, updated_at = now() WHERE id = $1 RETURNING *`
+        : `UPDATE orders SET status = $2 WHERE id = $1 RETURNING *`;
+    const result = await client.query(withUpdated, [orderId, status]);
+    saved = result.rows[0];
+  } catch (err) {
+    console.error("admin_status_update_retry", err);
+    const result = await client.query(`UPDATE orders SET status = $2 WHERE id = $1 RETURNING *`, [orderId, status]);
+    saved = result.rows[0];
+  }
+  if (!saved) return null;
+  saved = await stampStatusColumns(client, orderId, status, cols, saved);
+  try {
+    return serialize(saved);
+  } catch (err) {
+    console.error("admin_status_serialize_failed", err);
+    return serialize({ ...saved, status } as OrderRow);
+  }
+}
+
 export async function updateAdminOrder(orderId: string, patch: OrderPatch): Promise<AdminOrder | null> {
   patch = {
     ...patch,
@@ -353,15 +416,8 @@ export async function updateAdminOrder(orderId: string, patch: OrderPatch): Prom
     if (!row) return null;
     const cols = columnsOf(current);
 
-    const fields = Object.entries(patch).filter(([, value]) => value !== undefined);
-    if (fields.length === 1 && patch.status !== undefined) {
-      if (!ALLOWED.includes(patch.status)) throw new Error("invalid_status");
-      const statusSets: SetItem[] = [{ column: "status", value: patch.status }];
-      if (cols.size === 0 || cols.has("updated_at")) statusSets.push({ column: "updated_at", expr: "now" });
-      const built = buildUpdate(orderId, statusSets, cols);
-      const result = await client.query<OrderRow>(built.sql, built.values);
-      const saved = result.rows[0];
-      return saved ? serialize(saved) : null;
+    if (isStatusOnlyPatch(patch) && patch.status) {
+      return applyStatusOnly(client, orderId, patch.status, cols);
     }
 
     let fullName = row.full_name;
@@ -550,16 +606,8 @@ export async function updateAdminOrder(orderId: string, patch: OrderPatch): Prom
       }
     }
 
-    if ((status === "confirmed" || status === "shipped" || status === "delivered") && (cols.size === 0 || cols.has("confirmed_at"))) {
-      try {
-        const stamped = await run(
-          `UPDATE orders SET confirmed_at = COALESCE(confirmed_at, now()) WHERE id = $1 RETURNING *`,
-          [orderId],
-        );
-        if (stamped.rows[0]) saved = stamped.rows[0];
-      } catch (err) {
-        console.error("admin_order_stamp_skipped", err);
-      }
+    if ((status === "confirmed" || status === "shipped" || status === "delivered" || status === "cancelled") && saved) {
+      saved = await stampStatusColumns(client, orderId, status, cols, saved);
     }
 
     if (!saved) return null;
@@ -610,13 +658,24 @@ export async function createAdminOrder(input: {
   status: AdminStatus;
 }): Promise<AdminOrder> {
   if (!ALLOWED.includes(input.status)) throw new Error("invalid_status");
-  const fullName = input.full_name.trim();
+  const fullName = input.full_name.trim().slice(0, 120);
   if (fullName.length < 3) throw new Error("invalid_name");
-  const { normalizeMaPhone } = await import("@/lib/phone");
-  const { resolveCity } = await import("@/lib/cities");
-  const e164 = normalizeMaPhone(input.phone);
+  let e164 = "";
+  try {
+    const { normalizeMaPhone } = await import("@/lib/phone");
+    e164 = normalizeMaPhone(input.phone) || "";
+  } catch (err) {
+    console.error("admin_create_phone_parse_failed", err);
+  }
   if (!e164) throw new Error("invalid_ma_phone");
-  const city = resolveCity(input.city);
+  let cityAr = String(input.city || "").trim().slice(0, 80);
+  try {
+    const { resolveCity } = await import("@/lib/cities");
+    cityAr = (resolveCity(input.city).ar || cityAr).slice(0, 80);
+  } catch {
+    /* keep typed city */
+  }
+  if (cityAr.length < 2) throw new Error("invalid_city");
   const qty = input.tier_qty >= 2 ? 2 : 1;
   const cents = Math.round(Number(input.total_mad) * 100);
   if (!Number.isFinite(cents) || cents < 100) throw new Error("invalid_price");
@@ -628,32 +687,64 @@ export async function createAdminOrder(input: {
   await ensureSchema();
   const client = await getPool().connect();
   try {
-    await client.query("BEGIN");
-    const inserted = await client.query<OrderRow>(
-      `INSERT INTO orders (
-         id, full_name, phone, phone_national, city, address, product_slug, tier_qty, tier_price_cents,
-         cross_sell_slug, cross_sell_price_cents, upsell_slug, upsell_price_cents, subtotal_cents, total_cents,
-         currency, status, payment_method, event_id, source, created_at, updated_at,
-         confirmed_at, shipped_at, delivered_at, cancelled_at
-       ) VALUES (
-         $1,$2,$3,$4,$5,NULL,$6,$7,$8,NULL,0,NULL,0,$8,$8,'MAD',$9,'COD',$10,'admin', now(), now(),
-         CASE WHEN $9 IN ('confirmed','shipped','delivered') THEN now() ELSE NULL END,
-         CASE WHEN $9 IN ('shipped','delivered') THEN now() ELSE NULL END,
-         CASE WHEN $9 = 'delivered' THEN now() ELSE NULL END,
-         CASE WHEN $9 = 'cancelled' THEN now() ELSE NULL END
-       ) RETURNING ${ORDER_COLS}`,
-      [orderId, fullName, e164, national, city.ar, slug, qty, cents, input.status, eventId],
-    );
-    await client.query(
-      `INSERT INTO order_items (id, order_id, product_slug, role, quantity, unit_price_cents, line_total_cents)
-       VALUES ($1,$2,$3,'primary',$4,$5,$6)`,
-      [randomUUID(), orderId, slug, qty, Math.floor(cents / qty), cents],
-    );
-    await client.query("COMMIT");
-    return serialize(inserted.rows[0]);
-  } catch (err) {
-    await client.query("ROLLBACK").catch(() => undefined);
-    throw err;
+    const probe = await client.query(`SELECT * FROM orders LIMIT 0`);
+    const cols = columnsOf(probe);
+    const record: Record<string, unknown> = {
+      id: orderId,
+      full_name: fullName,
+      phone: e164,
+      phone_national: national,
+      city: cityAr,
+      product_slug: slug,
+      tier_qty: qty,
+      tier_price_cents: cents,
+      cross_sell_slug: null,
+      cross_sell_price_cents: 0,
+      upsell_slug: null,
+      upsell_price_cents: 0,
+      subtotal_cents: cents,
+      total_cents: cents,
+      currency: "MAD",
+      status: input.status,
+      payment_method: "COD",
+      event_id: eventId,
+      source: "admin",
+    };
+    const insertCols = Object.keys(record).filter((column) => cols.size === 0 || cols.has(column));
+    const insertVals = insertCols.map((column) => record[column]);
+    const placeholders = insertCols.map((_, index) => `$${index + 1}`);
+    let inserted: { rows: OrderRow[] };
+    try {
+      inserted = await client.query<OrderRow>(
+        `INSERT INTO orders (${insertCols.join(", ")}) VALUES (${placeholders.join(", ")}) RETURNING *`,
+        insertVals,
+      );
+    } catch (err) {
+      console.error("admin_create_insert_retry", err);
+      inserted = await client.query<OrderRow>(
+        `INSERT INTO orders (id, full_name, phone, phone_national, city, product_slug, tier_qty, tier_price_cents, subtotal_cents, total_cents, status, event_id)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$8,$8,$9,$10) RETURNING *`,
+        [orderId, fullName, e164, national, cityAr, slug, qty, cents, input.status, eventId],
+      );
+    }
+    const saved = inserted.rows[0];
+    if (!saved) throw new Error("create_failed");
+    const stamped = await stampStatusColumns(client, orderId, input.status, cols.size ? cols : columnsOf(inserted), saved);
+    try {
+      await client.query(
+        `INSERT INTO order_items (id, order_id, product_slug, role, quantity, unit_price_cents, line_total_cents)
+         VALUES ($1,$2,$3,'primary',$4,$5,$6)`,
+        [randomUUID(), orderId, slug, qty, Math.floor(cents / qty), cents],
+      );
+    } catch (err) {
+      console.error("admin_create_items_skipped", err);
+    }
+    try {
+      return serialize(stamped);
+    } catch (err) {
+      console.error("admin_create_serialize_failed", err);
+      return serialize(saved);
+    }
   } finally {
     client.release();
   }

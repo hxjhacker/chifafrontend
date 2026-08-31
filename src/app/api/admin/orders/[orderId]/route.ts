@@ -122,7 +122,15 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ orderId?:
   }
 
   try {
-    const order = await updateAdminOrder(orderId, normalizePatch(body));
+    const bodyKeys = Object.keys(body).filter((key) => body[key] !== undefined);
+    const patch =
+      bodyKeys.length === 1 && bodyKeys[0] === "status"
+        ? { status: asText(body.status) && ALLOWED.includes(asText(body.status) as AdminStatus) ? (asText(body.status) as AdminStatus) : undefined }
+        : normalizePatch(body);
+    if (bodyKeys.length === 1 && bodyKeys[0] === "status" && !patch.status) {
+      return NextResponse.json({ detail: "invalid_status" }, { status: 422 });
+    }
+    const order = await updateAdminOrder(orderId, patch);
     if (!order) return NextResponse.json({ detail: "order_not_found" }, { status: 404 });
     return NextResponse.json(order);
   } catch (err) {

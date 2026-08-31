@@ -98,6 +98,7 @@ export function AddOrderModal({ open, editing, onClose, onCreated, onUpdated }: 
           invalid_ma_phone: "رقم الهاتف المغربي غير صالح.",
           invalid_price: "المبلغ غير صالح.",
           invalid_status: "حالة الطلب غير صالحة.",
+          invalid_city: "المدينة غير صالحة.",
         };
         throw new Error(map[body.detail || ""] || (isEdit ? "تعذر تعديل الطلب." : "تعذر حفظ الطلب."));
       }

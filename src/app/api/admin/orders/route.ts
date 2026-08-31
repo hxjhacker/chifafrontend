@@ -57,7 +57,7 @@ export async function POST(request: Request) {
     return NextResponse.json(order, { status: 201 });
   } catch (err) {
     const message = err instanceof Error ? err.message : "create_failed";
-    const status = ["invalid_name", "invalid_ma_phone", "invalid_price", "invalid_status"].includes(message) ? 422 : 500;
+    const status = ["invalid_name", "invalid_ma_phone", "invalid_price", "invalid_status", "invalid_city"].includes(message) ? 422 : 500;
     if (status === 500) console.error("admin_create_failed", err);
     return NextResponse.json({ detail: message }, { status });
   }
