@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Check,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Copy,
@@ -18,6 +19,7 @@ import {
   PieChart,
   Plus,
   Printer,
+  Repeat2,
   Search,
   SlidersHorizontal,
   Trash2,
@@ -35,6 +37,7 @@ import {
   ADMIN_STATUSES,
   allowedNextStatuses,
   canTransitionStatus,
+  cloneOrderCreatePayload,
   copyText,
   copyablePhone,
   downloadCsv,
@@ -121,6 +124,8 @@ export function AdminDashboard() {
   const [printingId, setPrintingId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AdminOrder | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
+  const [notice, setNotice] = useState("");
   useLockBodyScroll(Boolean(deleteTarget));
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [hideAll, setHideAll] = useState(false);
@@ -135,6 +140,12 @@ export function AdminDashboard() {
 
   const closeTimeline = useCallback(() => setViewingId(null), []);
   const closePrint = useCallback(() => setPrintingId(null), []);
+
+  useEffect(() => {
+    if (!notice) return;
+    const timer = window.setTimeout(() => setNotice(""), 4200);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
 
   useEffect(() => {
     setPrefs(readPrefs());
@@ -285,6 +296,40 @@ export function AdminDashboard() {
     }
     setCopiedId(order.order_id);
     window.setTimeout(() => setCopiedId(null), 1800);
+  }
+
+  async function duplicateOrder(order: AdminOrder) {
+    if (duplicatingId) return;
+    setDuplicatingId(order.order_id);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/orders", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(cloneOrderCreatePayload(order)),
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { detail?: string };
+        const map: Record<string, string> = {
+          invalid_name: "الاسم قصير جداً.",
+          invalid_ma_phone: "رقم الهاتف غير صالح لإعادة الطلب.",
+          invalid_city: "المدينة غير صالحة.",
+          invalid_price: "المبلغ غير صالح.",
+        };
+        throw new Error(map[body.detail || ""] || "تعذر إنشاء الطلبية الجديدة.");
+      }
+      const created = (await res.json()) as AdminOrder;
+      setOrders((list) => [created, ...list]);
+      setPage(1);
+      if (status !== "all" && status !== "new") setStatus("all");
+      setNotice("تم إنشاء طلبية جديدة بنجاح من هذه الطلبية");
+      await refreshStats();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "تعذر إنشاء الطلبية الجديدة.");
+    } finally {
+      setDuplicatingId(null);
+    }
   }
 
   async function confirmDelete() {
@@ -773,6 +818,19 @@ export function AdminDashboard() {
                             </button>
                             <button
                               type="button"
+                              title="إعادة طلبية جديدة"
+                              disabled={duplicatingId === order.order_id}
+                              onClick={() => void duplicateOrder(order)}
+                              className="flex h-8 w-8 items-center justify-center rounded-xl border border-violet-500/30 bg-violet-500/10 text-violet-400 transition hover:bg-violet-500 hover:text-white disabled:opacity-60"
+                            >
+                              {duplicatingId === order.order_id ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <Repeat2 className="h-3.5 w-3.5" />
+                              )}
+                            </button>
+                            <button
+                              type="button"
                               title="حذف الطلبية"
                               onClick={() => setDeleteTarget(order)}
                               className="flex h-8 w-8 items-center justify-center rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-500 transition hover:bg-rose-500 hover:text-white"
@@ -931,6 +989,15 @@ export function AdminDashboard() {
       </footer>
     </div>
     {printing ? <ShippingLabel order={printing} onClose={closePrint} /> : null}
+    {notice ? (
+      <div
+        role="status"
+        className="fixed bottom-6 left-1/2 z-[80] flex -translate-x-1/2 items-center gap-2 rounded-2xl border border-emerald-400/40 bg-[#0b1322] px-4 py-3 text-sm font-bold text-emerald-200 shadow-2xl"
+      >
+        <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
+        {notice}
+      </div>
+    ) : null}
     </>
   );
 }

@@ -101,7 +101,7 @@ export function CompleteDetailsModal({ open, order, onClose, onSaved }: Props) {
       const qty = Math.round(Math.max(1, Number(primaryQty) || 1));
       const extraQty = Math.round(Math.max(1, Number(secondaryQty) || 1));
       const total = Math.round(Number(price)) || 0;
-      const nextStatus = order.status === "new" ? "confirmed" : order.status;
+      const nextStatus = order.status === "new" || order.status === "cancelled" ? "confirmed" : order.status;
       const fullPayload = {
         full_name: name.trim(),
         customer_name: name.trim(),

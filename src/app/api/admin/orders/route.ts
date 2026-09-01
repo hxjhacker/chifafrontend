@@ -38,6 +38,16 @@ export async function POST(request: Request) {
     tier_qty?: number;
     total_mad?: number;
     status?: AdminStatus;
+    address?: string | null;
+    region_id?: string | null;
+    quartier?: string | null;
+    street?: string | null;
+    building?: string | null;
+    landmark?: string | null;
+    courier_notes?: string | null;
+    cross_sell_slug?: string | null;
+    bundle_enabled?: boolean;
+    secondary_qty?: number;
   };
   try {
     body = (await request.json()) as typeof body;
@@ -53,6 +63,16 @@ export async function POST(request: Request) {
       tier_qty: Number(body.tier_qty || 1),
       total_mad: Number(body.total_mad || 0),
       status: (body.status || "confirmed") as AdminStatus,
+      address: body.address,
+      region_id: body.region_id,
+      quartier: body.quartier,
+      street: body.street,
+      building: body.building,
+      landmark: body.landmark,
+      courier_notes: body.courier_notes,
+      cross_sell_slug: body.cross_sell_slug,
+      bundle_enabled: body.bundle_enabled,
+      secondary_qty: body.secondary_qty,
     });
     return NextResponse.json(order, { status: 201 });
   } catch (err) {

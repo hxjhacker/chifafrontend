@@ -87,19 +87,21 @@ function stampFragment(cols: Set<string>, param: string) {
   const parts: string[] = [];
   if (cols.has("confirmed_at")) {
     parts.push(
-      `confirmed_at = CASE WHEN ${param} IN ('confirmed','shipped','delivered') THEN COALESCE(confirmed_at, now()) ELSE confirmed_at END`,
+      `confirmed_at = CASE WHEN ${param} = 'new' THEN NULL WHEN ${param} IN ('confirmed','shipped','delivered') THEN COALESCE(confirmed_at, now()) ELSE confirmed_at END`,
     );
   }
   if (cols.has("shipped_at")) {
     parts.push(
-      `shipped_at = CASE WHEN ${param} IN ('shipped','delivered') THEN COALESCE(shipped_at, now()) ELSE shipped_at END`,
+      `shipped_at = CASE WHEN ${param} IN ('new','confirmed') THEN NULL WHEN ${param} IN ('shipped','delivered') THEN COALESCE(shipped_at, now()) ELSE shipped_at END`,
     );
   }
   if (cols.has("delivered_at")) {
-    parts.push(`delivered_at = CASE WHEN ${param} = 'delivered' THEN COALESCE(delivered_at, now()) ELSE delivered_at END`);
+    parts.push(
+      `delivered_at = CASE WHEN ${param} IN ('new','confirmed','shipped') THEN NULL WHEN ${param} = 'delivered' THEN COALESCE(delivered_at, now()) ELSE delivered_at END`,
+    );
   }
   if (cols.has("cancelled_at")) {
-    parts.push(`cancelled_at = CASE WHEN ${param} = 'cancelled' THEN COALESCE(cancelled_at, now()) ELSE cancelled_at END`);
+    parts.push(`cancelled_at = CASE WHEN ${param} = 'cancelled' THEN COALESCE(cancelled_at, now()) ELSE NULL END`);
   }
   return parts.length ? `, ${parts.join(", ")}` : "";
 }
@@ -343,25 +345,45 @@ async function stampStatusColumns(
   cols: Set<string>,
   saved: OrderRow,
 ) {
-  const stamps: string[] = [];
-  if (status === "confirmed" || status === "shipped" || status === "delivered") stamps.push("confirmed_at");
-  if (status === "shipped" || status === "delivered") stamps.push("shipped_at");
-  if (status === "delivered") stamps.push("delivered_at");
-  if (status === "cancelled") stamps.push("cancelled_at");
-  let current = saved;
-  for (const column of stamps) {
-    if (cols.size > 0 && !cols.has(column)) continue;
-    try {
-      const result = await client.query(
-        `UPDATE orders SET ${column} = COALESCE(${column}, now()) WHERE id = $1 RETURNING *`,
-        [orderId],
-      );
-      if (result.rows[0]) current = result.rows[0];
-    } catch (err) {
-      console.error("admin_order_stamp_skipped", column, err);
-    }
+  const assignments: string[] = [];
+  if (cols.size === 0 || cols.has("confirmed_at")) {
+    assignments.push(
+      status === "new"
+        ? "confirmed_at = NULL"
+        : status === "confirmed" || status === "shipped" || status === "delivered"
+          ? "confirmed_at = COALESCE(confirmed_at, now())"
+          : "confirmed_at = confirmed_at",
+    );
   }
-  return current;
+  if (cols.size === 0 || cols.has("shipped_at")) {
+    assignments.push(
+      status === "new" || status === "confirmed"
+        ? "shipped_at = NULL"
+        : status === "shipped" || status === "delivered"
+          ? "shipped_at = COALESCE(shipped_at, now())"
+          : "shipped_at = shipped_at",
+    );
+  }
+  if (cols.size === 0 || cols.has("delivered_at")) {
+    assignments.push(
+      status === "delivered"
+        ? "delivered_at = COALESCE(delivered_at, now())"
+        : status === "cancelled"
+          ? "delivered_at = delivered_at"
+          : "delivered_at = NULL",
+    );
+  }
+  if (cols.size === 0 || cols.has("cancelled_at")) {
+    assignments.push(status === "cancelled" ? "cancelled_at = COALESCE(cancelled_at, now())" : "cancelled_at = NULL");
+  }
+  if (!assignments.length) return saved;
+  try {
+    const result = await client.query(`UPDATE orders SET ${assignments.join(", ")} WHERE id = $1 RETURNING *`, [orderId]);
+    return result.rows[0] || saved;
+  } catch (err) {
+    console.error("admin_order_stamp_skipped", status, err);
+    return saved;
+  }
 }
 
 async function applyStatusOnly(
@@ -678,6 +700,16 @@ export async function createAdminOrder(input: {
   tier_qty: number;
   total_mad: number;
   status: AdminStatus;
+  address?: string | null;
+  region_id?: string | null;
+  quartier?: string | null;
+  street?: string | null;
+  building?: string | null;
+  landmark?: string | null;
+  courier_notes?: string | null;
+  cross_sell_slug?: string | null;
+  bundle_enabled?: boolean;
+  secondary_qty?: number;
 }): Promise<AdminOrder> {
   if (!ALLOWED.includes(input.status)) throw new Error("invalid_status");
   const fullName = input.full_name.trim().slice(0, 120);
@@ -701,13 +733,25 @@ export async function createAdminOrder(input: {
     /* keep typed city */
   }
   if (cityAr.length < 2) throw new Error("invalid_city");
-  const qty = input.tier_qty >= 2 ? 2 : 1;
+  const qty = Math.min(20, Math.max(1, Math.round(Number(input.tier_qty) || 1)));
   const cents = Math.round(Number(input.total_mad) * 100);
   if (!Number.isFinite(cents) || cents < 100) throw new Error("invalid_price");
   const slug = ["quran", "kids", "music", "educative"].includes(input.product_slug) ? input.product_slug : "quran";
   const national = e164.startsWith("+212") && e164.length === 13 ? `0${e164.slice(4)}` : e164;
   const orderId = randomUUID();
   const eventId = `admin-${orderId}`;
+  const address = String(input.address || "").trim() || null;
+  const courierNotes = String(input.courier_notes || "").trim() || null;
+  const allowedCross = ["quran", "kids", "music", "educative", "extra"];
+  const crossSlug = input.cross_sell_slug && allowedCross.includes(input.cross_sell_slug) ? input.cross_sell_slug : null;
+  const bundleEnabled = Boolean(input.bundle_enabled && crossSlug);
+  const secondaryQty = Math.min(20, Math.max(1, Math.round(Number(input.secondary_qty) || 1)));
+  let regionId: string | null = null;
+  if (input.region_id) {
+    const raw = String(input.region_id).trim();
+    const byId = raw.toUpperCase();
+    if (/^MA(0[1-9]|1[0-2])$/.test(byId)) regionId = byId;
+  }
 
   await ensureSchema();
   const client = await getPool().connect();
@@ -723,7 +767,7 @@ export async function createAdminOrder(input: {
       product_slug: slug,
       tier_qty: qty,
       tier_price_cents: cents,
-      cross_sell_slug: null,
+      cross_sell_slug: bundleEnabled ? crossSlug : null,
       cross_sell_price_cents: 0,
       upsell_slug: null,
       upsell_price_cents: 0,
@@ -734,6 +778,15 @@ export async function createAdminOrder(input: {
       payment_method: "COD",
       event_id: eventId,
       source: "admin",
+      address,
+      quartier: String(input.quartier || "").trim() || null,
+      street: String(input.street || "").trim() || null,
+      building: String(input.building || "").trim() || null,
+      landmark: String(input.landmark || "").trim() || null,
+      courier_notes: courierNotes,
+      region_id: regionId,
+      bundle_enabled: bundleEnabled,
+      secondary_qty: bundleEnabled ? secondaryQty : 1,
     };
     const insertCols = Object.keys(record).filter((column) => cols.size === 0 || cols.has(column));
     const insertVals = insertCols.map((column) => record[column]);

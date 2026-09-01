@@ -109,7 +109,7 @@ export const STATUS_TRANSITIONS: Record<AdminStatus, readonly AdminStatus[]> = {
   confirmed: ["shipped", "cancelled"],
   shipped: ["delivered", "cancelled"],
   delivered: [],
-  cancelled: [],
+  cancelled: ["new", "confirmed"],
 };
 
 export function displayStatus(raw: string): AdminStatus {
@@ -158,7 +158,8 @@ export function hasCompleteConfirmDetails(order: AddressParts): boolean {
 
 export function needsConfirmModal(order: AddressParts & { status: string }, next: AdminStatus): boolean {
   if (displayStatus(next) !== "confirmed") return false;
-  if (displayStatus(order.status) !== "new") return false;
+  const from = displayStatus(order.status);
+  if (from !== "new" && from !== "cancelled") return false;
   return !hasCompleteConfirmDetails(order);
 }
 
@@ -335,6 +336,28 @@ export function copyablePhone(order: { phone: string; phone_national: string }) 
   if (digits.startsWith("212") && digits.length >= 12) return `0${digits.slice(3)}`;
   if (digits.startsWith("0") && digits.length >= 10) return digits.slice(0, 10);
   return raw;
+}
+
+export function cloneOrderCreatePayload(order: AdminOrder) {
+  return {
+    full_name: order.full_name,
+    phone: copyablePhone(order),
+    city: order.city,
+    address: detailedAddress(order) || order.address || "",
+    region_id: order.region_id || order.region || "",
+    product_slug: order.product_slug,
+    tier_qty: Math.max(1, order.tier_qty || order.primary_qty || 1),
+    total_mad: Number(order.total ?? order.total_price) || 0,
+    status: "new" as AdminStatus,
+    courier_notes: order.courier_notes || order.driver_comment || "",
+    quartier: order.quartier || "",
+    street: order.street || "",
+    building: order.building || "",
+    landmark: order.landmark || "",
+    cross_sell_slug: order.cross_sell_slug || order.secondary_product || null,
+    bundle_enabled: Boolean(order.bundle_enabled || order.cross_sell_slug || order.secondary_product),
+    secondary_qty: Math.max(1, order.secondary_qty || 1),
+  };
 }
 
 export async function copyText(value: string) {
