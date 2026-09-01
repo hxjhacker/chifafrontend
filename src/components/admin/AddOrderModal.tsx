@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { Pencil, Plus, ShoppingCart, X } from "lucide-react";
 import { CITIES } from "@/lib/cities";
 import { MANUAL_PRODUCTS } from "@/lib/admin-geo";
-import { copyablePhone, type AdminOrder, type AdminStatus } from "@/lib/admin";
+import { allowedNextStatuses, canTransitionStatus, copyablePhone, needsConfirmModal, type AdminOrder, type AdminStatus } from "@/lib/admin";
 import { digitsOnly, isTenDigitMaPhone } from "@/lib/phone";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import { cn } from "@/lib/cn";
@@ -101,6 +101,10 @@ export function AddOrderModal({ open, editing, onClose, onCreated, onUpdated }: 
       setError("رقم الهاتف المغربي غير صالح.");
       return;
     }
+    if (isEdit && !canTransitionStatus(editing!.status, status)) {
+      setError("لا يمكن القفز في حالة الطلب. اتبع المسار بالترتيب.");
+      return;
+    }
     setError("");
     setSaving(true);
     try {
@@ -126,6 +130,8 @@ export function AddOrderModal({ open, editing, onClose, onCreated, onUpdated }: 
           invalid_ma_phone: "رقم الهاتف المغربي غير صالح.",
           invalid_price: "المبلغ غير صالح.",
           invalid_status: "حالة الطلب غير صالحة.",
+          invalid_status_transition: "لا يمكن القفز في حالة الطلب.",
+          confirmation_details_required: "لازم تكمل معلومات التوصيل قبل التأكيد.",
           invalid_city: "المدينة غير صالحة.",
         };
         throw new Error(map[body.detail || ""] || (isEdit ? "تعذر تعديل الطلب." : "تعذر حفظ الطلب."));
@@ -141,7 +147,14 @@ export function AddOrderModal({ open, editing, onClose, onCreated, onUpdated }: 
     }
   }
 
-  const statuses = isEdit ? ALL_STATUSES : ALL_STATUSES.slice(0, 3);
+  const statuses = isEdit
+    ? ALL_STATUSES.filter((s) => {
+        if (s.id === editing!.status) return true;
+        if (!allowedNextStatuses(editing!.status).includes(s.id)) return false;
+        if (needsConfirmModal(editing!, s.id)) return false;
+        return true;
+      })
+    : ALL_STATUSES.filter((s) => s.id === "new" || s.id === "confirmed");
 
   return (
     <div

@@ -104,10 +104,62 @@ export const PACK_NAMES: Record<string, string> = {
 
 export const NEW_EQUIV = new Set(["pending", "upsell_accepted", "new"]);
 
+export const STATUS_TRANSITIONS: Record<AdminStatus, readonly AdminStatus[]> = {
+  new: ["confirmed", "cancelled"],
+  confirmed: ["shipped", "cancelled"],
+  shipped: ["delivered", "cancelled"],
+  delivered: [],
+  cancelled: [],
+};
+
 export function displayStatus(raw: string): AdminStatus {
   if (NEW_EQUIV.has(raw) || raw === "new") return "new";
   if (raw === "confirmed" || raw === "shipped" || raw === "delivered" || raw === "cancelled") return raw;
   return "new";
+}
+
+export function allowedNextStatuses(current: AdminStatus): AdminStatus[] {
+  return [...(STATUS_TRANSITIONS[current] || [])];
+}
+
+export function canTransitionStatus(from: string, to: string): boolean {
+  const current = displayStatus(from);
+  const next = displayStatus(to);
+  if (current === next) return true;
+  return allowedNextStatuses(current).includes(next);
+}
+
+export function assertStatusTransition(from: string, to: string) {
+  if (!canTransitionStatus(from, to)) throw new Error("invalid_status_transition");
+}
+
+type AddressParts = {
+  full_name?: string | null;
+  city?: string | null;
+  phone?: string | null;
+  phone_national?: string | null;
+  address?: string | null;
+  full_address?: string | null;
+  quartier?: string | null;
+  street?: string | null;
+  building?: string | null;
+  landmark?: string | null;
+};
+
+export function hasCompleteConfirmDetails(order: AddressParts): boolean {
+  const name = (order.full_name || "").trim();
+  const city = (order.city || "").trim();
+  const phone = (order.phone || order.phone_national || "").trim();
+  const address = detailedAddress(order).trim();
+  if (name.length < 3 || city.length < 2 || !phone || address.length < 8) return false;
+  const rest = address.split(city).join(" ").replace(/[،,.\-\s]/g, "");
+  return rest.length >= 5;
+}
+
+export function needsConfirmModal(order: AddressParts & { status: string }, next: AdminStatus): boolean {
+  if (displayStatus(next) !== "confirmed") return false;
+  if (displayStatus(order.status) !== "new") return false;
+  return !hasCompleteConfirmDetails(order);
 }
 
 export function packLabel(order: {
@@ -148,7 +200,14 @@ export function sourceLabel(source: string | null | undefined) {
   return source || "الموقع";
 }
 
-export function detailedAddress(order: AdminOrder) {
+export function detailedAddress(order: {
+  address?: string | null;
+  full_address?: string | null;
+  quartier?: string | null;
+  street?: string | null;
+  building?: string | null;
+  landmark?: string | null;
+}) {
   const stored = (order.address || order.full_address || "").trim();
   if (stored) return stored;
   const bits = [order.quartier, order.street, order.building, order.landmark]

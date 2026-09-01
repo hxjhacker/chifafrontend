@@ -33,10 +33,13 @@ import { OrderTimelineModal } from "@/components/admin/OrderTimelineModal";
 import { ShippingLabel } from "@/components/admin/ShippingLabel";
 import {
   ADMIN_STATUSES,
+  allowedNextStatuses,
+  canTransitionStatus,
   copyText,
   copyablePhone,
   downloadCsv,
   formatMad,
+  needsConfirmModal,
   ordersToCsv,
   pct,
   shortOrderRef,
@@ -228,7 +231,13 @@ export function AdminDashboard() {
   }
 
   function onStatusSelect(order: AdminOrder, next: AdminStatus, selectEl: HTMLSelectElement) {
-    if (next === "confirmed" && order.status !== "confirmed") {
+    if (next === order.status) return;
+    if (!canTransitionStatus(order.status, next)) {
+      selectEl.value = order.status;
+      setError("لا يمكن القفز في حالة الطلب. اتبع المسار: جديدة → تم التأكيد → قيد الشحن → تم التسليم.");
+      return;
+    }
+    if (needsConfirmModal(order, next)) {
       selectEl.value = order.status;
       setCompleting(order);
       return;
@@ -247,13 +256,21 @@ export function AdminDashboard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: next }),
       });
-      if (!res.ok) throw new Error("fail");
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { detail?: string };
+        const map: Record<string, string> = {
+          invalid_status_transition: "لا يمكن القفز في حالة الطلب. اتبع المسار بالترتيب.",
+          confirmation_details_required: "لازم تكمل معلومات التوصيل قبل التأكيد.",
+          invalid_status: "حالة الطلب غير صالحة.",
+        };
+        throw new Error(map[body.detail || ""] || "fail");
+      }
       const updated = (await res.json()) as AdminOrder;
       setOrders((list) => list.map((o) => (o.order_id === order.order_id ? updated : o)));
       await refreshStats();
-    } catch {
+    } catch (err) {
       setOrders((list) => list.map((o) => (o.order_id === order.order_id ? { ...o, status: prev } : o)));
-      setError("فشل تحديث الحالة. أعد المحاولة.");
+      setError(err instanceof Error && err.message !== "fail" ? err.message : "فشل تحديث الحالة. أعد المحاولة.");
     } finally {
       setSavingId(null);
     }
@@ -820,12 +837,16 @@ export function AdminDashboard() {
                           <div className="inline-flex items-center gap-1.5">
                             <select
                               value={order.status}
-                              disabled={savingId === order.order_id}
+                              disabled={savingId === order.order_id || allowedNextStatuses(order.status).length === 0}
                               onChange={(e) => onStatusSelect(order, e.target.value as AdminStatus, e.currentTarget)}
                               className={cn("rounded-lg border px-2 py-1 text-[11px] font-bold focus:outline-none", meta.selectClass)}
                             >
                               {STATUS_OPTIONS.map((s) => (
-                                <option key={s.id} value={s.id}>
+                                <option
+                                  key={s.id}
+                                  value={s.id}
+                                  disabled={s.id !== order.status && !canTransitionStatus(order.status, s.id)}
+                                >
                                   {s.label}
                                 </option>
                               ))}

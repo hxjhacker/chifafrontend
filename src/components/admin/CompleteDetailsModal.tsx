@@ -101,6 +101,7 @@ export function CompleteDetailsModal({ open, order, onClose, onSaved }: Props) {
       const qty = Math.round(Math.max(1, Number(primaryQty) || 1));
       const extraQty = Math.round(Math.max(1, Number(secondaryQty) || 1));
       const total = Math.round(Number(price)) || 0;
+      const nextStatus = order.status === "new" ? "confirmed" : order.status;
       const fullPayload = {
         full_name: name.trim(),
         customer_name: name.trim(),
@@ -122,7 +123,7 @@ export function CompleteDetailsModal({ open, order, onClose, onSaved }: Props) {
         driver_comment: notes,
         total_mad: total,
         total_price: total,
-        status: "confirmed",
+        status: nextStatus,
       };
       const minimalPayload = {
         full_name: name.trim(),
@@ -131,7 +132,7 @@ export function CompleteDetailsModal({ open, order, onClose, onSaved }: Props) {
         product_slug: primary.slug,
         tier_qty: qty,
         total_mad: total,
-        status: "confirmed",
+        status: nextStatus,
       };
 
       async function send(body: Record<string, unknown>) {
@@ -158,6 +159,8 @@ export function CompleteDetailsModal({ open, order, onClose, onSaved }: Props) {
           invalid_price: "المبلغ غير صالح.",
           invalid_qty: "الكمية غير صالحة.",
           invalid_status: "حالة الطلب غير صالحة.",
+          invalid_status_transition: "لا يمكن القفز في حالة الطلب.",
+          confirmation_details_required: "لازم تكمل العنوان قبل التأكيد.",
           invalid_ma_phone: "رقم الهاتف غير صالح.",
           order_not_found: "الطلبية غير موجودة.",
           update_failed: "تعذر حفظ وتأكيد المعلومات.",

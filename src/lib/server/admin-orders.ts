@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { AdminOrder, AdminStats, AdminStatus, DeliveryWindow } from "@/lib/admin";
-import { displayStatus, packLabel } from "@/lib/admin";
+import { assertStatusTransition, displayStatus, hasCompleteConfirmDetails, packLabel } from "@/lib/admin";
 import { ensureSchema, getPool } from "./db";
 
 type OrderRow = {
@@ -417,6 +417,10 @@ export async function updateAdminOrder(orderId: string, patch: OrderPatch): Prom
     const cols = columnsOf(current);
 
     if (isStatusOnlyPatch(patch) && patch.status) {
+      assertStatusTransition(row.status, patch.status);
+      if (displayStatus(patch.status) === "confirmed" && displayStatus(row.status) !== "confirmed" && !hasCompleteConfirmDetails(row)) {
+        throw new Error("confirmation_details_required");
+      }
       return applyStatusOnly(client, orderId, patch.status, cols);
     }
 
@@ -478,6 +482,7 @@ export async function updateAdminOrder(orderId: string, patch: OrderPatch): Prom
     }
     if (patch.status !== undefined) {
       if (!ALLOWED.includes(patch.status)) throw new Error("invalid_status");
+      assertStatusTransition(row.status, patch.status);
       status = patch.status;
     }
     if (patch.quartier != null) quartier = String(patch.quartier).trim() || null;
@@ -529,6 +534,24 @@ export async function updateAdminOrder(orderId: string, patch: OrderPatch): Prom
     if (!bundleEnabled) {
       crossSlug = null;
       crossCents = 0;
+    }
+
+    if (displayStatus(status) === "confirmed" && displayStatus(row.status) !== "confirmed") {
+      if (
+        !hasCompleteConfirmDetails({
+          full_name: fullName,
+          city: cityAr,
+          phone,
+          phone_national: phoneNational,
+          address,
+          quartier,
+          street,
+          building,
+          landmark,
+        })
+      ) {
+        throw new Error("confirmation_details_required");
+      }
     }
 
     const extras: Array<[string, unknown]> = [

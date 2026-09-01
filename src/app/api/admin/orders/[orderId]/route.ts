@@ -135,7 +135,16 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ orderId?:
     return NextResponse.json(order);
   } catch (err) {
     const message = err instanceof Error ? err.message : "update_failed";
-    const known = ["invalid_name", "invalid_ma_phone", "invalid_price", "invalid_status", "invalid_delivery_window", "invalid_qty"];
+    const known = [
+      "invalid_name",
+      "invalid_ma_phone",
+      "invalid_price",
+      "invalid_status",
+      "invalid_status_transition",
+      "confirmation_details_required",
+      "invalid_delivery_window",
+      "invalid_qty",
+    ];
     const status = known.includes(message) ? 422 : 500;
     if (status === 500) console.error("admin_order_patch_failed", err);
     return NextResponse.json({ detail: known.includes(message) ? message : "update_failed" }, { status });
