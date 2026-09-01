@@ -49,6 +49,7 @@ export function QuickWhatsAppOrderModal({ open, onClose, onCreated, onWarning }:
         address: "العنوان",
         phone: "رقم الهاتف",
         price: "الثمن",
+        product: "المنتج (1 أو 2 أو 3)",
       };
       const message = `الحقول الناقصة: ${parsed.missing.map((key) => labels[key]).join("، ")}`;
       setError(message);
@@ -69,8 +70,8 @@ export function QuickWhatsAppOrderModal({ open, onClose, onCreated, onWarning }:
           address: parsed.address,
           phone: parsed.phone,
           total_mad: parsed.price,
-          product_slug: "quran",
-          tier_qty: 1,
+          product_slug: parsed.productSlug,
+          tier_qty: parsed.qty,
           status: "new",
           region_id: regionIdForCity(parsed.city),
         }),
@@ -131,7 +132,7 @@ export function QuickWhatsAppOrderModal({ open, onClose, onCreated, onWarning }:
               value={raw}
               onChange={(e) => setRaw(e.target.value)}
               required
-              rows={8}
+              rows={9}
               dir="rtl"
               placeholder={WHATSAPP_ORDER_PLACEHOLDER}
               className="mt-1.5 w-full resize-y rounded-2xl border border-gold/20 bg-cream px-3.5 py-3 font-mono text-xs leading-6 text-royal placeholder-royal/35 transition focus:border-gold focus:outline-none dark:bg-brandDark dark:text-white dark:placeholder-slate-500"
@@ -143,6 +144,8 @@ export function QuickWhatsAppOrderModal({ open, onClose, onCreated, onWarning }:
             <li>3. العنوان بالتفصيل</li>
             <li>4. رقم الهاتف</li>
             <li>5. الثمن</li>
+            <li>6. المنتج: 1 قرآن · 2 أطفال · 3 موسيقى</li>
+            <li>7. الكمية (اختياري — الافتراضي 1)</li>
           </ol>
 
           {error ? (
