@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   Check,
   CheckCircle2,
+  CircleAlert,
   ChevronLeft,
   ChevronRight,
   Copy,
@@ -32,6 +33,7 @@ import { CompleteDetailsModal } from "@/components/admin/CompleteDetailsModal";
 import { IosSwitch } from "@/components/admin/IosSwitch";
 import { MoroccoMap } from "@/components/admin/MoroccoMap";
 import { OrderTimelineModal } from "@/components/admin/OrderTimelineModal";
+import { QuickWhatsAppOrderModal } from "@/components/admin/QuickWhatsAppOrderModal";
 import { ShippingLabel } from "@/components/admin/ShippingLabel";
 import {
   ADMIN_STATUSES,
@@ -119,6 +121,7 @@ export function AdminDashboard() {
   const [savingId, setSavingId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
+  const [quickOpen, setQuickOpen] = useState(false);
   const [completing, setCompleting] = useState<AdminOrder | null>(null);
   const [viewingId, setViewingId] = useState<string | null>(null);
   const [printingId, setPrintingId] = useState<string | null>(null);
@@ -126,6 +129,7 @@ export function AdminDashboard() {
   const [deleting, setDeleting] = useState(false);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
+  const [noticeKind, setNoticeKind] = useState<"ok" | "warn">("ok");
   useLockBodyScroll(Boolean(deleteTarget));
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [hideAll, setHideAll] = useState(false);
@@ -323,6 +327,7 @@ export function AdminDashboard() {
       setOrders((list) => [created, ...list]);
       setPage(1);
       if (status !== "all" && status !== "new") setStatus("all");
+      setNoticeKind("ok");
       setNotice("تم إنشاء طلبية جديدة بنجاح من هذه الطلبية");
       await refreshStats();
     } catch (err) {
@@ -397,6 +402,22 @@ export function AdminDashboard() {
           setOrders((list) => [order, ...list]);
           setPage(1);
           void refreshStats();
+        }}
+      />
+      <QuickWhatsAppOrderModal
+        open={quickOpen}
+        onClose={() => setQuickOpen(false)}
+        onCreated={(order) => {
+          setOrders((list) => [order, ...list]);
+          setPage(1);
+          if (status !== "all" && status !== "new") setStatus("all");
+          setNoticeKind("ok");
+          setNotice("تم إنشاء طلبية جديدة بنجاح من هذه الطلبية");
+          void refreshStats();
+        }}
+        onWarning={(message) => {
+          setNoticeKind("warn");
+          setNotice(message);
         }}
       />
       <OrderTimelineModal
@@ -479,6 +500,15 @@ export function AdminDashboard() {
             >
               <Plus className="h-4 w-4" />
               <span className="hidden text-xs font-black md:inline">إضافة طلب</span>
+            </button>
+            <button
+              type="button"
+              aria-label="إضافة سريعة من الواتساب"
+              onClick={() => setQuickOpen(true)}
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-emeraldCustom/30 bg-emeraldCustom/10 text-emeraldCustom shadow-sm transition hover:bg-emeraldCustom hover:text-white active:scale-95 md:h-auto md:w-auto md:gap-1.5 md:px-3.5 md:py-2"
+            >
+              <WhatsAppIcon className="h-4 w-4" />
+              <span className="hidden text-xs font-black md:inline">إضافة سريعة من الواتساب</span>
             </button>
             <div className="relative" ref={prefsRef}>
               <button
@@ -992,9 +1022,18 @@ export function AdminDashboard() {
     {notice ? (
       <div
         role="status"
-        className="fixed bottom-6 left-1/2 z-[80] flex -translate-x-1/2 items-center gap-2 rounded-2xl border border-emerald-400/40 bg-[#0b1322] px-4 py-3 text-sm font-bold text-emerald-200 shadow-2xl"
+        className={cn(
+          "fixed bottom-6 left-1/2 z-[80] flex -translate-x-1/2 items-center gap-2 rounded-2xl border px-4 py-3 text-sm font-bold shadow-2xl",
+          noticeKind === "warn"
+            ? "border-amber-400/40 bg-[#0b1322] text-amber-200"
+            : "border-emerald-400/40 bg-[#0b1322] text-emerald-200",
+        )}
       >
-        <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
+        {noticeKind === "warn" ? (
+          <CircleAlert className="h-4 w-4 shrink-0 text-amber-400" />
+        ) : (
+          <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
+        )}
         {notice}
       </div>
     ) : null}
