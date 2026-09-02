@@ -63,6 +63,41 @@ export function regionNameForId(id: string) {
   return MOROCCO_REGIONS.find((r) => r.id === id)?.name ?? regionForCity("");
 }
 
+const REGION_ZONES: Record<string, string> = {
+  MA01: "TNG",
+  MA02: "ORI",
+  MA03: "FES",
+  MA04: "RBT",
+  MA05: "BML",
+  MA06: "CASA",
+  MA07: "MAR",
+  MA08: "ERD",
+  MA09: "AGA",
+  MA10: "GUL",
+  MA11: "LAA",
+  MA12: "DKH",
+};
+
+const CITY_ZONES: Array<[string[], string]> = [
+  [["الدار البيضاء", "كازا", "casablanca", "casa", "المحمدية", "زناتة"], "CASA"],
+  [["الرباط", "سلا", "تمارة", "rabat", "sale", "salé"], "RBT"],
+  [["مراكش", "marrakech", "marrakesh"], "MAR"],
+  [["طنجة", "tangier", "tanger"], "TNG"],
+  [["أكادير", "agadir"], "AGA"],
+  [["فاس", "fes", "fez"], "FES"],
+  [["وجدة", "oujda"], "OUJ"],
+  [["القنيطرة", "kenitra"], "KEN"],
+];
+
+export function expeditionZone(city: string, regionId?: string | null) {
+  const needle = (city || "").trim().toLowerCase();
+  for (const [aliases, zone] of CITY_ZONES) {
+    if (aliases.some((alias) => needle.includes(alias.toLowerCase()))) return zone;
+  }
+  const id = regionId || regionIdForCity(city);
+  return REGION_ZONES[id] || "CASA";
+}
+
 export function buildRegionStats(orders: { city: string; status: string; region_id?: string | null }[]): RegionStat[] {
   const map = new Map<string, RegionStat>();
   for (const region of MOROCCO_REGIONS) {

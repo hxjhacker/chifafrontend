@@ -42,7 +42,16 @@ const CODE39: Record<string, string> = {
 };
 
 export function barcodeValue(orderId: string) {
-  return `CFG${orderId.replace(/-/g, "").slice(0, 6).toUpperCase()}`;
+  return `CFG${orderId.replace(/-/g, "").slice(0, 8).toUpperCase()}`;
+}
+
+export function parcelTrackingId(orderId: string) {
+  return barcodeValue(orderId);
+}
+
+export function parcelTrackingUrl(orderId: string) {
+  const base = (process.env.NEXT_PUBLIC_SITE_URL || "https://chifaglow.com").replace(/\/$/, "");
+  return `${base}/thank-you?order=${encodeURIComponent(orderId)}`;
 }
 
 export function encodeCode39(text: string) {

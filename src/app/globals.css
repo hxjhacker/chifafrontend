@@ -155,132 +155,253 @@ html.dark body {
   min-height: 150mm;
   height: 150mm;
   overflow: hidden;
-  padding: 4.5mm;
+  padding: 3mm;
   background: #fff;
-  color: #0b1322;
+  color: #000;
   font-family: var(--font-tajawal), Tajawal, sans-serif;
-  border: 1px solid #1e293b;
+  border: 2px solid #000;
   display: flex;
   flex-direction: column;
-  gap: 3.2mm;
+  gap: 0;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
 }
 
-#shipping-label-print .label-header {
-  text-align: center;
-  border-bottom: 2px solid #0b1322;
-  padding-bottom: 2.5mm;
+#shipping-label-print .label-top {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 2.5mm;
+  align-items: center;
+  border-bottom: 2px solid #000;
+  padding-bottom: 2mm;
 }
 
-#shipping-label-print .store-mark {
-  margin: 0;
-  font-weight: 900;
-  letter-spacing: 0.18em;
-  font-size: 13px;
+#shipping-label-print .label-brand {
+  display: flex;
+  align-items: center;
+  gap: 2mm;
 }
 
-#shipping-label-print .store-ar {
-  margin: 1px 0 0;
-  font-weight: 800;
-  font-size: 12px;
-}
-
-#shipping-label-print .store-tag,
-#shipping-label-print .store-contact {
-  margin: 1px 0 0;
+#shipping-label-print .brand-mark {
+  display: flex;
+  width: 7mm;
+  height: 7mm;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  color: #fff;
   font-size: 8px;
+  font-weight: 900;
+}
+
+#shipping-label-print .brand-name {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  line-height: 1.1;
+}
+
+#shipping-label-print .brand-tag {
+  margin: 0.4mm 0 0;
+  font-size: 7px;
   font-weight: 700;
   color: #334155;
 }
 
-#shipping-label-print .barcode-block {
+#shipping-label-print .label-zone {
+  background: #000;
+  color: #fff;
   text-align: center;
+  padding: 1.6mm 1.5mm;
 }
 
-#shipping-label-print .order-ref {
-  margin: 1.5mm 0 0;
+#shipping-label-print .label-zone span {
+  display: block;
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #e2e8f0;
+}
+
+#shipping-label-print .label-zone strong {
+  display: block;
+  margin-top: 0.4mm;
   font-size: 16px;
   font-weight: 900;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.16em;
 }
 
-#shipping-label-print .section-kicker {
-  margin: 0 0 1mm;
-  font-size: 8px;
-  font-weight: 800;
-  color: #64748b;
+#shipping-label-print .label-parties {
+  display: grid;
+  grid-template-columns: 0.85fr 1fr 1.15fr;
+  border-bottom: 2px solid #000;
+  min-height: 32mm;
 }
 
-#shipping-label-print .receiver-name {
+#shipping-label-print .label-qr,
+#shipping-label-print .label-sender,
+#shipping-label-print .label-receiver {
+  padding: 2mm;
+}
+
+#shipping-label-print .label-qr,
+#shipping-label-print .label-sender {
+  border-right: 2px solid #000;
+}
+
+#shipping-label-print .label-qr {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 1mm;
+}
+
+#shipping-label-print .label-qr span,
+#shipping-label-print .party-kicker {
   margin: 0;
-  font-size: 16px;
+  font-size: 8px;
+  font-weight: 900;
+}
+
+#shipping-label-print .label-qr svg {
+  width: 18mm;
+  height: 18mm;
+}
+
+#shipping-label-print .party-kicker {
+  border-bottom: 1px solid #000;
+  padding-bottom: 0.8mm;
+  margin-bottom: 1.2mm;
+}
+
+#shipping-label-print .party-line,
+#shipping-label-print .party-city,
+#shipping-label-print .party-address {
+  margin: 0 0 0.8mm;
+  font-size: 8.5px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+#shipping-label-print .party-name {
+  margin: 0 0 0.8mm;
+  font-size: 10px;
   font-weight: 900;
   line-height: 1.25;
 }
 
-#shipping-label-print .receiver-city,
-#shipping-label-print .receiver-address,
-#shipping-label-print .receiver-parts,
-#shipping-label-print .receiver-phone {
-  margin: 1mm 0 0;
+#shipping-label-print .party-phone {
+  margin: 0 0 0.8mm;
   font-size: 10px;
-  font-weight: 700;
-  line-height: 1.45;
-}
-
-#shipping-label-print .receiver-phone {
-  font-size: 12px;
   font-weight: 900;
+  letter-spacing: 0.04em;
   direction: ltr;
   unicode-bidi: isolate;
 }
 
-#shipping-label-print .cod-box {
-  border: 2.5px solid #0b1322;
-  padding: 2.5mm 3mm;
+#shipping-label-print .stock-pill {
+  margin: 2mm 0 0;
+  background: #f1f5f9;
+  border: 1px solid #000;
+  text-align: center;
+  font-size: 8px;
+  font-weight: 900;
+  padding: 1mm 0;
+}
+
+#shipping-label-print .label-bans {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: #f1f5f9;
+  border-bottom: 2px solid #000;
+  font-size: 9px;
+  font-weight: 900;
+  text-align: center;
+}
+
+#shipping-label-print .label-bans span {
+  padding: 1.4mm 1mm;
+}
+
+#shipping-label-print .label-bans span:first-child {
+  border-right: 1px solid #000;
+}
+
+#shipping-label-print .label-goods {
+  display: grid;
+  grid-template-columns: 1.7fr 0.8fr;
+  border-bottom: 2px solid #000;
+  min-height: 22mm;
+  flex: 1;
+}
+
+#shipping-label-print .goods-list {
+  border-right: 2px solid #000;
+  padding: 2mm;
+  display: flex;
+  flex-direction: column;
+}
+
+#shipping-label-print .goods-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5mm;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+}
+
+#shipping-label-print .goods-chips span {
+  border: 1px solid #000;
+  background: #f8fafc;
+  font-size: 9px;
+  font-weight: 900;
+  padding: 1mm 2mm;
+}
+
+#shipping-label-print .goods-crbt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   background: #f8fafc;
+  padding: 2mm;
 }
 
-#shipping-label-print .cod-box p {
-  margin: 0;
-  font-size: 9px;
-  font-weight: 800;
+#shipping-label-print .goods-crbt span {
+  font-size: 8px;
+  font-weight: 900;
+  text-transform: uppercase;
 }
 
-#shipping-label-print .cod-box strong {
-  display: block;
+#shipping-label-print .goods-crbt strong {
   margin-top: 1mm;
   font-size: 16px;
   font-weight: 900;
 }
 
-#shipping-label-print .pack-list ul {
-  margin: 0;
-  padding: 0;
-  list-style: none;
+#shipping-label-print .label-barcode {
+  padding: 2mm 1mm 0;
+  text-align: center;
 }
 
-#shipping-label-print .pack-list li {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  font-size: 10px;
+#shipping-label-print .label-barcode svg {
+  display: block;
+  width: 100%;
+  height: 16mm;
+}
+
+#shipping-label-print .label-barcode p {
+  margin: 1mm 0 0;
+  font-size: 6.5px;
   font-weight: 700;
-  padding: 0.6mm 0;
-  border-bottom: 1px dashed #cbd5e1;
-}
-
-#shipping-label-print .driver-notes {
-  margin-top: auto;
-  border: 1px dashed #0b1322;
-  padding: 2mm 2.5mm;
-  font-size: 9px;
-  font-weight: 700;
-  line-height: 1.5;
-}
-
-#shipping-label-print .driver-notes p:last-child {
-  margin: 0;
+  color: #334155;
+  line-height: 1.35;
 }
 
 @media print {
@@ -292,11 +413,12 @@ html.dark body {
   html,
   body {
     background: #fff !important;
-    color: #0b1322 !important;
+    color: #000 !important;
   }
 
   .admin-print-root,
-  .no-print {
+  .no-print,
+  .shipping-label-chrome {
     display: none !important;
   }
 
@@ -305,8 +427,8 @@ html.dark body {
     inset: 0;
     width: 100mm;
     height: 150mm;
-    border: none;
     box-shadow: none;
+    border: 2px solid #000 !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
