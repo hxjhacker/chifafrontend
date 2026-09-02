@@ -407,7 +407,7 @@ export function AdminDashboard() {
 
   return (
     <>
-    <div className="admin-print-root flex min-h-screen flex-col justify-between bg-cream text-royal antialiased transition-colors duration-300 dark:bg-brandDark dark:text-slate-100 print:hidden">
+    <div className="admin-print-root no-select flex min-h-screen select-none flex-col justify-between bg-cream text-royal antialiased transition-colors duration-300 dark:bg-brandDark dark:text-slate-100 print:hidden">
       <AddOrderModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}

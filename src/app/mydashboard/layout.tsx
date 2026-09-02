@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { DashboardShield } from "@/components/admin/DashboardShield";
 
 export const metadata: Metadata = {
   title: {
@@ -27,5 +28,5 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  return children;
+  return <DashboardShield>{children}</DashboardShield>;
 }
