@@ -52,7 +52,7 @@ export async function verifyAdminPassword(username: string, password: string) {
   const hash = adminPasswordHash();
   const plain = adminPasswordPlain();
   if (!expectedUser || (!hash && !plain)) return false;
-  if (!safeEqual(username, expectedUser)) {
+  if (!safeEqual(username.trim().toLowerCase(), expectedUser.toLowerCase())) {
     await bcrypt.compare(password || "x", "$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW");
     return false;
   }

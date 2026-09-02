@@ -25,15 +25,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ detail: "admin_not_configured" }, { status: 503 });
   }
 
-  let body: { username?: string; password?: string };
+  let body: { username?: string; password?: string; remember?: boolean; rememberMe?: boolean };
   try {
-    body = (await request.json()) as { username?: string; password?: string };
+    body = (await request.json()) as { username?: string; password?: string; remember?: boolean; rememberMe?: boolean };
   } catch {
     return NextResponse.json({ detail: "invalid_body" }, { status: 400 });
   }
 
   const username = (body.username || "").trim();
   const password = body.password || "";
+  const remember = Boolean(body.remember ?? body.rememberMe);
   if (!username || !password) {
     return NextResponse.json({ detail: "invalid_credentials" }, { status: 401 });
   }
@@ -48,8 +49,8 @@ export async function POST(request: Request) {
   }
 
   recordLoginSuccess(ip);
-  const token = await signAdminToken(username);
+  const token = await signAdminToken(username, remember);
   const res = NextResponse.json({ ok: true, username });
-  res.cookies.set(ADMIN_COOKIE, token, authCookieOptions());
+  res.cookies.set(ADMIN_COOKIE, token, authCookieOptions(remember));
   return res;
 }

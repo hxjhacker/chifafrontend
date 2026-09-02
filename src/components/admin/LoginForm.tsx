@@ -46,7 +46,7 @@ export function LoginForm() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ username: username.trim(), password }),
+        body: JSON.stringify({ username: username.trim(), password, remember, rememberMe: remember }),
       });
       if (res.status === 429) {
         setError("محاولات كثيرة. انتظر 15 دقيقة ثم أعد المحاولة.");
@@ -130,7 +130,7 @@ export function LoginForm() {
                 required
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="admin@chifaglow.com"
+                placeholder="manager@chifa.com"
                 className="w-full rounded-2xl border border-white/10 bg-[#040810] py-4 pl-4 pr-11 font-bold text-white shadow-inner placeholder-slate-600 transition-all focus:border-gold/80 focus:outline-none focus:ring-4 focus:ring-gold/10"
               />
             </div>

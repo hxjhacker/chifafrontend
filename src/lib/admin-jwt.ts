@@ -2,9 +2,10 @@ import { jwtVerify, SignJWT, type JWTPayload } from "jose";
 
 export const ADMIN_COOKIE = "cg_admin";
 export const JWT_ALG = "HS256";
+export const REMEMBER_MAX_AGE = 30 * 24 * 60 * 60;
 
-const FALLBACK_USER = "MOhammed2003";
-const FALLBACK_PASS = "simo25082003elyoussfiM#";
+const FALLBACK_USER = "manager@chifa.com";
+const FALLBACK_PASS = "adminpro@";
 const FALLBACK_JWT = "204a308d75e24d90b8e47391e1cc9d33b2b08cce2dcd4482a2276542bd346504";
 
 export type AdminJwt = JWTPayload & { role?: string; sub?: string };
@@ -44,12 +45,12 @@ export function adminAuthConfigured() {
   return Boolean(adminUsername() && (adminPasswordPlain() || adminPasswordHash()));
 }
 
-export async function signAdminToken(username: string) {
+export async function signAdminToken(username: string, remember = false) {
   return new SignJWT({ role: "admin" })
     .setProtectedHeader({ alg: JWT_ALG })
     .setSubject(username)
     .setIssuedAt()
-    .setExpirationTime(`${jwtHours()}h`)
+    .setExpirationTime(remember ? "30d" : `${jwtHours()}h`)
     .sign(secretBytes());
 }
 
@@ -64,12 +65,17 @@ export async function verifyAdminToken(token: string): Promise<AdminJwt | null> 
   }
 }
 
-export function authCookieOptions() {
-  return {
+export function authCookieOptions(remember = false) {
+  const options = {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "strict" as const,
+    sameSite: "lax" as const,
     path: "/",
-    maxAge: jwtHours() * 3600,
+  };
+  if (!remember) return options;
+  return {
+    ...options,
+    maxAge: REMEMBER_MAX_AGE,
+    expires: new Date(Date.now() + REMEMBER_MAX_AGE * 1000),
   };
 }
