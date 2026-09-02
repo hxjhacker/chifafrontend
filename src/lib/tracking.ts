@@ -1,6 +1,7 @@
 "use client";
 
 import { sendTracking } from "./api";
+import { purchaseEventId, type PurchaseKind } from "./purchase-event";
 
 export type PixelWindow = Window & {
   fbq?: (...args: unknown[]) => void;
@@ -10,6 +11,12 @@ export type PixelWindow = Window & {
 };
 
 const queue: Array<() => void> = [];
+const trackedPurchaseIds = new Set<string>();
+const PURCHASE_STORAGE_PREFIX = "cg_purchase_event_";
+const SERVER_OWNED_EVENTS = new Set(["Purchase", "CompletePayment", "PURCHASE"]);
+
+export { purchaseEventId };
+export type { PurchaseKind };
 
 export function newEventId() {
   if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
@@ -51,6 +58,42 @@ function run(fn: () => void) {
   else queue.push(fn);
 }
 
+function readStored(eventId: string) {
+  if (typeof window === "undefined") return false;
+  try {
+    if (window.sessionStorage.getItem(PURCHASE_STORAGE_PREFIX + eventId)) return true;
+    if (window.localStorage.getItem(PURCHASE_STORAGE_PREFIX + eventId)) return true;
+  } catch {
+    /* private mode */
+  }
+  return false;
+}
+
+function writeStored(eventId: string) {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.setItem(PURCHASE_STORAGE_PREFIX + eventId, "1");
+    window.localStorage.setItem(PURCHASE_STORAGE_PREFIX + eventId, "1");
+  } catch {
+    /* private mode */
+  }
+}
+
+function hasTrackedPurchase(eventId: string) {
+  if (!eventId) return true;
+  if (trackedPurchaseIds.has(eventId)) return true;
+  if (readStored(eventId)) {
+    trackedPurchaseIds.add(eventId);
+    return true;
+  }
+  return false;
+}
+
+function markTrackedPurchase(eventId: string) {
+  trackedPurchaseIds.add(eventId);
+  writeStored(eventId);
+}
+
 export function trackBrowser(
   eventName: string,
   eventId: string,
@@ -58,16 +101,18 @@ export function trackBrowser(
 ) {
   run(() => {
     const w = window as PixelWindow;
-    const params = {
-      value: extra.value,
+    const params: Record<string, unknown> = {
       currency: "MAD",
-      content_ids: extra.content_ids,
       content_type: "product",
-      ...extra,
-    };
-    w.fbq?.("track", eventName === "CompletePayment" ? "Purchase" : eventName, params, {
       eventID: eventId,
-    });
+    };
+    if (extra.value != null) params.value = extra.value;
+    if (extra.content_ids != null) params.content_ids = extra.content_ids;
+    for (const [key, value] of Object.entries(extra)) {
+      if (value != null && params[key] == null) params[key] = value;
+    }
+    const metaName = eventName === "CompletePayment" ? "Purchase" : eventName;
+    w.fbq?.("track", metaName, params, { eventID: eventId });
     const tiktokName =
       eventName === "Purchase" ? "CompletePayment" : eventName === "PageView" ? "Pageview" : eventName;
     w.ttq?.track(tiktokName, { ...params, event_id: eventId });
@@ -83,6 +128,22 @@ export function trackBrowser(
       client_dedup_id: eventId,
     });
   });
+}
+
+export function trackPurchaseOnce(opts: {
+  orderId: string;
+  value?: number;
+  contentIds?: string[];
+  kind?: PurchaseKind;
+}) {
+  const eventId = purchaseEventId(opts.orderId, opts.kind);
+  if (!eventId || hasTrackedPurchase(eventId)) return eventId;
+  markTrackedPurchase(eventId);
+  trackBrowser("Purchase", eventId, {
+    value: opts.value,
+    content_ids: opts.contentIds,
+  });
+  return eventId;
 }
 
 export function trackFunnel(
@@ -102,17 +163,19 @@ export function trackFunnel(
     value: opts.value,
     content_ids: opts.contentIds,
   });
-  void sendTracking({
-    event_name: eventName,
-    event_id: eventId,
-    event_source_url: typeof window !== "undefined" ? window.location.href : "",
-    value: opts.value,
-    currency: "MAD",
-    content_ids: opts.contentIds || [],
-    phone: opts.phone,
-    city: opts.city,
-    full_name: opts.fullName,
-    ...ids,
-  });
+  if (!SERVER_OWNED_EVENTS.has(eventName)) {
+    void sendTracking({
+      event_name: eventName,
+      event_id: eventId,
+      event_source_url: typeof window !== "undefined" ? window.location.href : "",
+      value: opts.value,
+      currency: "MAD",
+      content_ids: opts.contentIds || [],
+      phone: opts.phone,
+      city: opts.city,
+      full_name: opts.fullName,
+      ...ids,
+    });
+  }
   return eventId;
 }

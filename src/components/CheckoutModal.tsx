@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useCart } from "@/lib/cart";
 import { digitsOnly, isTenDigitMaPhone } from "@/lib/phone";
 import { submitOrder } from "@/lib/api";
-import { clickIds, newEventId, trackFunnel } from "@/lib/tracking";
+import { clickIds, newEventId, trackPurchaseOnce } from "@/lib/tracking";
 
 export function CheckoutModal() {
   const cart = useCart();
@@ -38,13 +38,10 @@ export function CheckoutModal() {
         landing_url: window.location.href,
         ...clickIds(),
       });
-      trackFunnel("Purchase", {
-        eventId,
+      trackPurchaseOnce({
+        orderId: order.order_id,
         value: order.total,
-        contentIds: [cart.productSlug],
-        phone,
-        city: city.trim(),
-        fullName: name.trim(),
+        contentIds: [cart.productSlug, cart.crossSellSlug].filter(Boolean) as string[],
       });
       cart.onOrderCreated(order.order_id);
     } catch {

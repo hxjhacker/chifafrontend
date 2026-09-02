@@ -3,6 +3,8 @@ import type { PoolClient } from "pg";
 import { resolveCity } from "@/lib/cities";
 import { normalizeMaPhone } from "@/lib/phone";
 import type { OrderPayload, OrderResponse } from "@/lib/api";
+import { purchaseEventId } from "@/lib/purchase-event";
+import { sendPurchaseCapi } from "./capi";
 import { ensureSchema, getPool } from "./db";
 
 const PRODUCT_SLUGS = new Set(["quran", "kids", "music", "educative"]);
@@ -34,6 +36,12 @@ type OrderRow = {
   tier_price_cents: number;
   cross_sell_price_cents: number;
   upsell_price_cents: number;
+  fbp?: string | null;
+  fbc?: string | null;
+  ttclid?: string | null;
+  sccid?: string | null;
+  client_ip?: string | null;
+  user_agent?: string | null;
 };
 
 type ItemRow = {
@@ -82,6 +90,7 @@ function serialize(order: OrderRow, items: ItemRow[]): OrderResponse {
       line_total: centsToMad(item.line_total_cents),
     })),
     upsell_offer: { price: 99, candidates },
+    purchase_event_id: purchaseEventId(order.id),
   };
 }
 
@@ -243,6 +252,7 @@ export async function createOrder(
     const order = inserted.rows[0];
     const items = await loadItems(client, orderId);
     void pushSheets(order, items);
+    sendPurchaseCapi(order, "order");
     return serialize(order, items);
   } catch (err) {
     await client.query("ROLLBACK").catch(() => undefined);
@@ -300,6 +310,7 @@ export async function addUpsell(orderId: string, productSlug: string, eventId: s
     if (!updated) throw new OrderError(404, "order_not_found");
     const items = await loadItems(client, orderId);
     void pushSheets(updated, items);
+    sendPurchaseCapi(updated, "upsell");
     return serialize(updated, items);
   } catch (err) {
     await client.query("ROLLBACK").catch(() => undefined);

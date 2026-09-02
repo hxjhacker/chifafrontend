@@ -31,6 +31,7 @@ export type OrderResponse = {
   currency: string;
   items: { product_slug: string; role: string; quantity: number; line_total: number }[];
   upsell_offer: { price: number; candidates: string[] };
+  purchase_event_id?: string;
 };
 
 async function parse<T>(res: Response): Promise<T> {

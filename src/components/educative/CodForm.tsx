@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { BadgeCheck, Eye, MessageCircle, ShieldCheck } from "lucide-react";
 import { digitsOnly, isTenDigitMaPhone } from "@/lib/phone";
 import { submitOrder } from "@/lib/api";
-import { clickIds, newEventId, trackFunnel } from "@/lib/tracking";
+import { clickIds, newEventId, trackPurchaseOnce } from "@/lib/tracking";
 import { EDUCATIVE_SLUG, type Bundle } from "@/lib/educative";
 import type { Offer } from "@/lib/offer";
 
@@ -56,13 +56,10 @@ export function CodForm({
         landing_url: window.location.href,
         ...clickIds(),
       });
-      trackFunnel("Purchase", {
-        eventId,
+      trackPurchaseOnce({
+        orderId: order.order_id,
         value: order.total,
         contentIds: [deal.slug],
-        phone,
-        city: city.trim(),
-        fullName: name.trim(),
       });
       router.push(`/thank-you?order=${order.order_id}`);
     } catch {

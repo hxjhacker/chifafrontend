@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useCart } from "@/lib/cart";
 import { otherProducts } from "@/lib/products";
 import { submitUpsell } from "@/lib/api";
-import { newEventId, trackFunnel } from "@/lib/tracking";
+import { newEventId, trackPurchaseOnce } from "@/lib/tracking";
 
 export function UpsellModal() {
   const cart = useCart();
@@ -45,7 +45,12 @@ export function UpsellModal() {
     const eventId = newEventId();
     try {
       await submitUpsell(cart.orderId, offer.slug, eventId);
-      trackFunnel("Purchase", { eventId, value: 99, contentIds: [offer.slug] });
+      trackPurchaseOnce({
+        orderId: cart.orderId,
+        value: 99,
+        contentIds: [offer.slug],
+        kind: "upsell",
+      });
     } catch {
       /* still confirm */
     }

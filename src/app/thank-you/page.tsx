@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { fetchOrder, type OrderResponse } from "@/lib/api";
 import { getProduct } from "@/lib/products";
+import { trackPurchaseOnce } from "@/lib/tracking";
 import { waLink, WhatsAppIcon } from "@/components/Chrome";
 
 type OrderDetails = {
@@ -49,6 +50,20 @@ function ThanksInner() {
           price: `${order.total} درهم`,
           city: order.city,
         });
+        const contentIds = [order.product_slug, order.cross_sell_slug].filter(Boolean) as string[];
+        trackPurchaseOnce({
+          orderId: order.order_id,
+          value: order.subtotal,
+          contentIds,
+        });
+        if (order.upsell_slug) {
+          trackPurchaseOnce({
+            orderId: order.order_id,
+            value: 99,
+            contentIds: [order.upsell_slug],
+            kind: "upsell",
+          });
+        }
       })
       .catch(() => {
         if (!cancelled) setDetails(null);
