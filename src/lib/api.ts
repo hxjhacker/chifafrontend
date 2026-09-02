@@ -80,3 +80,20 @@ export async function sendTracking(body: Record<string, unknown>) {
     /* client pixels still fire */
   }
 }
+
+export async function sendPageView(kind: "store" | "product", productSlug?: string | null) {
+  try {
+    await fetch(apiPath("/api/tracking/page-views"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        kind,
+        product_slug: productSlug || null,
+        path: typeof window !== "undefined" ? window.location.pathname : "",
+      }),
+      keepalive: true,
+    });
+  } catch {
+    /* observatory still loads without this hit */
+  }
+}

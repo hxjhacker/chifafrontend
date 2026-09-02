@@ -8,6 +8,7 @@ import {
   Truck,
 } from "lucide-react";
 import { ReviewGrid, Stars } from "@/components/reviews/ReviewCard";
+import { TrackPageView } from "@/components/TrackPageView";
 
 const PRODUCTS = [
   {
@@ -86,6 +87,7 @@ const REVIEWS = [
 export function HomePage() {
   return (
     <>
+      <TrackPageView kind="store" />
       <section className="relative overflow-hidden pb-16 pt-10 md:pb-24 md:pt-16">
         <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 md:grid-cols-2">
           <div>

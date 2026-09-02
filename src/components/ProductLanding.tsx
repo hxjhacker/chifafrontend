@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { galleryShots, getProduct } from "@/lib/products";
 import { CATALOG_OFFER, type Offer } from "@/lib/offer";
+import { TrackPageView } from "@/components/TrackPageView";
 import { trackFunnel } from "@/lib/tracking";
 import { padTime, useOfferCountdown } from "@/hooks/useOfferCountdown";
 import { scrollToOrderFields } from "@/lib/scroll";
@@ -63,6 +64,7 @@ export function ProductLanding({ slug }: { slug: string }) {
 
   return (
     <div className="bg-cream pb-28 transition-colors duration-300 dark:bg-brandDark" dir="rtl">
+      <TrackPageView kind="product" productSlug={product.slug} />
       <main className="mx-auto flex max-w-6xl flex-col gap-14 px-4 py-8 sm:py-12">
         <section className="grid gap-8 lg:grid-cols-2 lg:items-start">
           <div>

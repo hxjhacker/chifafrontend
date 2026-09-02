@@ -109,6 +109,16 @@ CREATE TABLE IF NOT EXISTS tracking_events (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS ix_tracking_events_event_id ON tracking_events (event_id);
+
+CREATE TABLE IF NOT EXISTS page_views (
+  id uuid PRIMARY KEY,
+  kind varchar(32) NOT NULL,
+  product_slug varchar(32),
+  path text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS ix_page_views_created_at ON page_views (created_at);
+CREATE INDEX IF NOT EXISTS ix_page_views_slug_created ON page_views (product_slug, created_at);
 `;
 
 const SCHEMA_ALTERS = [
@@ -141,6 +151,15 @@ const SCHEMA_ALTERS = [
   `ALTER TABLE orders ADD COLUMN IF NOT EXISTS shipped_at timestamptz`,
   `ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivered_at timestamptz`,
   `ALTER TABLE orders ADD COLUMN IF NOT EXISTS cancelled_at timestamptz`,
+  `CREATE TABLE IF NOT EXISTS page_views (
+    id uuid PRIMARY KEY,
+    kind varchar(32) NOT NULL,
+    product_slug varchar(32),
+    path text,
+    created_at timestamptz NOT NULL DEFAULT now()
+  )`,
+  `CREATE INDEX IF NOT EXISTS ix_page_views_created_at ON page_views (created_at)`,
+  `CREATE INDEX IF NOT EXISTS ix_page_views_slug_created ON page_views (product_slug, created_at)`,
 ];
 
 const PRODUCT_SEED = [
@@ -178,7 +197,7 @@ const PRODUCT_SEED = [
   },
 ] as const;
 
-const SCHEMA_ALTER_VERSION = 7;
+const SCHEMA_ALTER_VERSION = 8;
 let appliedAlterVersion = 0;
 
 export async function ensureSchema() {

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef } from "react";
 import { DEFAULT_BUNDLE, EDUCATIVE_SLUG, getBundle } from "@/lib/educative";
+import { TrackPageView } from "@/components/TrackPageView";
 import { trackFunnel } from "@/lib/tracking";
 import { scrollToOrderFields } from "@/lib/scroll";
 import { Faq } from "./Faq";
@@ -37,6 +38,7 @@ export function EducativeProductPage() {
 
   return (
     <div className="bg-cream pb-28 transition-colors duration-300 dark:bg-brandDark" dir="rtl">
+      <TrackPageView kind="product" productSlug="kids" />
       <main className="mx-auto flex max-w-6xl flex-col gap-14 px-4 py-8 sm:py-12">
         <HeroGallery bundle={bundle} onFocusCheckout={markCheckout} />
         <PainSolution />

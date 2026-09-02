@@ -34,6 +34,7 @@ import { IosSwitch } from "@/components/admin/IosSwitch";
 import { MoroccoMap } from "@/components/admin/MoroccoMap";
 import { OrderTimelineModal } from "@/components/admin/OrderTimelineModal";
 import { QuickWhatsAppOrderModal } from "@/components/admin/QuickWhatsAppOrderModal";
+import { ViewsObservatory } from "@/components/admin/ViewsObservatory";
 import { ShippingLabel } from "@/components/admin/ShippingLabel";
 import {
   ADMIN_STATUSES,
@@ -83,14 +84,15 @@ const STATUS_OPTIONS: { id: AdminStatus; label: string }[] = [
 
 const PREFS_KEY = "chifaglow_view_prefs";
 const LEGACY_PREFS_KEY = "cg_admin_sections";
-type SectionPrefs = { overview: boolean; cities: boolean; map: boolean; orders: boolean };
-const DEFAULT_PREFS: SectionPrefs = { overview: true, cities: true, map: true, orders: true };
+type SectionPrefs = { overview: boolean; cities: boolean; map: boolean; orders: boolean; observatory: boolean };
+const DEFAULT_PREFS: SectionPrefs = { overview: true, cities: true, map: true, orders: true, observatory: true };
 
 const SECTION_ITEMS: { key: keyof SectionPrefs; label: string }[] = [
   { key: "overview", label: "نظرة عامة على الطلبات" },
   { key: "cities", label: "الطرود حسب المدن" },
   { key: "map", label: "خريطة المغرب" },
   { key: "orders", label: "جدول الطلبات" },
+  { key: "observatory", label: "إظهار/إخفاء مرصد المشاهدات والأداء" },
 ];
 
 function readPrefs(): SectionPrefs {
@@ -524,7 +526,7 @@ export function AdminDashboard() {
               {prefsOpen ? (
                 <div
                   role="menu"
-                  className="absolute left-0 top-11 z-50 w-64 rounded-2xl border border-gold/20 bg-[#0F1E33] p-4 text-white shadow-2xl dark:bg-[#0F1E33]"
+                  className="absolute left-0 top-11 z-50 w-80 rounded-2xl border border-gold/20 bg-[#0F1E33] p-4 text-white shadow-2xl dark:bg-[#0F1E33]"
                 >
                   <p className="mb-3 text-sm font-black text-white">أقسام اللوحة</p>
                   <div className="space-y-1">
@@ -1012,6 +1014,8 @@ export function AdminDashboard() {
         </div>
         </>
         ) : null}
+
+        {prefs.observatory ? <ViewsObservatory hideAll={hideAll} /> : null}
       </main>
 
       <footer className="border-t border-gold/20 bg-white px-4 py-4 text-center text-xs text-royal/60 transition-colors dark:bg-cardDark dark:text-slate-500">
