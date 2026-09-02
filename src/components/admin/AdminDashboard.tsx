@@ -34,6 +34,7 @@ import { IosSwitch } from "@/components/admin/IosSwitch";
 import { MoroccoMap } from "@/components/admin/MoroccoMap";
 import { OrderTimelineModal } from "@/components/admin/OrderTimelineModal";
 import { QuickWhatsAppOrderModal } from "@/components/admin/QuickWhatsAppOrderModal";
+import { PushToggle } from "@/components/admin/PushToggle";
 import { ViewsObservatory } from "@/components/admin/ViewsObservatory";
 import { ShippingLabel } from "@/components/admin/ShippingLabel";
 import {
@@ -512,6 +513,12 @@ export function AdminDashboard() {
               <WhatsAppIcon className="h-4 w-4" />
               <span className="hidden text-xs font-black md:inline">إضافة سريعة من الواتساب</span>
             </button>
+            <PushToggle
+              onNotice={(message, kind) => {
+                setNoticeKind(kind || "ok");
+                setNotice(message);
+              }}
+            />
             <div className="relative" ref={prefsRef}>
               <button
                 type="button"

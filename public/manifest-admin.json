@@ -1,0 +1,19 @@
+{
+  "name": "Chifaglow Admin",
+  "short_name": "Chifaglow",
+  "start_url": "/mydashboard",
+  "scope": "/mydashboard",
+  "display": "standalone",
+  "background_color": "#070F1B",
+  "theme_color": "#D4AF37",
+  "dir": "rtl",
+  "lang": "ar",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

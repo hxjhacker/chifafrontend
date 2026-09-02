@@ -6,6 +6,7 @@ import type { OrderPayload, OrderResponse } from "@/lib/api";
 import { purchaseEventId } from "@/lib/purchase-event";
 import { sendPurchaseCapi } from "./capi";
 import { ensureSchema, getPool } from "./db";
+import { notifyNewOrder } from "./push";
 
 const PRODUCT_SLUGS = new Set(["quran", "kids", "music", "educative"]);
 const TIER_CENTS: Record<number, number> = { 1: 19900, 2: 27900, 3: 34900 };
@@ -253,6 +254,13 @@ export async function createOrder(
     const items = await loadItems(client, orderId);
     void pushSheets(order, items);
     sendPurchaseCapi(order, "order");
+    void notifyNewOrder({
+      fullName: order.full_name,
+      city: order.city,
+      productSlug: order.product_slug,
+      qty,
+      totalMad: Number(order.total_cents) / 100,
+    }).catch((err) => console.error("push_notify_failed", err));
     return serialize(order, items);
   } catch (err) {
     await client.query("ROLLBACK").catch(() => undefined);

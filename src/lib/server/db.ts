@@ -119,6 +119,16 @@ CREATE TABLE IF NOT EXISTS page_views (
 );
 CREATE INDEX IF NOT EXISTS ix_page_views_created_at ON page_views (created_at);
 CREATE INDEX IF NOT EXISTS ix_page_views_slug_created ON page_views (product_slug, created_at);
+
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+  id uuid PRIMARY KEY,
+  endpoint text NOT NULL UNIQUE,
+  p256dh text NOT NULL,
+  auth text NOT NULL,
+  user_agent text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ix_push_subscriptions_endpoint ON push_subscriptions (endpoint);
 `;
 
 const SCHEMA_ALTERS = [
@@ -160,6 +170,15 @@ const SCHEMA_ALTERS = [
   )`,
   `CREATE INDEX IF NOT EXISTS ix_page_views_created_at ON page_views (created_at)`,
   `CREATE INDEX IF NOT EXISTS ix_page_views_slug_created ON page_views (product_slug, created_at)`,
+  `CREATE TABLE IF NOT EXISTS push_subscriptions (
+    id uuid PRIMARY KEY,
+    endpoint text NOT NULL UNIQUE,
+    p256dh text NOT NULL,
+    auth text NOT NULL,
+    user_agent text,
+    created_at timestamptz NOT NULL DEFAULT now()
+  )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS ix_push_subscriptions_endpoint ON push_subscriptions (endpoint)`,
 ];
 
 const PRODUCT_SEED = [
@@ -197,7 +216,7 @@ const PRODUCT_SEED = [
   },
 ] as const;
 
-const SCHEMA_ALTER_VERSION = 8;
+const SCHEMA_ALTER_VERSION = 9;
 let appliedAlterVersion = 0;
 
 export async function ensureSchema() {

@@ -5,6 +5,12 @@ export const metadata: Metadata = {
     default: "لوحة التحكم",
     template: "%s | Chifaglow Admin",
   },
+  manifest: "/manifest-admin.json",
+  appleWebApp: {
+    capable: true,
+    title: "Chifaglow",
+    statusBarStyle: "black-translucent",
+  },
   robots: {
     index: false,
     follow: false,
