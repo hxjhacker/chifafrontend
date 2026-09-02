@@ -13,7 +13,13 @@ import { cn } from "@/lib/cn";
 
 type Status = "loading" | "unsupported" | "off" | "on" | "blocked";
 
-export function PushToggle({ onNotice }: { onNotice?: (message: string, kind?: "ok" | "warn") => void }) {
+export function PushToggle({
+  onNotice,
+  variant = "toolbar",
+}: {
+  onNotice?: (message: string, kind?: "ok" | "warn") => void;
+  variant?: "toolbar" | "menu";
+}) {
   const [status, setStatus] = useState<Status>("loading");
   const [busy, setBusy] = useState(false);
 
@@ -69,7 +75,28 @@ export function PushToggle({ onNotice }: { onNotice?: (message: string, kind?: "
 
   const on = status === "on";
   const label =
-    status === "on" ? "إشعارات مفعّلة" : status === "blocked" ? "الإشعارات محظورة" : status === "unsupported" ? "الإشعارات غير مدعومة" : "تفعيل إشعارات الطلبات";
+    status === "on" ? "الإشعارات مفعّلة" : status === "blocked" ? "الإشعارات محظورة" : status === "unsupported" ? "الإشعارات غير مدعومة" : "الإشعارات";
+
+  const icon =
+    status === "blocked" || status === "unsupported" ? <BellOff className="h-4 w-4" /> : <Bell className="h-4 w-4" />;
+
+  if (variant === "menu") {
+    return (
+      <button
+        type="button"
+        aria-label={label}
+        disabled={busy || status === "loading" || status === "unsupported"}
+        onClick={() => void toggle()}
+        className={cn(
+          "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-right transition hover:bg-white/5",
+          (busy || status === "unsupported") && "opacity-60",
+        )}
+      >
+        <span className={cn("text-gold", on && "text-emerald-400")}>{icon}</span>
+        <span className="text-[13px] font-bold text-white">{label}</span>
+      </button>
+    );
+  }
 
   return (
     <button
@@ -86,11 +113,7 @@ export function PushToggle({ onNotice }: { onNotice?: (message: string, kind?: "
         (busy || status === "unsupported") && "opacity-60",
       )}
     >
-      {status === "blocked" || status === "unsupported" ? (
-        <BellOff className="h-4 w-4" />
-      ) : (
-        <Bell className="h-4 w-4" />
-      )}
+      {icon}
       <span className="hidden text-xs font-black md:inline">{on ? "إشعارات مفعّلة" : "إشعارات الطلبات"}</span>
     </button>
   );

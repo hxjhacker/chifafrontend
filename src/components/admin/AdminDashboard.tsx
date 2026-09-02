@@ -15,6 +15,7 @@ import {
   FileSpreadsheet,
   Loader2,
   LogOut,
+  Menu,
   Pencil,
   Phone,
   PieChart,
@@ -23,8 +24,10 @@ import {
   Repeat2,
   Search,
   SlidersHorizontal,
+  Sun,
   Trash2,
   Moon,
+  X,
 } from "lucide-react";
 import { ThemeToggle, WhatsAppIcon } from "@/components/Chrome";
 import { AddOrderModal } from "@/components/admin/AddOrderModal";
@@ -142,8 +145,10 @@ export function AdminDashboard() {
   const [showAllCities, setShowAllCities] = useState(false);
   const [prefs, setPrefs] = useState<SectionPrefs>(DEFAULT_PREFS);
   const [prefsOpen, setPrefsOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const prefsRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const closeTimeline = useCallback(() => setViewingId(null), []);
   const closePrint = useCallback(() => setPrintingId(null), []);
@@ -166,10 +171,15 @@ export function AdminDashboard() {
 
   useEffect(() => {
     function onDocClick(e: MouseEvent) {
-      if (prefsRef.current && !prefsRef.current.contains(e.target as Node)) setPrefsOpen(false);
+      const t = e.target as Node;
+      if (prefsRef.current && !prefsRef.current.contains(t)) setPrefsOpen(false);
+      if (menuRef.current && !menuRef.current.contains(t)) setMenuOpen(false);
     }
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setPrefsOpen(false);
+      if (e.key === "Escape") {
+        setPrefsOpen(false);
+        setMenuOpen(false);
+      }
     }
     document.addEventListener("mousedown", onDocClick);
     document.addEventListener("keydown", onKey);
@@ -481,7 +491,7 @@ export function AdminDashboard() {
       ) : null}
 
       <header className="sticky top-0 z-40 border-b border-gold/20 bg-white/95 px-3 py-2.5 shadow-sm backdrop-blur-md dark:bg-cardDark/95 md:px-4 md:py-3.5">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-2">
+        <div className="relative mx-auto flex max-w-7xl items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2.5">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border-2 border-gold bg-royal shadow-sm dark:bg-brandDark md:h-10 md:w-10">
               <span className="font-cinzel text-lg font-black text-gold md:text-xl">C</span>
@@ -494,24 +504,128 @@ export function AdminDashboard() {
             </div>
           </div>
 
-          <div className="flex shrink-0 items-center gap-1.5 md:gap-3">
+          <div className="flex shrink-0 items-center gap-1.5 md:hidden">
+            <button
+              type="button"
+              aria-label="إضافة سريعة من الواتساب"
+              onClick={() => {
+                setMenuOpen(false);
+                setQuickOpen(true);
+              }}
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-emeraldCustom/30 bg-emeraldCustom/10 text-emeraldCustom shadow-sm transition hover:bg-emeraldCustom hover:text-white active:scale-95"
+            >
+              <WhatsAppIcon className="h-4 w-4" />
+            </button>
+            <div className="relative" ref={menuRef}>
+              <button
+                type="button"
+                aria-label={menuOpen ? "إغلاق القائمة" : "قائمة الإجراءات"}
+                aria-expanded={menuOpen}
+                onClick={() => {
+                  setPrefsOpen(false);
+                  setMenuOpen((v) => !v);
+                }}
+                className="flex h-9 w-9 items-center justify-center rounded-xl border border-gold/30 bg-gold/10 text-gold-600 transition hover:bg-gold hover:text-royal dark:text-gold"
+              >
+                {menuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+              </button>
+              {menuOpen ? (
+                <div
+                  role="menu"
+                  className="absolute left-0 top-11 z-50 max-h-[min(80vh,32rem)] w-[min(20rem,calc(100vw-1.5rem))] overflow-y-auto rounded-2xl border border-gold/20 bg-[#0F1E33] p-2 text-white shadow-2xl"
+                >
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      setModalOpen(true);
+                    }}
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-right transition hover:bg-white/5"
+                  >
+                    <Plus className="h-4 w-4 text-gold" />
+                    <span className="text-[13px] font-bold">إضافة طلبية يدوية</span>
+                  </button>
+                  <PushToggle
+                    variant="menu"
+                    onNotice={(message, kind) => {
+                      setNoticeKind(kind || "ok");
+                      setNotice(message);
+                    }}
+                  />
+                  <div className="my-1 border-t border-white/10 px-3 py-2">
+                    <p className="mb-1 flex items-center gap-2 text-[11px] font-black text-gold">
+                      <SlidersHorizontal className="h-3.5 w-3.5" />
+                      تخصيص الواجهة
+                    </p>
+                    <div className="space-y-0.5">
+                      {SECTION_ITEMS.map((item) => (
+                        <button
+                          key={item.key}
+                          type="button"
+                          role="switch"
+                          aria-checked={prefs[item.key]}
+                          onClick={() => toggleSection(item.key)}
+                          className="flex w-full items-center justify-between gap-3 rounded-xl px-1 py-2 text-right transition hover:bg-white/5"
+                        >
+                          <span className="text-[12px] font-bold text-white">{item.label}</span>
+                          <IosSwitch checked={prefs[item.key]} />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => setHideAll((v) => !v)}
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-right transition hover:bg-white/5"
+                  >
+                    {hideAll ? <Eye className="h-4 w-4 text-emerald-400" /> : <EyeOff className="h-4 w-4 text-gold" />}
+                    <span className="text-[13px] font-bold">{hideAll ? "إظهار الأرقام" : "إخفاء الأرقام"}</span>
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={toggleDarkMode}
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-right transition hover:bg-white/5"
+                  >
+                    {darkMode ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-gold" />}
+                    <span className="text-[13px] font-bold">{darkMode ? "الوضع النهاري" : "الوضع الليلي"}</span>
+                  </button>
+                  <div className="mt-1 border-t border-white/10 pt-1">
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => void logout()}
+                      className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-right text-rose-300 transition hover:bg-rose-500/10"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      <span className="text-[13px] font-bold">تسجيل الخروج</span>
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="hidden shrink-0 items-center gap-1.5 md:flex md:gap-3">
             <button
               type="button"
               aria-label="إضافة طلب"
               onClick={() => setModalOpen(true)}
-              className="flex h-9 w-9 items-center justify-center rounded-xl bg-gold text-royal shadow-sm transition hover:bg-gold-600 active:scale-95 md:h-auto md:w-auto md:gap-1.5 md:px-3.5 md:py-2"
+              className="flex items-center gap-1.5 rounded-xl bg-gold px-3.5 py-2 text-royal shadow-sm transition hover:bg-gold-600 active:scale-95"
             >
               <Plus className="h-4 w-4" />
-              <span className="hidden text-xs font-black md:inline">إضافة طلب</span>
+              <span className="text-xs font-black">إضافة طلب</span>
             </button>
             <button
               type="button"
               aria-label="إضافة سريعة من الواتساب"
               onClick={() => setQuickOpen(true)}
-              className="flex h-9 w-9 items-center justify-center rounded-xl border border-emeraldCustom/30 bg-emeraldCustom/10 text-emeraldCustom shadow-sm transition hover:bg-emeraldCustom hover:text-white active:scale-95 md:h-auto md:w-auto md:gap-1.5 md:px-3.5 md:py-2"
+              className="flex items-center gap-1.5 rounded-xl border border-emeraldCustom/30 bg-emeraldCustom/10 px-3.5 py-2 text-emeraldCustom shadow-sm transition hover:bg-emeraldCustom hover:text-white active:scale-95"
             >
               <WhatsAppIcon className="h-4 w-4" />
-              <span className="hidden text-xs font-black md:inline">إضافة سريعة من الواتساب</span>
+              <span className="text-xs font-black">إضافة سريعة من الواتساب</span>
             </button>
             <PushToggle
               onNotice={(message, kind) => {
@@ -525,10 +639,10 @@ export function AdminDashboard() {
                 aria-label="تخصيص الواجهة"
                 aria-expanded={prefsOpen}
                 onClick={() => setPrefsOpen((v) => !v)}
-                className="flex h-9 w-9 items-center justify-center rounded-xl border border-gold/30 bg-gold/10 text-gold-600 transition hover:bg-gold hover:text-royal md:h-auto md:w-auto md:gap-1.5 md:px-3 md:py-2 dark:text-gold"
+                className="flex items-center gap-1.5 rounded-xl border border-gold/30 bg-gold/10 px-3 py-2 text-gold-600 transition hover:bg-gold hover:text-royal dark:text-gold"
               >
                 <SlidersHorizontal className="h-3.5 w-3.5" />
-                <span className="hidden text-xs font-bold md:inline">تخصيص الواجهة</span>
+                <span className="text-xs font-bold">تخصيص الواجهة</span>
               </button>
               {prefsOpen ? (
                 <div
@@ -573,16 +687,16 @@ export function AdminDashboard() {
               type="button"
               aria-label={hideAll ? "إظهار كل الأرقام" : "إخفاء الأرقام"}
               onClick={() => setHideAll((v) => !v)}
-              className="flex h-9 w-9 items-center justify-center rounded-xl border border-gold/30 bg-gold/10 text-gold-600 transition hover:bg-gold hover:text-royal md:h-auto md:w-auto md:gap-1.5 md:px-3 md:py-2 dark:text-gold"
+              className="flex items-center gap-1.5 rounded-xl border border-gold/30 bg-gold/10 px-3 py-2 text-gold-600 transition hover:bg-gold hover:text-royal dark:text-gold"
             >
               {hideAll ? <Eye className="h-3.5 w-3.5 text-emeraldCustom" /> : <EyeOff className="h-3.5 w-3.5" />}
-              <span className="hidden text-xs font-bold md:inline">{hideAll ? "إظهار كل الأرقام" : "إخفاء الأرقام"}</span>
+              <span className="text-xs font-bold">{hideAll ? "إظهار كل الأرقام" : "إخفاء الأرقام"}</span>
             </button>
             <ThemeToggle />
             <button
               type="button"
               onClick={() => downloadCsv("orders-chifaglow.csv", ordersToCsv(filtered))}
-              className="hidden items-center gap-1.5 rounded-xl border border-emeraldCustom/30 bg-emeraldCustom/10 px-3 py-2 text-xs font-bold text-emeraldCustom transition hover:bg-emeraldCustom hover:text-white md:flex"
+              className="flex items-center gap-1.5 rounded-xl border border-emeraldCustom/30 bg-emeraldCustom/10 px-3 py-2 text-xs font-bold text-emeraldCustom transition hover:bg-emeraldCustom hover:text-white"
             >
               <FileSpreadsheet className="h-3.5 w-3.5" />
               <span>تصدير CSV / Excel</span>
@@ -591,10 +705,10 @@ export function AdminDashboard() {
               type="button"
               aria-label="خروج"
               onClick={() => void logout()}
-              className="flex h-9 w-9 items-center justify-center rounded-xl border border-moroccoRed/30 bg-moroccoRed/10 text-moroccoRed transition hover:bg-moroccoRed hover:text-white md:h-auto md:w-auto md:gap-1.5 md:px-3.5 md:py-2"
+              className="flex items-center gap-1.5 rounded-xl border border-moroccoRed/30 bg-moroccoRed/10 px-3.5 py-2 text-moroccoRed transition hover:bg-moroccoRed hover:text-white"
             >
               <LogOut className="h-3.5 w-3.5" />
-              <span className="hidden text-xs font-bold md:inline">خروج</span>
+              <span className="text-xs font-bold">خروج</span>
             </button>
           </div>
         </div>
