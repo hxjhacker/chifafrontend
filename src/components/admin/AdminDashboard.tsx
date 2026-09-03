@@ -30,6 +30,7 @@ import {
   X,
 } from "lucide-react";
 import { ThemeToggle, WhatsAppIcon } from "@/components/Chrome";
+import SplashScreen from "@/components/SplashScreen";
 import { AddOrderModal } from "@/components/admin/AddOrderModal";
 import { AdminDoughnut } from "@/components/admin/AdminDoughnut";
 import { CompleteDetailsModal } from "@/components/admin/CompleteDetailsModal";
@@ -407,6 +408,7 @@ export function AdminDashboard() {
 
   return (
     <>
+    <SplashScreen isLoading={loading} />
     <div className="admin-print-root no-select flex min-h-screen select-none flex-col justify-between bg-cream text-royal antialiased transition-colors duration-300 dark:bg-brandDark dark:text-slate-100 print:hidden">
       <AddOrderModal
         open={modalOpen}

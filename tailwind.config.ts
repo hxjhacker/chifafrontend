@@ -48,6 +48,14 @@ const config: Config = {
         luxury: "0 15px 35px -10px rgba(212, 175, 55, 0.15)",
         drawer: "-12px 0 40px rgba(11, 31, 58, 0.25)",
       },
+      keyframes: {
+        scan: {
+          "0%, 100%": { top: "12%", opacity: "0" },
+          "10%": { opacity: "1" },
+          "50%": { top: "88%" },
+          "90%": { opacity: "1" },
+        },
+      },
     },
   },
   plugins: [],
