@@ -42,7 +42,12 @@ export function MetaAdsTelemetry({
     if (manual) setRefreshing(true);
     else setLoading(true);
     try {
-      const res = await fetch("/api/meta-insights", { credentials: "include", cache: "no-store" });
+      const res = await fetch("/api/meta-insights", {
+        method: "GET",
+        credentials: "include",
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+      });
       if (!res.ok) {
         setLive(false);
         setData(EMPTY);

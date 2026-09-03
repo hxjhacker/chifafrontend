@@ -73,11 +73,26 @@ export function requestIp(request: Request) {
   return request.headers.get("x-real-ip") || "unknown";
 }
 
+function cookieFromHeader(header: string | null, name: string) {
+  if (!header) return "";
+  for (const part of header.split(";")) {
+    const trimmed = part.trim();
+    const eq = trimmed.indexOf("=");
+    if (eq === -1) continue;
+    if (trimmed.slice(0, eq) === name) return decodeURIComponent(trimmed.slice(eq + 1));
+  }
+  return "";
+}
+
 export async function readAdminFromRequest(request: Request) {
   const header = request.headers.get("authorization");
   const bearer = header?.toLowerCase().startsWith("bearer ") ? header.slice(7).trim() : "";
   const jar = await cookies();
-  const token = bearer || jar.get(ADMIN_COOKIE)?.value || "";
+  const token =
+    bearer ||
+    jar.get(ADMIN_COOKIE)?.value ||
+    cookieFromHeader(request.headers.get("cookie"), ADMIN_COOKIE) ||
+    "";
   return verifyAdminToken(token);
 }
 
