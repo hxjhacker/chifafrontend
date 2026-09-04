@@ -35,7 +35,6 @@ import { AddOrderModal } from "@/components/admin/AddOrderModal";
 import { AdminDoughnut } from "@/components/admin/AdminDoughnut";
 import { CompleteDetailsModal } from "@/components/admin/CompleteDetailsModal";
 import { IosSwitch } from "@/components/admin/IosSwitch";
-import { MetaAdsTelemetry } from "@/components/admin/MetaAdsTelemetry";
 import { MoroccoMap } from "@/components/admin/MoroccoMap";
 import { OrderTimelineModal } from "@/components/admin/OrderTimelineModal";
 import { QuickWhatsAppOrderModal } from "@/components/admin/QuickWhatsAppOrderModal";
@@ -379,24 +378,6 @@ export function AdminDashboard() {
   const hideTableNums = hideAll;
 
   const regionStats = useMemo(() => buildRegionStats(orders), [orders]);
-  const todayOrders = useMemo(() => {
-    const today = new Intl.DateTimeFormat("en-CA", {
-      timeZone: "Africa/Casablanca",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }).format(new Date());
-    return orders.filter((order) => {
-      if (!order.created_at) return false;
-      const day = new Intl.DateTimeFormat("en-CA", {
-        timeZone: "Africa/Casablanca",
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-      }).format(new Date(order.created_at));
-      return day === today;
-    }).length;
-  }, [orders]);
 
   const cityRows = stats.city_breakdown || [];
   const cityTotal = cityRows.reduce((sum, row) => sum + row.count, 0);
@@ -741,7 +722,6 @@ export function AdminDashboard() {
             {error}
           </p>
         ) : null}
-        <MetaAdsTelemetry todayOrders={todayOrders} hidden={hideAll} />
         {prefs.overview ? (
         <div className="relative rounded-3xl border border-gold/20 bg-white p-6 shadow-luxury transition-all dark:bg-cardDark">
           <div className="flex items-center justify-between border-b border-gold/10 pb-4">

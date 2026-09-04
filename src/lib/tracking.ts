@@ -13,7 +13,33 @@ export type PixelWindow = Window & {
 const queue: Array<() => void> = [];
 const trackedPurchaseIds = new Set<string>();
 const PURCHASE_STORAGE_PREFIX = "cg_purchase_event_";
+const COMMERCE_EVENTS = new Set(["ViewContent", "AddToCart", "InitiateCheckout", "Purchase", "CompletePayment"]);
 const SERVER_OWNED_EVENTS = new Set(["Purchase", "CompletePayment", "PURCHASE"]);
+
+export function pixelMoney(raw: unknown): number {
+  if (typeof raw === "number" && Number.isFinite(raw)) {
+    return Math.round(raw * 100) / 100;
+  }
+  const parsed = parseFloat(String(raw ?? "").replace(/[^0-9.]/g, ""));
+  return Number.isFinite(parsed) ? Math.round(parsed * 100) / 100 : 0;
+}
+
+export function pixelContentIds(raw: unknown): string[] {
+  const list = Array.isArray(raw) ? raw : raw != null ? [raw] : [];
+  const ids = list.map((item) => String(item ?? "").trim()).filter(Boolean);
+  return ids.length ? ids : ["default"];
+}
+
+function commerceParams(extra: Record<string, unknown>) {
+  const value = pixelMoney(extra.value);
+  const content_ids = pixelContentIds(extra.content_ids);
+  return {
+    value,
+    currency: "MAD" as const,
+    content_type: "product" as const,
+    content_ids,
+  };
+}
 
 export { purchaseEventId };
 export type { PurchaseKind };
@@ -101,17 +127,11 @@ export function trackBrowser(
 ) {
   run(() => {
     const w = window as PixelWindow;
-    const params: Record<string, unknown> = {
-      currency: "MAD",
-      content_type: "product",
-      eventID: eventId,
-    };
-    if (extra.value != null) params.value = extra.value;
-    if (extra.content_ids != null) params.content_ids = extra.content_ids;
-    for (const [key, value] of Object.entries(extra)) {
-      if (value != null && params[key] == null) params[key] = value;
-    }
     const metaName = eventName === "CompletePayment" ? "Purchase" : eventName;
+    const params =
+      COMMERCE_EVENTS.has(eventName) || COMMERCE_EVENTS.has(metaName)
+        ? commerceParams(extra)
+        : {};
     w.fbq?.("track", metaName, params, { eventID: eventId });
     const tiktokName =
       eventName === "Purchase" ? "CompletePayment" : eventName === "PageView" ? "Pageview" : eventName;
@@ -132,7 +152,7 @@ export function trackBrowser(
 
 export function trackPurchaseOnce(opts: {
   orderId: string;
-  value?: number;
+  value?: number | string;
   contentIds?: string[];
   kind?: PurchaseKind;
 }) {
@@ -140,8 +160,8 @@ export function trackPurchaseOnce(opts: {
   if (!eventId || hasTrackedPurchase(eventId)) return eventId;
   markTrackedPurchase(eventId);
   trackBrowser("Purchase", eventId, {
-    value: opts.value,
-    content_ids: opts.contentIds,
+    value: pixelMoney(opts.value),
+    content_ids: pixelContentIds(opts.contentIds),
   });
   return eventId;
 }
@@ -150,32 +170,35 @@ export function trackFunnel(
   eventName: string,
   opts: {
     eventId?: string;
-    value?: number;
+    value?: number | string;
     contentIds?: string[];
     phone?: string;
     city?: string;
     fullName?: string;
   } = {},
 ) {
+  if (SERVER_OWNED_EVENTS.has(eventName)) {
+    return opts.eventId || "";
+  }
   const eventId = opts.eventId || newEventId();
   const ids = clickIds();
+  const value = pixelMoney(opts.value);
+  const contentIds = pixelContentIds(opts.contentIds);
   trackBrowser(eventName, eventId, {
-    value: opts.value,
-    content_ids: opts.contentIds,
+    value,
+    content_ids: contentIds,
   });
-  if (!SERVER_OWNED_EVENTS.has(eventName)) {
-    void sendTracking({
-      event_name: eventName,
-      event_id: eventId,
-      event_source_url: typeof window !== "undefined" ? window.location.href : "",
-      value: opts.value,
-      currency: "MAD",
-      content_ids: opts.contentIds || [],
-      phone: opts.phone,
-      city: opts.city,
-      full_name: opts.fullName,
-      ...ids,
-    });
-  }
+  void sendTracking({
+    event_name: eventName,
+    event_id: eventId,
+    event_source_url: typeof window !== "undefined" ? window.location.href : "",
+    value,
+    currency: "MAD",
+    content_ids: contentIds,
+    phone: opts.phone,
+    city: opts.city,
+    full_name: opts.fullName,
+    ...ids,
+  });
   return eventId;
 }

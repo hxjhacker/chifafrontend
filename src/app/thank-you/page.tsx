@@ -53,7 +53,7 @@ function ThanksInner() {
         const contentIds = [order.product_slug, order.cross_sell_slug].filter(Boolean) as string[];
         trackPurchaseOnce({
           orderId: order.order_id,
-          value: order.subtotal,
+          value: order.total,
           contentIds,
         });
         if (order.upsell_slug) {
