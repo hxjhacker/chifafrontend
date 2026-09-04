@@ -253,7 +253,7 @@ export async function createOrder(
     const order = inserted.rows[0];
     const items = await loadItems(client, orderId);
     void pushSheets(order, items);
-    sendPurchaseCapi(order, "order");
+    if (!payload.defer_purchase) sendPurchaseCapi(order);
     void notifyNewOrder({
       fullName: order.full_name,
       city: order.city,
@@ -282,6 +282,19 @@ export async function getOrder(orderId: string): Promise<OrderResponse> {
   }
 }
 
+export async function finalizeOrderPurchase(orderId: string): Promise<OrderResponse> {
+  await ensureSchema();
+  const client = await getPool().connect();
+  try {
+    const row = await loadOrder(client, orderId);
+    if (!row) throw new OrderError(404, "order_not_found");
+    sendPurchaseCapi(row);
+    return serialize(row, await loadItems(client, orderId));
+  } finally {
+    client.release();
+  }
+}
+
 export async function addUpsell(orderId: string, productSlug: string, eventId: string): Promise<OrderResponse> {
   await ensureSchema();
   if (!PRODUCT_SLUGS.has(productSlug)) throw new OrderError(422, "invalid_product");
@@ -295,6 +308,7 @@ export async function addUpsell(orderId: string, productSlug: string, eventId: s
     if (order.upsell_slug) {
       const items = await loadItems(client, orderId);
       await client.query("COMMIT");
+      sendPurchaseCapi(order);
       return serialize(order, items);
     }
     if (productSlug === order.product_slug || productSlug === order.cross_sell_slug) {
@@ -318,7 +332,7 @@ export async function addUpsell(orderId: string, productSlug: string, eventId: s
     if (!updated) throw new OrderError(404, "order_not_found");
     const items = await loadItems(client, orderId);
     void pushSheets(updated, items);
-    sendPurchaseCapi(updated, "upsell");
+    sendPurchaseCapi(updated);
     return serialize(updated, items);
   } catch (err) {
     await client.query("ROLLBACK").catch(() => undefined);

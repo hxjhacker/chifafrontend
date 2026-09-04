@@ -14,6 +14,7 @@ export type OrderPayload = {
   ttclid?: string | null;
   sccid?: string | null;
   landing_url?: string | null;
+  defer_purchase?: boolean;
 };
 
 export type OrderResponse = {
@@ -67,6 +68,18 @@ export async function submitUpsell(orderId: string, productSlug: string, eventId
 export async function fetchOrder(orderId: string) {
   const res = await fetch(apiPath(`/api/orders/${orderId}`), { cache: "no-store" });
   return parse<OrderResponse>(res);
+}
+
+export async function finalizePurchase(orderId: string) {
+  try {
+    await fetch(apiPath(`/api/orders/${orderId}/purchase`), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      keepalive: true,
+    });
+  } catch {
+    /* pixel still fires */
+  }
 }
 
 export async function sendTracking(body: Record<string, unknown>) {

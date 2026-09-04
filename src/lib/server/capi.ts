@@ -1,9 +1,10 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { resolveCity } from "@/lib/cities";
-import { purchaseEventId, type PurchaseKind } from "@/lib/purchase-event";
+import { purchaseEventId } from "@/lib/purchase-event";
 import { FB_PIXEL_ID } from "@/lib/pixels";
+import { getPool } from "./db";
 
-type CapiOrder = {
+export type CapiOrder = {
   id: string;
   full_name: string;
   phone: string;
@@ -71,19 +72,7 @@ function hashedUser(order: CapiOrder) {
   return userData;
 }
 
-function customData(order: CapiOrder, kind: PurchaseKind) {
-  if (kind === "upsell" && order.upsell_slug) {
-    const price = centsToMad(order.upsell_price_cents || 9900);
-    return {
-      currency: "MAD",
-      value: price,
-      content_type: "product",
-      content_ids: [order.upsell_slug],
-      contents: [{ id: order.upsell_slug, quantity: 1, item_price: price }],
-      order_id: order.id,
-    };
-  }
-
+function customData(order: CapiOrder) {
   const ids = [order.product_slug];
   const contents = [
     {
@@ -100,9 +89,17 @@ function customData(order: CapiOrder, kind: PurchaseKind) {
       item_price: centsToMad(order.cross_sell_price_cents || 19900),
     });
   }
+  if (order.upsell_slug) {
+    ids.push(order.upsell_slug);
+    contents.push({
+      id: order.upsell_slug,
+      quantity: 1,
+      item_price: centsToMad(order.upsell_price_cents || 9900),
+    });
+  }
   return {
     currency: "MAD",
-    value: centsToMad(order.subtotal_cents || order.total_cents),
+    value: centsToMad(order.total_cents || order.subtotal_cents),
     content_type: "product",
     content_ids: ids,
     contents,
@@ -110,7 +107,29 @@ function customData(order: CapiOrder, kind: PurchaseKind) {
   };
 }
 
-async function postMeta(eventId: string, order: CapiOrder, kind: PurchaseKind) {
+async function claimPurchaseEvent(eventId: string) {
+  const client = await getPool().connect();
+  try {
+    const existing = await client.query(
+      `SELECT 1 FROM tracking_events WHERE event_id = $1 AND event_name = 'Purchase' AND platform = 'meta' LIMIT 1`,
+      [eventId],
+    );
+    if (existing.rows[0]) return false;
+    await client.query(
+      `INSERT INTO tracking_events (id, event_id, event_name, platform, status, detail, created_at)
+       VALUES ($1, $2, 'Purchase', 'meta', 'queued', '', now())`,
+      [randomUUID(), eventId],
+    );
+    return true;
+  } catch (err) {
+    console.error("capi_claim_failed", err);
+    return true;
+  } finally {
+    client.release();
+  }
+}
+
+async function postMeta(eventId: string, order: CapiOrder) {
   const pixelId = (process.env.META_PIXEL_ID || FB_PIXEL_ID || "").trim();
   const token = (process.env.META_CAPI_ACCESS_TOKEN || "").trim();
   if (!pixelId || !token) return;
@@ -126,7 +145,7 @@ async function postMeta(eventId: string, order: CapiOrder, kind: PurchaseKind) {
         event_source_url: eventSourceUrl,
         action_source: "website",
         user_data: hashedUser(order),
-        custom_data: customData(order, kind),
+        custom_data: customData(order),
       },
     ],
     access_token: token,
@@ -145,10 +164,14 @@ async function postMeta(eventId: string, order: CapiOrder, kind: PurchaseKind) {
   }
 }
 
-export function sendPurchaseCapi(order: CapiOrder, kind: PurchaseKind = "order") {
-  const eventId = purchaseEventId(order.id, kind);
+export function sendPurchaseCapi(order: CapiOrder) {
+  const eventId = purchaseEventId(order.id);
   if (!eventId) return;
-  void postMeta(eventId, order, kind).catch((err) => {
+  void (async () => {
+    const claimed = await claimPurchaseEvent(eventId);
+    if (!claimed) return;
+    await postMeta(eventId, order);
+  })().catch((err) => {
     console.error("meta_capi_purchase_failed", err);
   });
 }

@@ -1,8 +1,5 @@
 /** Stable Meta / CAPI Purchase id. Pixel `eventID` and CAPI `event_id` must be identical. */
-export type PurchaseKind = "order" | "upsell";
-
-export function purchaseEventId(orderId: string, kind: PurchaseKind = "order") {
+export function purchaseEventId(orderId: string) {
   const id = String(orderId || "").trim();
-  if (!id) return "";
-  return kind === "upsell" ? `order_${id}_upsell` : `order_${id}`;
+  return id ? `order_${id}` : "";
 }

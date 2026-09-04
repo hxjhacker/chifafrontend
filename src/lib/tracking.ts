@@ -1,7 +1,7 @@
 "use client";
 
 import { sendTracking } from "./api";
-import { purchaseEventId, type PurchaseKind } from "./purchase-event";
+import { purchaseEventId } from "./purchase-event";
 
 export type PixelWindow = Window & {
   fbq?: (...args: unknown[]) => void;
@@ -42,7 +42,6 @@ function commerceParams(extra: Record<string, unknown>) {
 }
 
 export { purchaseEventId };
-export type { PurchaseKind };
 
 export function newEventId() {
   if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
@@ -154,14 +153,27 @@ export function trackPurchaseOnce(opts: {
   orderId: string;
   value?: number | string;
   contentIds?: string[];
-  kind?: PurchaseKind;
 }) {
-  const eventId = purchaseEventId(opts.orderId, opts.kind);
+  const eventId = purchaseEventId(opts.orderId);
   if (!eventId || hasTrackedPurchase(eventId)) return eventId;
   markTrackedPurchase(eventId);
   trackBrowser("Purchase", eventId, {
     value: pixelMoney(opts.value),
     content_ids: pixelContentIds(opts.contentIds),
+  });
+  return eventId;
+}
+
+export function trackUpsellAccepted(opts: { value?: number | string; contentIds?: string[] } = {}) {
+  const eventId = newEventId();
+  run(() => {
+    const w = window as PixelWindow;
+    w.fbq?.("trackCustom", "UpsellAccepted", {
+      value: pixelMoney(opts.value ?? 99),
+      currency: "MAD",
+      content_ids: pixelContentIds(opts.contentIds),
+      content_type: "product",
+    });
   });
   return eventId;
 }

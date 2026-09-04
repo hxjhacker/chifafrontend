@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useCart } from "@/lib/cart";
 import { otherProducts } from "@/lib/products";
 import { submitUpsell } from "@/lib/api";
-import { newEventId, trackPurchaseOnce } from "@/lib/tracking";
+import { newEventId, trackUpsellAccepted } from "@/lib/tracking";
 
 export function UpsellModal() {
   const cart = useCart();
@@ -17,6 +17,13 @@ export function UpsellModal() {
     const skip = new Set([cart.productSlug, cart.crossSellSlug || ""]);
     return otherProducts(cart.productSlug).find((p) => !skip.has(p.slug)) ?? null;
   }, [cart.productSlug, cart.crossSellSlug]);
+
+  useEffect(() => {
+    if (cart.upsellOpen && !offer && cart.orderId) {
+      goThanks();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cart.upsellOpen, offer, cart.orderId]);
 
   useEffect(() => {
     if (!cart.upsellOpen) return;
@@ -45,12 +52,7 @@ export function UpsellModal() {
     const eventId = newEventId();
     try {
       await submitUpsell(cart.orderId, offer.slug, eventId);
-      trackPurchaseOnce({
-        orderId: cart.orderId,
-        value: 99,
-        contentIds: [offer.slug],
-        kind: "upsell",
-      });
+      trackUpsellAccepted({ value: 99, contentIds: [offer.slug] });
     } catch {
       /* still confirm */
     }

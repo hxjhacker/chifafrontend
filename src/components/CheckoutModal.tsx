@@ -35,6 +35,7 @@ export function CheckoutModal() {
         tier_qty: cart.tierQty,
         cross_sell_slug: cart.crossSellSlug,
         event_id: eventId,
+        defer_purchase: true,
         landing_url: window.location.href,
         ...clickIds(),
       });
