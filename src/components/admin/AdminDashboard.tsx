@@ -393,7 +393,7 @@ export function AdminDashboard() {
           order_not_found: "الطلبية غير موجودة.",
           not_authenticated: "جلسة الأدمن غير صالحة. أعد تسجيل الدخول.",
         };
-        throw new Error(body.message || map[body.detail || ""] || body.detail || "تعذر إرسال الطرد إلى Meta Livraison.");
+        throw new Error(body.message || body.error || map[body.detail || ""] || body.detail || "تعذر إرسال الطرد إلى Meta Livraison.");
       }
       setOrders((list) => list.map((row) => (row.order_id === order.order_id ? { ...row, ...body } : row)));
       setNoticeKind("ok");

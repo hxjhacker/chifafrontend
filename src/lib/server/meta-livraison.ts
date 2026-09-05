@@ -79,30 +79,30 @@ export async function createMetaLivraisonColis(order: AdminOrder) {
       "X-API-Secret": secret,
     },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(15000),
   });
 
-  const raw = await res.json().catch(() => null);
+  const text = await res.text().catch(() => "");
+  let raw: unknown = null;
+  try {
+    raw = text ? JSON.parse(text) : null;
+  } catch {
+    raw = null;
+  }
   const code = pickCode(raw);
   if (!res.ok) {
-    const message =
-      raw && typeof raw === "object"
-        ? String((raw as { message?: string; detail?: string; error?: string }).message ||
-            (raw as { detail?: string }).detail ||
-            (raw as { error?: string }).error ||
-            "")
-        : "";
     if (res.status === 401) {
       console.error("401 details:", {
         origin: "meta_livraison",
         status: 401,
         hasKey: Boolean(key),
         hasSecret: Boolean(secret),
-        error: raw ?? message,
+        error: text || raw,
       });
     } else {
-      console.error("meta_livraison_failed", res.status, raw ?? message);
+      console.error("meta_livraison_failed", res.status, text || raw);
     }
-    return { ok: false as const, status: res.status, detail: message || "meta_livraison_failed", code, raw };
+    return { ok: false as const, status: res.status, detail: text || "meta_livraison_failed", code, raw };
   }
 
   return { ok: true as const, status: res.status, detail: "", code, raw };
