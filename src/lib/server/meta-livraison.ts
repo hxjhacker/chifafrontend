@@ -75,10 +75,8 @@ export async function createMetaLivraisonColis(order: AdminOrder) {
     headers: {
       Accept: "application/json",
       "Content-Type": "application/json",
-      "X-API-KEY": key,
-      "X-API-SECRET": secret,
-      "Api-Key": key,
-      "Api-Secret": secret,
+      "X-API-Key": key,
+      "X-API-Secret": secret,
     },
     body: JSON.stringify(body),
   });
@@ -93,6 +91,17 @@ export async function createMetaLivraisonColis(order: AdminOrder) {
             (raw as { error?: string }).error ||
             "")
         : "";
+    if (res.status === 401) {
+      console.error("401 details:", {
+        origin: "meta_livraison",
+        status: 401,
+        hasKey: Boolean(key),
+        hasSecret: Boolean(secret),
+        error: raw ?? message,
+      });
+    } else {
+      console.error("meta_livraison_failed", res.status, raw ?? message);
+    }
     return { ok: false as const, status: res.status, detail: message || "meta_livraison_failed", code, raw };
   }
 

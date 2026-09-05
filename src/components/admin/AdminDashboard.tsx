@@ -377,16 +377,23 @@ export function AdminDashboard() {
         method: "POST",
         credentials: "include",
         cache: "no-store",
+        headers: { Accept: "application/json" },
       });
-      const body = (await res.json().catch(() => ({}))) as AdminOrder & { detail?: string };
-      if (!res.ok) {
+      const body = (await res.json().catch(() => ({}))) as AdminOrder & {
+        detail?: string;
+        success?: boolean;
+        message?: string;
+        origin?: string;
+      };
+      if (!res.ok || body.success === false) {
         const map: Record<string, string> = {
           meta_livraison_not_configured: "أضف مفاتيح Meta Livraison في الخادم أولاً.",
           confirmation_details_required: "كمّل معلومات التوصيل قبل الشحن.",
           cannot_ship_cancelled: "لا يمكن شحن طلبية ملغاة.",
           order_not_found: "الطلبية غير موجودة.",
+          not_authenticated: "جلسة الأدمن غير صالحة. أعد تسجيل الدخول.",
         };
-        throw new Error(map[body.detail || ""] || body.detail || "تعذر إرسال الطرد إلى Meta Livraison.");
+        throw new Error(body.message || map[body.detail || ""] || body.detail || "تعذر إرسال الطرد إلى Meta Livraison.");
       }
       setOrders((list) => list.map((row) => (row.order_id === order.order_id ? { ...row, ...body } : row)));
       setNoticeKind("ok");
