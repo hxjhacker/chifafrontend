@@ -27,6 +27,7 @@ import {
   Sun,
   Trash2,
   Moon,
+  Truck,
   X,
 } from "lucide-react";
 import { ThemeToggle, WhatsAppIcon } from "@/components/Chrome";
@@ -50,6 +51,7 @@ import {
   copyablePhone,
   downloadCsv,
   formatMad,
+  hasCompleteConfirmDetails,
   needsConfirmModal,
   ordersToCsv,
   pct,
@@ -135,6 +137,7 @@ export function AdminDashboard() {
   const [deleteTarget, setDeleteTarget] = useState<AdminOrder | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
+  const [shippingId, setShippingId] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
   const [noticeKind, setNoticeKind] = useState<"ok" | "warn">("ok");
   useLockBodyScroll(Boolean(deleteTarget));
@@ -348,6 +351,51 @@ export function AdminDashboard() {
       setError(err instanceof Error ? err.message : "تعذر إنشاء الطلبية الجديدة.");
     } finally {
       setDuplicatingId(null);
+    }
+  }
+
+  async function sendToMetaLivraison(order: AdminOrder) {
+    if (shippingId) return;
+    if (order.meta_livraison_code) {
+      setNoticeKind("ok");
+      setNotice(`الطلب مرسل مسبقاً إلى Meta Livraison: ${order.meta_livraison_code}`);
+      return;
+    }
+    if (order.status === "cancelled") {
+      setError("لا يمكن شحن طلبية ملغاة.");
+      return;
+    }
+    if (!hasCompleteConfirmDetails(order)) {
+      setCompleting(order);
+      setError("كمّل عنوان التوصيل قبل إرسال الطرد إلى Meta Livraison.");
+      return;
+    }
+    setShippingId(order.order_id);
+    setError("");
+    try {
+      const res = await fetch(`/api/admin/orders/${order.order_id}/livraison`, {
+        method: "POST",
+        credentials: "include",
+        cache: "no-store",
+      });
+      const body = (await res.json().catch(() => ({}))) as AdminOrder & { detail?: string };
+      if (!res.ok) {
+        const map: Record<string, string> = {
+          meta_livraison_not_configured: "أضف مفاتيح Meta Livraison في الخادم أولاً.",
+          confirmation_details_required: "كمّل معلومات التوصيل قبل الشحن.",
+          cannot_ship_cancelled: "لا يمكن شحن طلبية ملغاة.",
+          order_not_found: "الطلبية غير موجودة.",
+        };
+        throw new Error(map[body.detail || ""] || body.detail || "تعذر إرسال الطرد إلى Meta Livraison.");
+      }
+      setOrders((list) => list.map((row) => (row.order_id === order.order_id ? { ...row, ...body } : row)));
+      setNoticeKind("ok");
+      setNotice(body.meta_livraison_code ? `تم إرسال الطرد. كود التتبع: ${body.meta_livraison_code}` : "تم إرسال الطرد إلى Meta Livraison.");
+      await refreshStats();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "تعذر إرسال الطرد إلى Meta Livraison.");
+    } finally {
+      setShippingId(null);
     }
   }
 
@@ -957,6 +1005,20 @@ export function AdminDashboard() {
                             </button>
                             <button
                               type="button"
+                              title={order.meta_livraison_code ? `Meta Livraison: ${order.meta_livraison_code}` : "إرسال بنقرة إلى Meta Livraison"}
+                              disabled={shippingId === order.order_id}
+                              onClick={() => void sendToMetaLivraison(order)}
+                              className={cn(
+                                "flex h-8 w-8 items-center justify-center rounded-xl border transition disabled:opacity-60",
+                                order.meta_livraison_code
+                                  ? "border-sky-500/40 bg-sky-500/15 text-sky-400"
+                                  : "border-gold/40 bg-gold/10 text-gold hover:bg-gold hover:text-royal",
+                              )}
+                            >
+                              {shippingId === order.order_id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Truck className="h-3.5 w-3.5" />}
+                            </button>
+                            <button
+                              type="button"
                               title="عرض التفاصيل ومسار الطلب"
                               onClick={() => setViewingId(order.order_id)}
                               className="flex h-8 w-8 items-center justify-center rounded-xl border border-sky-500/30 bg-sky-500/10 text-sky-400 transition hover:bg-sky-500 hover:text-white"
@@ -995,7 +1057,10 @@ export function AdminDashboard() {
                           </div>
                         </td>
                         <td className="p-3.5 font-mono text-[11px] text-royal/60 dark:text-slate-400" title={order.order_id}>
-                          {shortOrderRef(order.order_id)}
+                          <div>{shortOrderRef(order.order_id)}</div>
+                          {order.meta_livraison_code ? (
+                            <div className="mt-1 text-[10px] font-bold text-sky-500">{order.meta_livraison_code}</div>
+                          ) : null}
                         </td>
                         <td className="p-3.5 font-bold">{order.full_name}</td>
                         <td className="p-3.5">

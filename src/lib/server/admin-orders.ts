@@ -33,6 +33,8 @@ type OrderRow = {
   region_id: string | null;
   bundle_enabled: boolean;
   secondary_qty: number;
+  meta_livraison_code?: string | null;
+  meta_livraison_sent_at?: Date | string | null;
 };
 
 const ALLOWED: AdminStatus[] = ["new", "confirmed", "shipped", "delivered", "cancelled"];
@@ -174,7 +176,51 @@ function serialize(row: OrderRow): AdminOrder {
     shipped_at: stampReached(row.shipped_at, updated, pastShipped),
     delivered_at: stampReached(row.delivered_at, updated, status === "delivered"),
     cancelled_at: stampReached(row.cancelled_at, updated, status === "cancelled"),
+    meta_livraison_code: row.meta_livraison_code || null,
+    meta_livraison_sent_at: iso(row.meta_livraison_sent_at || null),
   };
+}
+
+export async function getAdminOrder(orderId: string): Promise<AdminOrder | null> {
+  await ensureSchema();
+  const client = await getPool().connect();
+  try {
+    const result = await client.query<OrderRow>(`SELECT * FROM orders WHERE id = $1 LIMIT 1`, [orderId]);
+    return result.rows[0] ? serialize(result.rows[0]) : null;
+  } finally {
+    client.release();
+  }
+}
+
+export async function markMetaLivraisonSent(orderId: string, code: string): Promise<AdminOrder | null> {
+  await ensureSchema();
+  const client = await getPool().connect();
+  try {
+    const probe = await client.query(`SELECT * FROM orders WHERE id = $1 LIMIT 1`, [orderId]);
+    const current = probe.rows[0] as OrderRow | undefined;
+    if (!current) return null;
+    const cols = columnsOf(probe);
+    const values: unknown[] = [orderId];
+    const assignments = ["status = 'shipped'"];
+    if (cols.has("updated_at")) assignments.push("updated_at = now()");
+    if (cols.has("shipped_at")) assignments.push("shipped_at = COALESCE(shipped_at, now())");
+    if (cols.has("confirmed_at")) assignments.push("confirmed_at = COALESCE(confirmed_at, now())");
+    if (cols.has("cancelled_at")) assignments.push("cancelled_at = NULL");
+    if (cols.has("meta_livraison_code")) {
+      values.push(code);
+      assignments.push(`meta_livraison_code = $${values.length}`);
+    }
+    if (cols.has("meta_livraison_sent_at")) {
+      assignments.push("meta_livraison_sent_at = COALESCE(meta_livraison_sent_at, now())");
+    }
+    const result = await client.query<OrderRow>(
+      `UPDATE orders SET ${assignments.join(", ")} WHERE id = $1 RETURNING *`,
+      values,
+    );
+    return result.rows[0] ? serialize(result.rows[0]) : serialize(current);
+  } finally {
+    client.release();
+  }
 }
 
 export async function listAdminOrders(filters: { q?: string; city?: string; status?: string; limit?: number }) {
@@ -491,7 +537,7 @@ export async function updateAdminOrder(orderId: string, patch: OrderPatch): Prom
       }
     }
     if (patch.product_slug !== undefined) {
-      slug = ["quran", "kids", "music", "educative"].includes(patch.product_slug) ? patch.product_slug : slug;
+      slug = ["quran", "kids", "music", "educative", "taalim"].includes(patch.product_slug) ? patch.product_slug : slug;
     }
     if (patch.tier_qty !== undefined) {
       const nextQty = Math.round(Number(patch.tier_qty));
@@ -533,7 +579,7 @@ export async function updateAdminOrder(orderId: string, patch: OrderPatch): Prom
       }
     }
     if (patch.cross_sell_slug !== undefined) {
-      const allowedCross = ["quran", "kids", "music", "educative", "extra"];
+      const allowedCross = ["quran", "kids", "music", "educative", "taalim", "extra"];
       if (!patch.cross_sell_slug) {
         crossSlug = null;
         crossCents = 0;
@@ -736,13 +782,13 @@ export async function createAdminOrder(input: {
   const qty = Math.min(20, Math.max(1, Math.round(Number(input.tier_qty) || 1)));
   const cents = Math.round(Number(input.total_mad) * 100);
   if (!Number.isFinite(cents) || cents < 100) throw new Error("invalid_price");
-  const slug = ["quran", "kids", "music", "educative"].includes(input.product_slug) ? input.product_slug : "quran";
+  const slug = ["quran", "kids", "music", "educative", "taalim"].includes(input.product_slug) ? input.product_slug : "quran";
   const national = e164.startsWith("+212") && e164.length === 13 ? `0${e164.slice(4)}` : e164;
   const orderId = randomUUID();
   const eventId = `admin-${orderId}`;
   const address = String(input.address || "").trim() || null;
   const courierNotes = String(input.courier_notes || "").trim() || null;
-  const allowedCross = ["quran", "kids", "music", "educative", "extra"];
+  const allowedCross = ["quran", "kids", "music", "educative", "taalim", "extra"];
   const crossSlug = input.cross_sell_slug && allowedCross.includes(input.cross_sell_slug) ? input.cross_sell_slug : null;
   const bundleEnabled = Boolean(input.bundle_enabled && crossSlug);
   const secondaryQty = Math.min(20, Math.max(1, Math.round(Number(input.secondary_qty) || 1)));

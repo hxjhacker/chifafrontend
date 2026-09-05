@@ -41,6 +41,8 @@ export type AdminOrder = {
   shipped_at: string | null;
   delivered_at: string | null;
   cancelled_at: string | null;
+  meta_livraison_code?: string | null;
+  meta_livraison_sent_at?: string | null;
 };
 
 export type AdminStats = {
@@ -99,6 +101,7 @@ export const PACK_NAMES: Record<string, string> = {
   kids: "USB تعليم الأطفال",
   music: "USB الأغاني والموسيقى",
   educative: "الفلاشة التعليمية الذكية",
+  taalim: "فلاشة Taalim Kids",
   extra: "مفتاح إضافي بسعر العرض",
 };
 

@@ -82,7 +82,9 @@ CREATE TABLE IF NOT EXISTS orders (
   confirmed_at timestamptz,
   shipped_at timestamptz,
   delivered_at timestamptz,
-  cancelled_at timestamptz
+  cancelled_at timestamptz,
+  meta_livraison_code varchar(80),
+  meta_livraison_sent_at timestamptz
 );
 CREATE INDEX IF NOT EXISTS ix_orders_phone ON orders (phone);
 CREATE INDEX IF NOT EXISTS ix_orders_status ON orders (status);
@@ -161,6 +163,8 @@ const SCHEMA_ALTERS = [
   `ALTER TABLE orders ADD COLUMN IF NOT EXISTS shipped_at timestamptz`,
   `ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivered_at timestamptz`,
   `ALTER TABLE orders ADD COLUMN IF NOT EXISTS cancelled_at timestamptz`,
+  `ALTER TABLE orders ADD COLUMN IF NOT EXISTS meta_livraison_code varchar(80)`,
+  `ALTER TABLE orders ADD COLUMN IF NOT EXISTS meta_livraison_sent_at timestamptz`,
   `CREATE TABLE IF NOT EXISTS page_views (
     id uuid PRIMARY KEY,
     kind varchar(32) NOT NULL,
@@ -212,6 +216,14 @@ const PRODUCT_SEED = [
     name_en: "Smart Educational USB for Kids",
     tagline_ar: "100% بدون إنترنت — رفيق التفوق المدرسي.",
     description_ar: "فلاشة تربوية جاهزة للتلفاز والحاسوب.",
+    accent: "emerald",
+  },
+  {
+    slug: "taalim",
+    name_ar: "فلاشة Taalim Kids التعليمية",
+    name_en: "Taalim Kids Educational USB",
+    tagline_ar: "حوّل التلفاز إلى مدرسة ذكية لطفلك.",
+    description_ar: "مكتبة تعليمية بدون إنترنت للتلفاز والحاسوب.",
     accent: "emerald",
   },
 ] as const;
