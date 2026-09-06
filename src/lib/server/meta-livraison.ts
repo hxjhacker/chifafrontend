@@ -62,7 +62,7 @@ function parcelCode(orderId: string) {
   return `ORD-${orderId || "ORDER"}`;
 }
 
-function text(...values: Array<string | number | null | undefined>) {
+function firstNonEmpty(...values: Array<string | number | null | undefined>) {
   for (const value of values) {
     const next = String(value ?? "").trim();
     if (next) return next;
@@ -107,13 +107,13 @@ export async function createMetaLivraisonColis(order: AdminOrder) {
 
   const rawPrice = Number(order.total_price || order.total) || 0;
   const price = Number.isInteger(rawPrice) ? rawPrice : Math.round(rawPrice * 100) / 100;
-  const destinataire = text(order.full_name) || "Client";
-  const ville = text(order.city);
-  const address = text(order.full_address, order.address, ville) || "Centre Ville";
-  const marchendise = text(order.pack_label, order.primary_product, order.product_slug) || "Produit";
+  const destinataire = firstNonEmpty(order.full_name) || "Client";
+  const ville = firstNonEmpty(order.city);
+  const address = firstNonEmpty(order.full_address, order.address, ville) || "Centre Ville";
+  const marchendise = firstNonEmpty(order.pack_label, order.primary_product, order.product_slug) || "Produit";
   const quantity = Math.max(1, Math.round(Number(order.tier_qty || order.primary_qty) || 1));
   const code = parcelCode(order.order_id);
-  const note = text(order.courier_notes, order.driver_comment);
+  const note = firstNonEmpty(order.courier_notes, order.driver_comment);
   const payload = {
     destinataire,
     colisStock: false,
@@ -163,18 +163,18 @@ export async function createMetaLivraisonColis(order: AdminOrder) {
     signal: AbortSignal.timeout(15000),
   });
 
-  const text = await res.text().catch(() => "");
+  const rawBody = await res.text().catch(() => "");
   console.log("STATUS FROM META:", res.status);
-  console.log("RAW BODY FROM META:", text);
+  console.log("RAW BODY FROM META:", rawBody);
   console.log("[DEBUG META LIVRAISON] meta response content-type:", res.headers.get("content-type"));
   console.log("[DEBUG META LIVRAISON] meta www-authenticate:", res.headers.get("www-authenticate"));
   const contentType = res.headers.get("content-type") || "";
-  let detail: unknown = text;
+  let detail: unknown = rawBody;
   if (contentType.toLowerCase().startsWith("application/json")) {
     try {
-      detail = text ? JSON.parse(text) : text;
+      detail = rawBody ? JSON.parse(rawBody) : rawBody;
     } catch {
-      detail = text;
+      detail = rawBody;
     }
   }
   const tracking = pickCode(detail, code);
