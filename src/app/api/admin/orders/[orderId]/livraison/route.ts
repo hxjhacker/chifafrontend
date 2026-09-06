@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { hasCompleteConfirmDetails } from "@/lib/admin";
 import { readAdminFromRequest } from "@/lib/admin-auth";
 import { getAdminOrder, markMetaLivraisonSent } from "@/lib/server/admin-orders";
-import { createMetaLivraisonColis, metaLivraisonConfigured } from "@/lib/server/meta-livraison";
+import { createMetaLivraisonColis, debugMetaLivraisonCredentials, metaLivraisonConfigured } from "@/lib/server/meta-livraison";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,6 +22,14 @@ export async function POST(request: Request, context: Ctx) {
 
     const { orderId } = await context.params;
     if (!orderId) return NextResponse.json({ success: false, detail: "order_not_found" }, { status: 404 });
+
+    const api_key = (process.env.META_LIVRAISON_API_KEY || "").trim();
+    const api_secret = (process.env.META_LIVRAISON_API_SECRET || "").trim();
+    const base_url = (process.env.META_LIVRAISON_BASE_URL || "https://api.metalivraison.ma/colis-service").replace(/\/+$/, "");
+    console.log(`[DEBUG META LIVRAISON] Base URL: ${base_url}`);
+    console.log(`[DEBUG META LIVRAISON] Key length: ${api_key.length}, Key prefix: ${api_key.slice(0, 6)}...`);
+    console.log(`[DEBUG META LIVRAISON] Secret length: ${api_secret.length}, Secret prefix: ${api_secret.slice(0, 6)}...`);
+    debugMetaLivraisonCredentials();
 
     if (!metaLivraisonConfigured()) {
       return NextResponse.json(

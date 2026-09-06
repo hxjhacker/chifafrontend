@@ -1,20 +1,54 @@
 import { digitsOnly } from "@/lib/phone";
 import type { AdminOrder } from "@/lib/admin";
 
-const DEFAULT_BASE = "https://api.metalivraison.ma";
+const EMPTY_KEYS = new Set(["", "YOUR_API_KEY_HERE", "YOUR_API_SECRET_HERE"]);
+const DEFAULT_BASE = "https://api.metalivraison.ma/colis-service";
 const COLIS_PATH = "/api/v1/partner/colis";
 
-export function metaLivraisonConfigured() {
-  const key = (process.env.META_LIVRAISON_API_KEY || "").trim();
-  const secret = (process.env.META_LIVRAISON_API_SECRET || "").trim();
-  return Boolean(key && secret && key !== "YOUR_API_KEY_HERE" && secret !== "YOUR_API_SECRET_HERE");
+function clean(value: string | undefined | null) {
+  let text = (value || "").trim().replace(/^\uFEFF/, "");
+  if (text.length >= 2 && text[0] === text[text.length - 1] && (text[0] === '"' || text[0] === "'")) {
+    text = text.slice(1, -1).trim();
+  }
+  return text;
 }
 
-export function metaLivraisonColisUrl() {
-  let base = (process.env.META_LIVRAISON_BASE_URL || DEFAULT_BASE).trim().replace(/\/+$/, "");
-  if (base.endsWith(COLIS_PATH)) return base;
-  if (base.endsWith("/colis-service")) base = base.slice(0, -"/colis-service".length);
-  return `${base}${COLIS_PATH}`;
+function liveEnv(name: string, fallback = "") {
+  return clean(process.env[name] || fallback);
+}
+
+export function metaLivraisonApiKey() {
+  return liveEnv("META_LIVRAISON_API_KEY");
+}
+
+export function metaLivraisonApiSecret() {
+  return liveEnv("META_LIVRAISON_API_SECRET");
+}
+
+export function metaLivraisonBaseUrl() {
+  return liveEnv("META_LIVRAISON_BASE_URL", DEFAULT_BASE).replace(/\/+$/, "");
+}
+
+export function metaLivraisonConfigured() {
+  const key = metaLivraisonApiKey();
+  const secret = metaLivraisonApiSecret();
+  return Boolean(key && secret && !EMPTY_KEYS.has(key) && !EMPTY_KEYS.has(secret));
+}
+
+export function metaLivraisonColisUrl(base = metaLivraisonBaseUrl()) {
+  const trimmed = (base || DEFAULT_BASE).replace(/\/+$/, "");
+  if (trimmed.endsWith(COLIS_PATH)) return trimmed;
+  return `${trimmed}${COLIS_PATH}`;
+}
+
+export function debugMetaLivraisonCredentials() {
+  const key = metaLivraisonApiKey();
+  const secret = metaLivraisonApiSecret();
+  const base = metaLivraisonBaseUrl();
+  console.log(`[DEBUG META LIVRAISON] Base URL: ${base}`);
+  console.log(`[DEBUG META LIVRAISON] Key length: ${key.length}, Key prefix: ${key.slice(0, 6)}...`);
+  console.log(`[DEBUG META LIVRAISON] Secret length: ${secret.length}, Secret prefix: ${secret.slice(0, 6)}...`);
+  console.log(`[DEBUG META LIVRAISON] POST URL: ${metaLivraisonColisUrl(base)}`);
 }
 
 function nationalPhone(order: AdminOrder) {
@@ -44,12 +78,14 @@ function pickCode(payload: unknown, fallback: string) {
 }
 
 export async function createMetaLivraisonColis(order: AdminOrder) {
+  const key = metaLivraisonApiKey();
+  const secret = metaLivraisonApiSecret();
+  const base = metaLivraisonBaseUrl();
+  debugMetaLivraisonCredentials();
   if (!metaLivraisonConfigured()) {
     return { ok: false as const, status: 400, detail: "meta_livraison_not_configured", code: "", raw: null };
   }
 
-  const key = (process.env.META_LIVRAISON_API_KEY || "").trim();
-  const secret = (process.env.META_LIVRAISON_API_SECRET || "").trim();
   const phone = nationalPhone(order);
   if (!(phone.length === 10 && phone.startsWith("0"))) {
     return {
@@ -88,15 +124,22 @@ export async function createMetaLivraisonColis(order: AdminOrder) {
     openpackage: 1,
   };
 
-  const res = await fetch(metaLivraisonColisUrl(), {
+  const postUrl = metaLivraisonColisUrl(base);
+  const headers = {
+    Accept: "application/json",
+    "Content-Type": "application/json",
+    "X-API-Key": key,
+    "X-API-Secret": secret,
+  };
+  console.log("[DEBUG META LIVRAISON] sending POST", postUrl);
+  console.log("[DEBUG META LIVRAISON] sending header names:", Object.keys(headers));
+  console.log(`[DEBUG META LIVRAISON] sending key prefix: ${key.slice(0, 6)}..., len=${key.length}`);
+  console.log(`[DEBUG META LIVRAISON] sending secret prefix: ${secret.slice(0, 6)}..., len=${secret.length}`);
+
+  const res = await fetch(postUrl, {
     method: "POST",
     cache: "no-store",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      "X-API-Key": key,
-      "X-API-Secret": secret,
-    },
+    headers,
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(15000),
   });
@@ -104,6 +147,8 @@ export async function createMetaLivraisonColis(order: AdminOrder) {
   const text = await res.text().catch(() => "");
   console.log("STATUS FROM META:", res.status);
   console.log("RAW BODY FROM META:", text);
+  console.log("[DEBUG META LIVRAISON] meta response content-type:", res.headers.get("content-type"));
+  console.log("[DEBUG META LIVRAISON] meta www-authenticate:", res.headers.get("www-authenticate"));
   const contentType = res.headers.get("content-type") || "";
   let detail: unknown = text;
   if (contentType.toLowerCase().startsWith("application/json")) {
