@@ -16,18 +16,14 @@ import {
   Loader2,
   LogOut,
   Menu,
-  Pencil,
   Phone,
   PieChart,
   Plus,
-  Printer,
-  Repeat2,
   Search,
   SlidersHorizontal,
   Sun,
   Trash2,
   Moon,
-  Truck,
   X,
 } from "lucide-react";
 import { ThemeToggle, WhatsAppIcon } from "@/components/Chrome";
@@ -37,6 +33,7 @@ import { AdminDoughnut } from "@/components/admin/AdminDoughnut";
 import { CompleteDetailsModal } from "@/components/admin/CompleteDetailsModal";
 import { IosSwitch } from "@/components/admin/IosSwitch";
 import { MoroccoMap } from "@/components/admin/MoroccoMap";
+import { OrderActionsMenu } from "@/components/admin/OrderActionsMenu";
 import { OrderTimelineModal } from "@/components/admin/OrderTimelineModal";
 import { QuickWhatsAppOrderModal } from "@/components/admin/QuickWhatsAppOrderModal";
 import { PushToggle } from "@/components/admin/PushToggle";
@@ -1047,77 +1044,17 @@ export function AdminDashboard() {
                     return (
                       <tr key={order.order_id} className="transition hover:bg-cream/50 dark:hover:bg-brandDark/50">
                         <td className="p-3.5">
-                          <div className="flex items-center gap-1.5">
-                            <button
-                              type="button"
-                              title={
-                                order.meta_livraison_ticket_url
-                                  ? "طباعة تذكرة Meta Livraison"
-                                  : "طباعة بوليصة الشحن"
-                              }
-                              onClick={() => printShipping(order)}
-                              className="flex h-8 w-8 items-center justify-center rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 transition hover:bg-emerald-500 hover:text-white"
-                            >
-                              <Printer className="h-3.5 w-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              title={order.meta_livraison_code ? "Envoyé à Meta Livraison" : "إرسال بنقرة إلى Meta Livraison"}
-                              disabled={Boolean(order.meta_livraison_code) || shippingId === order.order_id}
-                              onClick={() => void sendToMetaLivraison(order)}
-                              className={cn(
-                                "flex h-8 w-8 items-center justify-center rounded-xl border transition disabled:opacity-80",
-                                order.meta_livraison_code
-                                  ? "cursor-default border-emerald-500/40 bg-emerald-500/15 text-emerald-400"
-                                  : "border-gold/40 bg-gold/10 text-gold hover:bg-gold hover:text-royal disabled:opacity-60",
-                              )}
-                            >
-                              {shippingId === order.order_id ? (
-                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                              ) : order.meta_livraison_code ? (
-                                <CheckCircle2 className="h-3.5 w-3.5" />
-                              ) : (
-                                <Truck className="h-3.5 w-3.5" />
-                              )}
-                            </button>
-                            <button
-                              type="button"
-                              title="عرض التفاصيل ومسار الطلب"
-                              onClick={() => setViewingId(order.order_id)}
-                              className="flex h-8 w-8 items-center justify-center rounded-xl border border-sky-500/30 bg-sky-500/10 text-sky-400 transition hover:bg-sky-500 hover:text-white"
-                            >
-                              <Eye className="h-3.5 w-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              title="إتمام وتأكيد المعلومات"
-                              onClick={() => setCompleting(order)}
-                              className="flex h-8 w-8 items-center justify-center rounded-xl border border-gold/30 bg-gold/10 text-gold transition hover:bg-gold hover:text-royal"
-                            >
-                              <Pencil className="h-3.5 w-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              title="إعادة طلبية جديدة"
-                              disabled={duplicatingId === order.order_id}
-                              onClick={() => void duplicateOrder(order)}
-                              className="flex h-8 w-8 items-center justify-center rounded-xl border border-violet-500/30 bg-violet-500/10 text-violet-400 transition hover:bg-violet-500 hover:text-white disabled:opacity-60"
-                            >
-                              {duplicatingId === order.order_id ? (
-                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                              ) : (
-                                <Repeat2 className="h-3.5 w-3.5" />
-                              )}
-                            </button>
-                            <button
-                              type="button"
-                              title="حذف الطلبية"
-                              onClick={() => setDeleteTarget(order)}
-                              className="flex h-8 w-8 items-center justify-center rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-500 transition hover:bg-rose-500 hover:text-white"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
+                          <OrderActionsMenu
+                            order={order}
+                            shipping={shippingId === order.order_id}
+                            duplicating={duplicatingId === order.order_id}
+                            onSendMeta={(row) => void sendToMetaLivraison(row)}
+                            onPrint={printShipping}
+                            onEdit={setCompleting}
+                            onView={(row) => setViewingId(row.order_id)}
+                            onDuplicate={(row) => void duplicateOrder(row)}
+                            onDelete={setDeleteTarget}
+                          />
                         </td>
                         <td className="p-3.5 font-mono text-[11px] text-royal/60 dark:text-slate-400" title={order.order_id}>
                           <div>{shortOrderRef(order.order_id)}</div>
