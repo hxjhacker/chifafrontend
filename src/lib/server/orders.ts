@@ -1,6 +1,5 @@
 import { randomUUID } from "node:crypto";
 import type { PoolClient } from "pg";
-import { resolveCity } from "@/lib/cities";
 import { normalizeMaPhone } from "@/lib/phone";
 import type { OrderPayload, OrderResponse } from "@/lib/api";
 import { purchaseEventId } from "@/lib/purchase-event";
@@ -168,9 +167,8 @@ export async function createOrder(
   const e164 = normalizeMaPhone(payload.phone);
   if (!e164) throw new OrderError(422, "invalid_ma_phone");
 
-  const cityLabel = (payload.city || "").trim();
-  if (cityLabel.length < 2) throw new OrderError(422, "invalid_city");
-  const city = resolveCity(cityLabel);
+  const customerCityRaw = (payload.city || "").trim();
+  if (customerCityRaw.length < 2) throw new OrderError(422, "invalid_city");
 
   const qty = Number(payload.tier_qty);
   const table = tierTable(payload.product_slug);
@@ -217,7 +215,7 @@ export async function createOrder(
         fullName,
         e164,
         toNational(e164),
-        city.ar,
+        customerCityRaw,
         address,
         payload.product_slug,
         qty,
