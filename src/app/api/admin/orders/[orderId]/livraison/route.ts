@@ -10,9 +10,6 @@ export async function POST(
   try {
     const resolvedParams = await params;
     const orderId = resolvedParams.orderId || resolvedParams.id;
-    if (!orderId) {
-      return NextResponse.json({ success: false, detail: "order_not_found" }, { status: 404 });
-    }
 
     const backendBase =
       process.env.API_URL ||
@@ -35,13 +32,31 @@ export async function POST(
       },
     });
 
-    const data = await backendRes.json().catch(() => null);
-
-    return NextResponse.json(data || { success: false, detail: "Empty backend response" }, {
+    const rawText = await backendRes.text();
+    console.error("[Livraison Proxy]", {
+      targetUrl,
       status: backendRes.status,
+      contentType: backendRes.headers.get("content-type"),
+      rawText: rawText.slice(0, 4000),
     });
+
+    let data: unknown;
+    try {
+      data = JSON.parse(rawText);
+    } catch {
+      data = { raw: rawText };
+    }
+
+    return NextResponse.json(
+      {
+        proxied_status: backendRes.status,
+        target_url: targetUrl,
+        backend_response: data,
+      },
+      { status: backendRes.status === 200 ? 200 : 400 },
+    );
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to reach backend";
+    const message = error instanceof Error ? error.message : String(error);
     console.error("[Livraison Proxy Error]:", error);
     return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
