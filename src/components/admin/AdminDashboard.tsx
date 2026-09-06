@@ -30,6 +30,7 @@ import { ThemeToggle, WhatsAppIcon } from "@/components/Chrome";
 import SplashScreen from "@/components/SplashScreen";
 import { AddOrderModal } from "@/components/admin/AddOrderModal";
 import { AdminDoughnut } from "@/components/admin/AdminDoughnut";
+import { BulkActionBar } from "@/components/admin/BulkActionBar";
 import { CompleteDetailsModal } from "@/components/admin/CompleteDetailsModal";
 import { IosSwitch } from "@/components/admin/IosSwitch";
 import { MoroccoMap } from "@/components/admin/MoroccoMap";
@@ -136,6 +137,9 @@ export function AdminDashboard() {
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
   const [shippingId, setShippingId] = useState<string | null>(null);
   const [copiedTrackingId, setCopiedTrackingId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkBusy, setBulkBusy] = useState<"dispatch" | "labels" | "manifest" | null>(null);
+  const [bulkConfirm, setBulkConfirm] = useState(false);
   const [notice, setNotice] = useState("");
   const [noticeKind, setNoticeKind] = useState<"ok" | "warn">("ok");
   useLockBodyScroll(Boolean(deleteTarget));
@@ -151,6 +155,7 @@ export function AdminDashboard() {
   const [darkMode, setDarkMode] = useState(false);
   const prefsRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const selectAllRef = useRef<HTMLInputElement>(null);
 
   const closeTimeline = useCallback(() => setViewingId(null), []);
   const closePrint = useCallback(() => setPrintingId(null), []);
@@ -449,6 +454,103 @@ export function AdminDashboard() {
     }
   }
 
+  function toggleSelected(orderId: string, on: boolean) {
+    setSelectedIds((prev) => {
+      if (on) return prev.includes(orderId) ? prev : [...prev, orderId];
+      return prev.filter((id) => id !== orderId);
+    });
+  }
+
+  function togglePageSelection(on: boolean) {
+    const pageIds = pageRows.map((row) => row.order_id);
+    setSelectedIds((prev) => {
+      if (on) return [...new Set([...prev, ...pageIds])];
+      const drop = new Set(pageIds);
+      return prev.filter((id) => !drop.has(id));
+    });
+  }
+
+  async function readError(res: Response) {
+    const body = (await res.json().catch(() => ({}))) as { detail?: string; message?: string };
+    const map: Record<string, string> = {
+      meta_livraison_not_configured: "أضف مفاتيح Meta Livraison في الخادم أولاً.",
+      order_ids_required: "حدّد طلبيات أولاً.",
+      no_labels: "ما كايناش بوالص Meta للطلبيات المحددة.",
+      order_not_confirmed: "كاين طلبيات ما تزادش تأكيدها.",
+      not_authenticated: "جلسة الأدمن غير صالحة. أعد تسجيل الدخول.",
+    };
+    return map[String(body.detail || "")] || body.message || body.detail || "تعذر تنفيذ العملية.";
+  }
+
+  async function openBulkFile(path: string, accept: string, busy: "labels" | "manifest") {
+    if (!selectedIds.length || bulkBusy) return;
+    setBulkBusy(busy);
+    setError("");
+    try {
+      const res = await fetch(path, {
+        method: "POST",
+        credentials: "include",
+        cache: "no-store",
+        headers: { Accept: accept, "Content-Type": "application/json" },
+        body: JSON.stringify({ order_ids: selectedIds }),
+      });
+      if (!res.ok) throw new Error(await readError(res));
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const opened = window.open(url, "_blank", "noopener,noreferrer");
+      if (!opened) {
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = busy === "labels" ? "chifaglow-labels.pdf" : "chifaglow-manifest.html";
+        link.click();
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "تعذر تنفيذ العملية.");
+    } finally {
+      setBulkBusy(null);
+    }
+  }
+
+  async function bulkDispatch() {
+    if (!selectedIds.length || bulkBusy) return;
+    setBulkBusy("dispatch");
+    setError("");
+    try {
+      const res = await fetch("/api/admin/orders/bulk-livraison", {
+        method: "POST",
+        credentials: "include",
+        cache: "no-store",
+        headers: { Accept: "application/json", "Content-Type": "application/json" },
+        body: JSON.stringify({ order_ids: selectedIds }),
+      });
+      const body = (await res.json().catch(() => ({}))) as {
+        success_count?: number;
+        failed_count?: number;
+        detail?: string;
+        message?: string;
+      };
+      if (!res.ok) throw new Error(await (async () => {
+        const map: Record<string, string> = {
+          meta_livraison_not_configured: "أضف مفاتيح Meta Livraison في الخادم أولاً.",
+          order_ids_required: "حدّد طلبيات أولاً.",
+          not_authenticated: "جلسة الأدمن غير صالحة. أعد تسجيل الدخول.",
+        };
+        return map[String(body.detail || "")] || body.message || body.detail || "تعذر الإرسال الجماعي.";
+      })());
+      const ok = Number(body.success_count || 0);
+      const fail = Number(body.failed_count || 0);
+      setNoticeKind(fail ? "warn" : "ok");
+      setNotice(`تم إرسال ${ok} طلبية إلى Meta Livraison${fail ? ` — فشل ${fail}` : ""}.`);
+      setBulkConfirm(false);
+      await load();
+      await refreshStats();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "تعذر الإرسال الجماعي.");
+    } finally {
+      setBulkBusy(null);
+    }
+  }
+
   async function confirmDelete() {
     if (!deleteTarget) return;
     setDeleting(true);
@@ -497,6 +599,22 @@ export function AdminDashboard() {
   const start = filtered.length === 0 ? 0 : (currentPage - 1) * perPage;
   const end = Math.min(start + perPage, filtered.length);
   const pageRows = filtered.slice(start, end);
+  const selectedOnPage = pageRows.filter((row) => selectedIds.includes(row.order_id)).length;
+  const allPageSelected = pageRows.length > 0 && selectedOnPage === pageRows.length;
+
+  useEffect(() => {
+    const alive = new Set(orders.map((order) => order.order_id));
+    setSelectedIds((prev) => {
+      const next = prev.filter((id) => alive.has(id));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [orders]);
+
+  useEffect(() => {
+    const box = selectAllRef.current;
+    if (!box) return;
+    box.indeterminate = selectedOnPage > 0 && !allPageSelected;
+  }, [selectedOnPage, allPageSelected]);
   const viewing = useMemo(() => orders.find((o) => o.order_id === viewingId) ?? null, [orders, viewingId]);
   const printing = useMemo(() => orders.find((o) => o.order_id === printingId) ?? null, [orders, printingId]);
 
@@ -814,7 +932,7 @@ export function AdminDashboard() {
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-7xl flex-grow space-y-6 px-4 py-8">
+      <main className={cn("mx-auto w-full max-w-7xl flex-grow space-y-6 px-4 py-8", selectedIds.length ? "pb-28" : "")}>
         {error ? (
           <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-bold text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200">
             {error}
@@ -1013,6 +1131,17 @@ export function AdminDashboard() {
             <table id="orders-table" className="w-full text-right text-xs text-royal dark:text-slate-200">
               <thead className="border-b border-gold/10 bg-cream font-bold text-royal/70 dark:bg-brandDark dark:text-slate-400">
                 <tr>
+                  <th className="p-3.5 text-center">
+                    <input
+                      ref={selectAllRef}
+                      type="checkbox"
+                      checked={allPageSelected}
+                      onChange={(e) => togglePageSelection(e.target.checked)}
+                      className="h-4 w-4 accent-gold"
+                      title="تحديد كل طلبيات هذه الصفحة"
+                      aria-label="تحديد كل طلبيات هذه الصفحة"
+                    />
+                  </th>
                   <th className="p-3.5">إجراءات</th>
                   <th className="p-3.5">الرقم المرجعي</th>
                   <th className="p-3.5">الزبون</th>
@@ -1026,14 +1155,14 @@ export function AdminDashboard() {
               <tbody className="divide-y divide-gold/10 font-medium">
                 {loading ? (
                   <tr>
-                    <td colSpan={8} className="p-16 text-center text-royal/60 dark:text-slate-400">
+                    <td colSpan={9} className="p-16 text-center text-royal/60 dark:text-slate-400">
                       <Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin text-gold" />
                       جاري التحميل…
                     </td>
                   </tr>
                 ) : pageRows.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="p-16 text-center font-bold text-royal/50 dark:text-slate-400">
+                    <td colSpan={9} className="p-16 text-center font-bold text-royal/50 dark:text-slate-400">
                       لا توجد طلبات مطابقة.
                     </td>
                   </tr>
@@ -1043,6 +1172,15 @@ export function AdminDashboard() {
                     const phone = copyablePhone(order);
                     return (
                       <tr key={order.order_id} className="transition hover:bg-cream/50 dark:hover:bg-brandDark/50">
+                        <td className="p-3.5 text-center">
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.includes(order.order_id)}
+                            onChange={(e) => toggleSelected(order.order_id, e.target.checked)}
+                            className="h-4 w-4 accent-gold"
+                            aria-label={`تحديد طلبية ${order.full_name}`}
+                          />
+                        </td>
                         <td className="p-3.5">
                           <OrderActionsMenu
                             order={order}
@@ -1230,16 +1368,28 @@ export function AdminDashboard() {
       </footer>
     </div>
     {printing ? <ShippingLabel order={printing} onClose={closePrint} /> : null}
-    {notice ? (
-      <div
-        role="status"
-        className={cn(
-          "fixed bottom-6 left-1/2 z-[80] flex -translate-x-1/2 items-center gap-2 rounded-2xl border px-4 py-3 text-sm font-bold shadow-2xl",
-          noticeKind === "warn"
-            ? "border-amber-400/40 bg-[#0b1322] text-amber-200"
-            : "border-emerald-400/40 bg-[#0b1322] text-emerald-200",
-        )}
-      >
+      <BulkActionBar
+        count={selectedIds.length}
+        busy={bulkBusy}
+        confirmOpen={bulkConfirm}
+        onConfirmOpen={() => setBulkConfirm(true)}
+        onConfirmClose={() => setBulkConfirm(false)}
+        onDispatch={() => void bulkDispatch()}
+        onLabels={() => void openBulkFile("/api/admin/orders/bulk-labels", "application/pdf", "labels")}
+        onManifest={() => void openBulkFile("/api/admin/orders/manifest", "text/html", "manifest")}
+        onClear={() => setSelectedIds([])}
+      />
+      {notice ? (
+        <div
+          role="status"
+          className={cn(
+            "fixed left-1/2 z-[80] flex -translate-x-1/2 items-center gap-2 rounded-2xl border px-4 py-3 text-sm font-bold shadow-2xl",
+            selectedIds.length ? "bottom-24" : "bottom-6",
+            noticeKind === "warn"
+              ? "border-amber-400/40 bg-[#0b1322] text-amber-200"
+              : "border-emerald-400/40 bg-[#0b1322] text-emerald-200",
+          )}
+        >
         {noticeKind === "warn" ? (
           <CircleAlert className="h-4 w-4 shrink-0 text-amber-400" />
         ) : (
