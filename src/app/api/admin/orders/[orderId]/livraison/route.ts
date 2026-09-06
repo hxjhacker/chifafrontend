@@ -12,9 +12,9 @@ export async function POST(
     const orderId = resolvedParams.orderId || resolvedParams.id;
 
     const backendBase =
+      process.env.INTERNAL_API_URL ||
       process.env.API_URL ||
-      process.env.NEXT_PUBLIC_API_URL ||
-      "https://api.chifaglow.com";
+      "http://chifaglow_backend:8000";
 
     const targetUrl = `${backendBase.replace(/\/$/, "")}/api/admin/orders/${orderId}/livraison`;
 
@@ -33,13 +33,6 @@ export async function POST(
     });
 
     const rawText = await backendRes.text();
-    console.error("[Livraison Proxy]", {
-      targetUrl,
-      status: backendRes.status,
-      contentType: backendRes.headers.get("content-type"),
-      rawText: rawText.slice(0, 4000),
-    });
-
     let data: unknown;
     try {
       data = JSON.parse(rawText);
@@ -53,7 +46,7 @@ export async function POST(
         target_url: targetUrl,
         backend_response: data,
       },
-      { status: backendRes.status === 200 ? 200 : 400 },
+      { status: backendRes.status === 200 ? 200 : backendRes.status },
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
