@@ -59,7 +59,15 @@ function nationalPhone(order: AdminOrder) {
 }
 
 function parcelCode(orderId: string) {
-  return `ORD-${(orderId || "ORDER").slice(0, 8)}-${Math.floor(Date.now() / 1000)}`;
+  return `ORD-${orderId || "ORDER"}`;
+}
+
+function text(...values: Array<string | number | null | undefined>) {
+  for (const value of values) {
+    const next = String(value ?? "").trim();
+    if (next) return next;
+  }
+  return "";
 }
 
 function pickCode(payload: unknown, fallback: string) {
@@ -99,29 +107,39 @@ export async function createMetaLivraisonColis(order: AdminOrder) {
 
   const rawPrice = Number(order.total_price || order.total) || 0;
   const price = Number.isInteger(rawPrice) ? rawPrice : Math.round(rawPrice * 100) / 100;
-  const ville = (order.city || "").trim();
-  const address = (order.full_address || order.address || "").trim() || ville;
+  const destinataire = text(order.full_name) || "Client";
+  const ville = text(order.city);
+  const address = text(order.full_address, order.address, ville) || "Centre Ville";
+  const marchendise = text(order.pack_label, order.primary_product, order.product_slug) || "Produit";
+  const quantity = Math.max(1, Math.round(Number(order.tier_qty || order.primary_qty) || 1));
   const code = parcelCode(order.order_id);
-  const body = {
-    code,
-    reference: code,
-    nom: (order.full_name || "").trim(),
-    fullname: (order.full_name || "").trim(),
-    telephone: phone,
+  const note = text(order.courier_notes, order.driver_comment);
+  const payload = {
+    destinataire,
+    colisStock: false,
+    canOpen: true,
+    replaceColis: false,
     phone,
     ville,
+    address,
+    price,
+    code,
+    marchendise,
+    quantity,
+    reference: code,
+    nom: destinataire,
+    fullname: destinataire,
+    telephone: phone,
     city: ville,
     adresse: address,
-    address,
     prix: price,
-    price,
     crbt: price,
-    produit: order.pack_label,
-    product: order.pack_label,
-    commentaire: (order.courier_notes || order.driver_comment || "").trim(),
-    note: (order.courier_notes || order.driver_comment || "").trim(),
-    ouverture: 1,
-    openpackage: 1,
+    produit: marchendise,
+    product: marchendise,
+    commentaire: note,
+    note,
+    ouverture: true,
+    openpackage: true,
   };
 
   const postUrl = metaLivraisonColisUrl(base);
@@ -132,6 +150,7 @@ export async function createMetaLivraisonColis(order: AdminOrder) {
     "X-API-Secret": secret,
   };
   console.log("[DEBUG META LIVRAISON] sending POST", postUrl);
+  console.log("[DEBUG META LIVRAISON] payload:", JSON.stringify(payload));
   console.log("[DEBUG META LIVRAISON] sending header names:", Object.keys(headers));
   console.log(`[DEBUG META LIVRAISON] sending key prefix: ${key.slice(0, 6)}..., len=${key.length}`);
   console.log(`[DEBUG META LIVRAISON] sending secret prefix: ${secret.slice(0, 6)}..., len=${secret.length}`);
@@ -140,7 +159,7 @@ export async function createMetaLivraisonColis(order: AdminOrder) {
     method: "POST",
     cache: "no-store",
     headers,
-    body: JSON.stringify(body),
+    body: JSON.stringify(payload),
     signal: AbortSignal.timeout(15000),
   });
 
