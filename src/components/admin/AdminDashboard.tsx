@@ -1076,7 +1076,14 @@ export function AdminDashboard() {
                         </td>
                         <td className="p-3.5 font-bold">{order.full_name}</td>
                         <td className="p-3.5">
-                          <span className="rounded-md bg-gold/10 px-2 py-1 text-gold-600 dark:text-gold">{order.city}</span>
+                          <div className="flex flex-col items-start gap-0.5">
+                            <span className="rounded-md bg-gold/10 px-2 py-1 text-gold-600 dark:text-gold">{order.city}</span>
+                            {order.shipping_city ? (
+                              <span dir="ltr" className="px-1 text-[10px] font-bold text-royal/45 dark:text-slate-400">
+                                {order.shipping_city}
+                              </span>
+                            ) : null}
+                          </div>
                         </td>
                         <td className="p-3.5">
                           <div className="flex items-center gap-1.5">

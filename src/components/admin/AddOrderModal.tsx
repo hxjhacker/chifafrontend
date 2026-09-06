@@ -2,7 +2,9 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { Pencil, Plus, ShoppingCart, X } from "lucide-react";
-import { CITIES } from "@/lib/cities";
+import { MetaCityCombobox } from "@/components/admin/MetaCityCombobox";
+import { isOfficialMetaCity } from "@/lib/meta-livraison-cities";
+import { matchOfficialMetaCity } from "@/lib/match-meta-city";
 import { MANUAL_PRODUCTS } from "@/lib/admin-geo";
 import { allowedNextStatuses, canTransitionStatus, copyablePhone, needsConfirmModal, type AdminOrder, type AdminStatus } from "@/lib/admin";
 import { digitsOnly, isTenDigitMaPhone } from "@/lib/phone";
@@ -44,6 +46,7 @@ export function AddOrderModal({ open, editing, onClose, onCreated, onUpdated }: 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [city, setCity] = useState("");
+  const [shippingCity, setShippingCity] = useState("");
   const [productId, setProductId] = useState<ProductId>("quran");
   const [price, setPrice] = useState(199);
   const [status, setStatus] = useState<AdminStatus>("confirmed");
@@ -71,6 +74,8 @@ export function AddOrderModal({ open, editing, onClose, onCreated, onUpdated }: 
       setName(editing.full_name);
       setPhone(nationalTenDigits(copyablePhone(editing)));
       setCity(editing.city);
+      const saved = (editing.shipping_city || "").trim();
+      setShippingCity(isOfficialMetaCity(saved) ? saved : matchOfficialMetaCity(editing.city));
       setProductId(matched.id);
       setPrice(Math.round(editing.total));
       setStatus(editing.status);
@@ -78,6 +83,7 @@ export function AddOrderModal({ open, editing, onClose, onCreated, onUpdated }: 
       setName("");
       setPhone("");
       setCity("");
+      setShippingCity("");
       setProductId("quran");
       setPrice(199);
       setStatus("confirmed");
@@ -101,6 +107,10 @@ export function AddOrderModal({ open, editing, onClose, onCreated, onUpdated }: 
       setError("رقم الهاتف المغربي غير صالح.");
       return;
     }
+    if (!isOfficialMetaCity(shippingCity)) {
+      setError("اختَر مدينة التوصيل الرسمية من قائمة Meta Livraison.");
+      return;
+    }
     if (isEdit && !canTransitionStatus(editing!.status, status)) {
       setError("لا يمكن القفز في حالة الطلب. اتبع المسار بالترتيب.");
       return;
@@ -112,6 +122,7 @@ export function AddOrderModal({ open, editing, onClose, onCreated, onUpdated }: 
         full_name: name,
         phone,
         city,
+        shipping_city: shippingCity,
         product_slug: product.slug,
         tier_qty: product.qty,
         total_mad: Number(price),
@@ -233,23 +244,28 @@ export function AddOrderModal({ open, editing, onClose, onCreated, onUpdated }: 
               {phoneError ? <p className="mt-1 font-bold text-rose-500">{phoneError}</p> : null}
             </div>
             <div>
-              <label className="mb-1 block font-bold text-royal/80 dark:text-slate-200">المدينة *</label>
+              <label className="mb-1 block font-bold text-royal/80 dark:text-slate-200">المدينة كما كتبها الزبون *</label>
               <input
                 value={city}
-                onChange={(e) => setCity(e.target.value)}
+                onChange={(e) => {
+                  setCity(e.target.value);
+                  if (!isOfficialMetaCity(shippingCity)) setShippingCity(matchOfficialMetaCity(e.target.value));
+                }}
                 required
-                list="admin-cities"
                 placeholder="مثال: الدار البيضاء"
                 className="w-full rounded-xl border border-gold/20 bg-cream px-3.5 py-2.5 text-royal placeholder-royal/30 transition focus:border-gold focus:outline-none dark:bg-brandDark dark:text-white dark:placeholder-slate-500"
               />
-              <datalist id="admin-cities">
-                {CITIES.map((c) => (
-                  <option key={c.ar} value={c.ar}>
-                    {c.fr}
-                  </option>
-                ))}
-              </datalist>
             </div>
+          </div>
+
+          <div>
+            <label className="mb-1 block font-bold text-royal/80 dark:text-slate-200">مدينة التوصيل Meta Livraison *</label>
+            <MetaCityCombobox
+              value={shippingCity}
+              onChange={setShippingCity}
+              tone="light"
+              placeholder="Imouzzer-Kandar - FES, RABAT, Casablanca…"
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-3">

@@ -34,6 +34,7 @@ export async function POST(request: Request) {
     full_name?: string;
     phone?: string;
     city?: string;
+    shipping_city?: string | null;
     product_slug?: string;
     tier_qty?: number;
     total_mad?: number;
@@ -59,6 +60,7 @@ export async function POST(request: Request) {
       full_name: body.full_name || "",
       phone: body.phone || "",
       city: body.city || "",
+      shipping_city: body.shipping_city,
       product_slug: body.product_slug || "quran",
       tier_qty: Number(body.tier_qty || 1),
       total_mad: Number(body.total_mad || 0),

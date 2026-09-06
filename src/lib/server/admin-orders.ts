@@ -36,6 +36,7 @@ type OrderRow = {
   meta_livraison_code?: string | null;
   meta_livraison_sent_at?: Date | string | null;
   meta_livraison_ticket_url?: string | null;
+  shipping_city?: string | null;
 };
 
 const ALLOWED: AdminStatus[] = ["new", "confirmed", "shipped", "delivered", "cancelled"];
@@ -138,6 +139,7 @@ function serialize(row: OrderRow): AdminOrder {
     created_at: created,
     full_name: row.full_name || "",
     city: row.city || "",
+    shipping_city: row.shipping_city || null,
     phone: row.phone || "",
     phone_national: row.phone_national || "",
     product_slug: row.product_slug || "quran",
@@ -334,6 +336,7 @@ type OrderPatch = {
   full_name?: string;
   phone?: string;
   city?: string;
+  shipping_city?: string | null;
   product_slug?: string;
   tier_qty?: number;
   total_mad?: number;
@@ -535,12 +538,13 @@ export async function updateAdminOrder(orderId: string, patch: OrderPatch): Prom
       phoneNational = e164.startsWith("+212") && e164.length === 13 ? `0${e164.slice(4)}` : e164;
     }
     if (patch.city != null && String(patch.city).trim()) {
-      try {
-        const { resolveCity } = await import("@/lib/cities");
-        cityAr = (resolveCity(String(patch.city)).ar || String(patch.city).trim()).slice(0, 80);
-      } catch {
-        cityAr = String(patch.city).trim().slice(0, 80);
-      }
+      cityAr = String(patch.city).trim().slice(0, 120);
+    }
+    let shippingCity = row.shipping_city || null;
+    if (patch.shipping_city !== undefined) {
+      const { isOfficialMetaCity } = await import("@/lib/meta-livraison-cities");
+      const next = String(patch.shipping_city || "").trim().slice(0, 160);
+      shippingCity = next && isOfficialMetaCity(next) ? next : next || null;
     }
     if (patch.product_slug !== undefined) {
       slug = ["quran", "kids", "music", "educative", "taalim"].includes(patch.product_slug) ? patch.product_slug : slug;
@@ -641,6 +645,7 @@ export async function updateAdminOrder(orderId: string, patch: OrderPatch): Prom
       ["cross_sell_price_cents", crossCents ?? 0],
       ["bundle_enabled", bundleEnabled],
       ["secondary_qty", secondaryQty],
+      ["shipping_city", shippingCity],
       ["tier_price_cents", cents],
       ["subtotal_cents", cents],
     ];
@@ -748,6 +753,7 @@ export async function createAdminOrder(input: {
   full_name: string;
   phone: string;
   city: string;
+  shipping_city?: string | null;
   product_slug: string;
   tier_qty: number;
   total_mad: number;
@@ -777,14 +783,11 @@ export async function createAdminOrder(input: {
     console.error("admin_create_phone_parse_failed", err);
   }
   if (!e164) throw new Error("invalid_ma_phone");
-  let cityAr = String(input.city || "").trim().slice(0, 80);
-  try {
-    const { resolveCity } = await import("@/lib/cities");
-    cityAr = (resolveCity(input.city).ar || cityAr).slice(0, 80);
-  } catch {
-    /* keep typed city */
-  }
+  let cityAr = String(input.city || "").trim().slice(0, 120);
   if (cityAr.length < 2) throw new Error("invalid_city");
+  const { isOfficialMetaCity } = await import("@/lib/meta-livraison-cities");
+  const shippingCity = String(input.shipping_city || "").trim().slice(0, 160);
+  const officialShipping = isOfficialMetaCity(shippingCity) ? shippingCity : null;
   const qty = Math.min(20, Math.max(1, Math.round(Number(input.tier_qty) || 1)));
   const cents = Math.round(Number(input.total_mad) * 100);
   if (!Number.isFinite(cents) || cents < 100) throw new Error("invalid_price");
@@ -816,6 +819,7 @@ export async function createAdminOrder(input: {
       phone: e164,
       phone_national: national,
       city: cityAr,
+      shipping_city: officialShipping,
       product_slug: slug,
       tier_qty: qty,
       tier_price_cents: cents,

@@ -58,6 +58,7 @@ function normalizePatch(body: PatchBody) {
     customer_name: asText(pick(body, "customer_name", "customerName")),
     phone: asText(pick(body, "phone")),
     city: asText(pick(body, "city")),
+    shipping_city: asNullableText(pick(body, "shipping_city", "shippingCity", "meta_city", "metaCity")),
     address: asText(pick(body, "address", "full_address", "fullAddress")),
     full_address: asText(pick(body, "full_address", "fullAddress")),
     region_id: asText(pick(body, "region_id", "regionId", "region")),

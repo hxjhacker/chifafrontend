@@ -2,7 +2,9 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { CheckCircle2, Layers, MessageCircle, Pencil, X } from "lucide-react";
-import { CITIES } from "@/lib/cities";
+import { MetaCityCombobox } from "@/components/admin/MetaCityCombobox";
+import { isOfficialMetaCity } from "@/lib/meta-livraison-cities";
+import { matchOfficialMetaCity } from "@/lib/match-meta-city";
 import { copyablePhone, shortOrderRef, type AdminOrder } from "@/lib/admin";
 import { MOROCCO_REGIONS, regionIdForCity } from "@/lib/admin-geo";
 import { IosSwitch } from "@/components/admin/IosSwitch";
@@ -36,6 +38,7 @@ const fieldClass =
 export function CompleteDetailsModal({ open, order, onClose, onSaved }: Props) {
   const [name, setName] = useState("");
   const [city, setCity] = useState("");
+  const [shippingCity, setShippingCity] = useState("");
   const [regionId, setRegionId] = useState("MA06");
   const [address, setAddress] = useState("");
   const [primarySlug, setPrimarySlug] = useState("quran");
@@ -68,6 +71,8 @@ export function CompleteDetailsModal({ open, order, onClose, onSaved }: Props) {
     setError("");
     setName(order.full_name);
     setCity(order.city);
+    const saved = (order.shipping_city || "").trim();
+    setShippingCity(isOfficialMetaCity(saved) ? saved : matchOfficialMetaCity(order.city));
     setRegionId(order.region_id || order.region || regionIdForCity(order.city));
     setAddress(order.address || order.full_address || "");
     setNotes(order.courier_notes || order.driver_comment || "");
@@ -89,11 +94,16 @@ export function CompleteDetailsModal({ open, order, onClose, onSaved }: Props) {
   function changeCity(next: string) {
     setCity(next);
     setRegionId(regionIdForCity(next));
+    if (!isOfficialMetaCity(shippingCity)) setShippingCity(matchOfficialMetaCity(next));
   }
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!order) return;
+    if (!isOfficialMetaCity(shippingCity)) {
+      setError("اختَر مدينة التوصيل الرسمية من قائمة Meta Livraison.");
+      return;
+    }
     setError("");
     setSaving(true);
     try {
@@ -106,6 +116,7 @@ export function CompleteDetailsModal({ open, order, onClose, onSaved }: Props) {
         full_name: name.trim(),
         customer_name: name.trim(),
         city: city.trim(),
+        shipping_city: shippingCity.trim(),
         region_id: regionId,
         region: regionId,
         address: address.trim(),
@@ -128,6 +139,7 @@ export function CompleteDetailsModal({ open, order, onClose, onSaved }: Props) {
       const minimalPayload = {
         full_name: name.trim(),
         city: city.trim(),
+        shipping_city: shippingCity.trim(),
         address: address.trim(),
         product_slug: primary.slug,
         tier_qty: qty,
@@ -232,25 +244,19 @@ export function CompleteDetailsModal({ open, order, onClose, onSaved }: Props) {
             <input value={name} onChange={(e) => setName(e.target.value)} required minLength={3} className={fieldClass} />
           </div>
 
+          <div>
+            <label className="mb-1.5 block text-right font-bold text-slate-300">المدينة كما كتبها الزبون</label>
+            <input value={city} onChange={(e) => changeCity(e.target.value)} required className={fieldClass} />
+            <p className="mt-1 text-[11px] text-slate-500">يُحفظ كما هو. الحي يبقى في حقل العنوان.</p>
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-right font-bold text-slate-300">مدينة التوصيل Meta Livraison *</label>
+            <MetaCityCombobox value={shippingCity} onChange={setShippingCity} placeholder="Imouzzer-Kandar - FES, RABAT, Casablanca…" />
+          </div>
+
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div>
-              <label className="mb-1.5 block text-right font-bold text-slate-300">المدينة *</label>
-              <input
-                value={city}
-                onChange={(e) => changeCity(e.target.value)}
-                required
-                list="confirm-cities"
-                className={fieldClass}
-              />
-              <datalist id="confirm-cities">
-                {CITIES.map((c) => (
-                  <option key={c.ar} value={c.ar}>
-                    {c.fr}
-                  </option>
-                ))}
-              </datalist>
-            </div>
-            <div>
+            <div className="sm:col-span-2">
               <label className="mb-1.5 block text-right font-bold text-slate-300">الجهة (لإحصائيات الخريطة) *</label>
               <select value={regionId} onChange={(e) => setRegionId(e.target.value)} required className={fieldClass}>
                 {MOROCCO_REGIONS.map((region) => (

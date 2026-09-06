@@ -7,6 +7,7 @@ export type AdminOrder = {
   created_at: string | null;
   full_name: string;
   city: string;
+  shipping_city?: string | null;
   phone: string;
   phone_national: string;
   product_slug: string;

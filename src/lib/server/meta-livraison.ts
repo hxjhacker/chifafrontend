@@ -1,5 +1,7 @@
 import { digitsOnly } from "@/lib/phone";
 import type { AdminOrder } from "@/lib/admin";
+import { FALLBACK_META_CITY, hasArabic, isOfficialMetaCity } from "@/lib/meta-livraison-cities";
+import { officialOrFallback } from "@/lib/match-meta-city";
 
 const EMPTY_KEYS = new Set(["", "YOUR_API_KEY_HERE", "YOUR_API_SECRET_HERE"]);
 const DEFAULT_BASE = "https://api.metalivraison.ma/colis-service";
@@ -108,8 +110,13 @@ export async function createMetaLivraisonColis(order: AdminOrder) {
   const rawPrice = Number(order.total_price || order.total) || 0;
   const price = Number.isInteger(rawPrice) ? rawPrice : Math.round(rawPrice * 100) / 100;
   const destinataire = firstNonEmpty(order.full_name) || "Client";
-  const ville = firstNonEmpty(order.city);
-  const address = firstNonEmpty(order.full_address, order.address, ville) || "Centre Ville";
+  const rawCity = firstNonEmpty(order.city);
+  let ville = officialOrFallback(firstNonEmpty(order.shipping_city, rawCity));
+  if (hasArabic(ville) || !isOfficialMetaCity(ville)) ville = FALLBACK_META_CITY;
+  let address = firstNonEmpty(order.full_address, order.address, ville) || "Centre Ville";
+  if (rawCity && (hasArabic(rawCity) || !isOfficialMetaCity(rawCity)) && !address.includes(rawCity)) {
+    address = `${address} - ${rawCity}`;
+  }
   const marchendise = firstNonEmpty(order.pack_label, order.primary_product, order.product_slug) || "Produit";
   const quantity = Math.max(1, Math.round(Number(order.tier_qty || order.primary_qty) || 1));
   const code = parcelCode(order.order_id);

@@ -167,6 +167,7 @@ const SCHEMA_ALTERS = [
   `ALTER TABLE orders ADD COLUMN IF NOT EXISTS meta_livraison_code varchar(80)`,
   `ALTER TABLE orders ADD COLUMN IF NOT EXISTS meta_livraison_sent_at timestamptz`,
   `ALTER TABLE orders ADD COLUMN IF NOT EXISTS meta_livraison_ticket_url text`,
+  `ALTER TABLE orders ADD COLUMN IF NOT EXISTS shipping_city varchar(160)`,
   `CREATE TABLE IF NOT EXISTS page_views (
     id uuid PRIMARY KEY,
     kind varchar(32) NOT NULL,
