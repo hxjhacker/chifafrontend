@@ -44,11 +44,13 @@ export async function POST(request: Request, context: Ctx) {
 
     const result = await createMetaLivraisonColis(order);
     if (!result.ok) {
-      if (result.status === 401) {
-        console.error("401 details:", { origin: "meta_livraison", error: result.raw || result.detail });
-      }
       return NextResponse.json(
-        { success: false, detail: result.detail || "meta_livraison_failed", origin: "meta_livraison" },
+        {
+          success: false,
+          origin: "meta_livraison",
+          status_code: result.status,
+          detail: result.detail ?? result.raw,
+        },
         { status: 400 },
       );
     }

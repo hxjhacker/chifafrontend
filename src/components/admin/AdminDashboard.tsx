@@ -380,10 +380,12 @@ export function AdminDashboard() {
         headers: { Accept: "application/json" },
       });
       const body = (await res.json().catch(() => ({}))) as AdminOrder & {
-        detail?: string;
+        detail?: string | Record<string, unknown>;
         success?: boolean;
         message?: string;
+        error?: string;
         origin?: string;
+        status_code?: number;
       };
       if (!res.ok || body.success === false) {
         const map: Record<string, string> = {
@@ -393,7 +395,13 @@ export function AdminDashboard() {
           order_not_found: "الطلبية غير موجودة.",
           not_authenticated: "جلسة الأدمن غير صالحة. أعد تسجيل الدخول.",
         };
-        throw new Error(body.message || body.error || map[body.detail || ""] || body.detail || "تعذر إرسال الطرد إلى Meta Livraison.");
+        throw new Error(
+          body.message ||
+            body.error ||
+            (typeof body.detail === "object" && body.detail ? JSON.stringify(body.detail) : body.detail) ||
+            map[String(body.detail || "")] ||
+            "تعذر إرسال الطرد إلى Meta Livraison.",
+        );
       }
       setOrders((list) => list.map((row) => (row.order_id === order.order_id ? { ...row, ...body } : row)));
       setNoticeKind("ok");
