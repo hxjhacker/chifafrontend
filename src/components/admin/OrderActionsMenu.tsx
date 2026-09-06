@@ -3,8 +3,9 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { CheckCircle2, Eye, Loader2, MoreVertical, Pencil, Printer, Repeat2, Trash2, Truck } from "lucide-react";
-import type { AdminOrder } from "@/lib/admin";
+import { shortOrderRef, type AdminOrder } from "@/lib/admin";
 import { cn } from "@/lib/cn";
+import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 
 type Props = {
   order: AdminOrder;
@@ -19,6 +20,8 @@ type Props = {
 };
 
 const MENU_WIDTH = 260;
+const CARD =
+  "w-full py-3.5 px-4 mb-3 rounded-2xl flex items-center justify-between border transition-all text-sm font-semibold disabled:cursor-default disabled:opacity-50";
 
 export function OrderActionsMenu({
   order,
@@ -35,7 +38,21 @@ export function OrderActionsMenu({
   const menuRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
   const [open, setOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches,
+  );
   const [pos, setPos] = useState({ top: 0, left: 0 });
+  const sent = Boolean(order.meta_livraison_code);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const apply = () => setIsMobile(mq.matches);
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
+
+  useLockBodyScroll(open && isMobile);
 
   function placeMenu() {
     const btn = btnRef.current;
@@ -57,7 +74,7 @@ export function OrderActionsMenu({
       close();
       return;
     }
-    placeMenu();
+    if (!window.matchMedia("(max-width: 767px)").matches) placeMenu();
     setOpen(true);
   }
 
@@ -77,99 +94,198 @@ export function OrderActionsMenu({
       if (e.key === "Escape") close();
     }
     function onReposition() {
-      placeMenu();
+      if (!window.matchMedia("(max-width: 767px)").matches) placeMenu();
     }
     document.addEventListener("mousedown", onDoc);
     document.addEventListener("keydown", onKey);
     window.addEventListener("resize", onReposition);
-    window.addEventListener("scroll", close, true);
+    if (!isMobile) window.addEventListener("scroll", close, true);
     return () => {
       document.removeEventListener("mousedown", onDoc);
       document.removeEventListener("keydown", onKey);
       window.removeEventListener("resize", onReposition);
       window.removeEventListener("scroll", close, true);
     };
-  }, [open]);
+  }, [open, isMobile]);
 
-  const sent = Boolean(order.meta_livraison_code);
+  const trigger = (
+    <button
+      ref={btnRef}
+      type="button"
+      aria-haspopup={isMobile ? "dialog" : "menu"}
+      aria-expanded={open}
+      aria-controls={open ? menuId : undefined}
+      title="إجراءات الطلبية"
+      onClick={toggle}
+      className={cn(
+        "flex h-9 w-9 items-center justify-center rounded-xl border border-gold/30 bg-gold/10 text-gold transition",
+        "hover:bg-gold hover:text-royal",
+        open && "bg-gold text-royal",
+      )}
+    >
+      <MoreVertical className="h-4 w-4" />
+    </button>
+  );
 
-  return (
-    <div className="relative">
-      <button
-        ref={btnRef}
-        type="button"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-controls={open ? menuId : undefined}
-        title="إجراءات الطلبية"
-        onClick={toggle}
-        className={cn(
-          "flex h-9 w-9 items-center justify-center rounded-xl border border-gold/30 bg-gold/10 text-gold transition",
-          "hover:bg-gold hover:text-royal",
-          open && "bg-gold text-royal",
-        )}
-      >
-        <MoreVertical className="h-4 w-4" />
-      </button>
-      {open && typeof document !== "undefined"
-        ? createPortal(
+  if (!open || typeof document === "undefined") {
+    return <div className="relative">{trigger}</div>;
+  }
+
+  if (isMobile) {
+    return (
+      <div className="relative">
+        {trigger}
+        {createPortal(
+          <div className="fixed inset-0 z-[90]">
+            <button type="button" aria-label="إغلاق" className="absolute inset-0 bg-black/60" onClick={close} />
             <div
               ref={menuRef}
               id={menuId}
-              role="menu"
-              dir="ltr"
-              style={{ top: pos.top, left: pos.left, width: MENU_WIDTH }}
-              className="fixed z-[90] overflow-hidden rounded-2xl border border-gold/25 bg-white py-1.5 shadow-luxury dark:border-gold/20 dark:bg-cardDark"
+              role="dialog"
+              aria-label={`إجراءات لـ ${shortOrderRef(order.order_id)}`}
+              dir="rtl"
+              className="absolute inset-x-0 bottom-0 max-h-[88vh] overflow-y-auto rounded-t-3xl bg-zinc-950 px-4 pb-6 pt-1 shadow-2xl"
             >
-              <MenuItem
+              <div className="mx-auto my-2 h-1.5 w-12 rounded-full bg-zinc-600" />
+              <h3 className="mb-4 text-center text-base font-black text-white">
+                إجراءات لـ {shortOrderRef(order.order_id)}
+              </h3>
+              <button
+                type="button"
                 disabled={sent || shipping || order.status === "cancelled"}
-                onSelect={() => run(() => onSendMeta(order))}
+                onClick={() => run(() => onSendMeta(order))}
+                className={cn(CARD, "border-emerald-500/30 bg-emerald-950/20 text-emerald-400 hover:bg-emerald-900/30")}
               >
-                {shipping ? (
-                  <Loader2 className="h-4 w-4 shrink-0 animate-spin text-gold" />
-                ) : sent ? (
-                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
-                ) : (
-                  <Truck className="h-4 w-4 shrink-0 text-gold" />
-                )}
-                <span className="min-w-0 flex-1 text-left">
-                  {sent ? `Envoyé à Meta Livraison` : "Envoyer à Meta Livraison"}
+                <span className="min-w-0 flex-1 text-right">
+                  {sent ? "تم الإرسال إلى Meta Livraison" : "إرسال إلى Meta Livraison"}
                   {sent && order.meta_livraison_code ? (
-                    <span className="mt-0.5 block truncate font-mono text-[10px] font-bold text-sky-600 dark:text-sky-300">
-                      {order.meta_livraison_code}
-                    </span>
+                    <span className="mt-0.5 block truncate font-mono text-[10px] font-bold">{order.meta_livraison_code}</span>
                   ) : null}
                 </span>
-              </MenuItem>
-              <MenuItem onSelect={() => run(() => onPrint(order))}>
-                <Printer className="h-4 w-4 shrink-0 text-emerald-500" />
-                Imprimer le ticket / Étiquette Meta
-              </MenuItem>
-              <MenuItem onSelect={() => run(() => onEdit(order))}>
-                <Pencil className="h-4 w-4 shrink-0 text-gold" />
-                Modifier la commande
-              </MenuItem>
-              <MenuItem onSelect={() => run(() => onView(order))}>
-                <Eye className="h-4 w-4 shrink-0 text-sky-500" />
-                Afficher les détails
-              </MenuItem>
-              <MenuItem disabled={duplicating} onSelect={() => run(() => onDuplicate(order))}>
-                {duplicating ? (
-                  <Loader2 className="h-4 w-4 shrink-0 animate-spin text-violet-400" />
+                {shipping ? (
+                  <Loader2 className="h-5 w-5 shrink-0 animate-spin" />
+                ) : sent ? (
+                  <CheckCircle2 className="h-5 w-5 shrink-0" />
                 ) : (
-                  <Repeat2 className="h-4 w-4 shrink-0 text-violet-500" />
+                  <Truck className="h-5 w-5 shrink-0" />
                 )}
-                Dupliquer la commande
-              </MenuItem>
-              <div className="my-1 border-t border-gold/15" />
-              <MenuItem danger onSelect={() => run(() => onDelete(order))}>
-                <Trash2 className="h-4 w-4 shrink-0" />
-                Supprimer la commande
-              </MenuItem>
-            </div>,
-            document.body,
-          )
-        : null}
+              </button>
+              <button
+                type="button"
+                onClick={() => run(() => onPrint(order))}
+                className={cn(CARD, "border-teal-500/30 bg-teal-950/20 text-teal-400 hover:bg-teal-900/30")}
+              >
+                <span>طباعة البوليصة</span>
+                <Printer className="h-5 w-5 shrink-0" />
+              </button>
+              <button
+                type="button"
+                onClick={() => run(() => onEdit(order))}
+                className={cn(CARD, "border-blue-500/30 bg-blue-950/20 text-blue-400 hover:bg-blue-900/30")}
+              >
+                <span>تعديل الطلبية</span>
+                <Pencil className="h-5 w-5 shrink-0" />
+              </button>
+              <button
+                type="button"
+                onClick={() => run(() => onView(order))}
+                className={cn(CARD, "border-sky-500/30 bg-sky-950/20 text-sky-400 hover:bg-sky-900/30")}
+              >
+                <span>عرض التفاصيل</span>
+                <Eye className="h-5 w-5 shrink-0" />
+              </button>
+              <button
+                type="button"
+                disabled={duplicating}
+                onClick={() => run(() => onDuplicate(order))}
+                className={cn(CARD, "border-indigo-500/30 bg-indigo-950/20 text-indigo-400 hover:bg-indigo-900/30")}
+              >
+                <span>تكرار الطلبية</span>
+                {duplicating ? <Loader2 className="h-5 w-5 shrink-0 animate-spin" /> : <Repeat2 className="h-5 w-5 shrink-0" />}
+              </button>
+              <button
+                type="button"
+                onClick={() => run(() => onDelete(order))}
+                className={cn(CARD, "border-rose-500/30 bg-rose-950/20 text-rose-400 hover:bg-rose-900/30")}
+              >
+                <span>حذف الطلبية</span>
+                <Trash2 className="h-5 w-5 shrink-0" />
+              </button>
+              <button
+                type="button"
+                onClick={close}
+                className="mx-auto mt-2 block rounded-2xl border border-zinc-700 bg-zinc-900 px-8 py-2 text-sm text-zinc-300"
+              >
+                إغلاق
+              </button>
+            </div>
+          </div>,
+          document.body,
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative">
+      {trigger}
+      {createPortal(
+        <div
+          ref={menuRef}
+          id={menuId}
+          role="menu"
+          dir="ltr"
+          style={{ top: pos.top, left: pos.left, width: MENU_WIDTH }}
+          className="fixed z-[90] overflow-hidden rounded-2xl border border-gold/25 bg-white py-1.5 shadow-luxury dark:border-gold/20 dark:bg-cardDark"
+        >
+          <MenuItem
+            disabled={sent || shipping || order.status === "cancelled"}
+            onSelect={() => run(() => onSendMeta(order))}
+          >
+            {shipping ? (
+              <Loader2 className="h-4 w-4 shrink-0 animate-spin text-gold" />
+            ) : sent ? (
+              <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
+            ) : (
+              <Truck className="h-4 w-4 shrink-0 text-gold" />
+            )}
+            <span className="min-w-0 flex-1 text-left">
+              {sent ? `Envoyé à Meta Livraison` : "Envoyer à Meta Livraison"}
+              {sent && order.meta_livraison_code ? (
+                <span className="mt-0.5 block truncate font-mono text-[10px] font-bold text-sky-600 dark:text-sky-300">
+                  {order.meta_livraison_code}
+                </span>
+              ) : null}
+            </span>
+          </MenuItem>
+          <MenuItem onSelect={() => run(() => onPrint(order))}>
+            <Printer className="h-4 w-4 shrink-0 text-emerald-500" />
+            Imprimer le ticket / Étiquette Meta
+          </MenuItem>
+          <MenuItem onSelect={() => run(() => onEdit(order))}>
+            <Pencil className="h-4 w-4 shrink-0 text-gold" />
+            Modifier la commande
+          </MenuItem>
+          <MenuItem onSelect={() => run(() => onView(order))}>
+            <Eye className="h-4 w-4 shrink-0 text-sky-500" />
+            Afficher les détails
+          </MenuItem>
+          <MenuItem disabled={duplicating} onSelect={() => run(() => onDuplicate(order))}>
+            {duplicating ? (
+              <Loader2 className="h-4 w-4 shrink-0 animate-spin text-violet-400" />
+            ) : (
+              <Repeat2 className="h-4 w-4 shrink-0 text-violet-500" />
+            )}
+            Dupliquer la commande
+          </MenuItem>
+          <div className="my-1 border-t border-gold/15" />
+          <MenuItem danger onSelect={() => run(() => onDelete(order))}>
+            <Trash2 className="h-4 w-4 shrink-0" />
+            Supprimer la commande
+          </MenuItem>
+        </div>,
+        document.body,
+      )}
     </div>
   );
 }
