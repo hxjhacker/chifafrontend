@@ -1,27 +1,30 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type Ctx = { params: Promise<{ orderId: string }> };
-
-export async function POST(request: Request, context: Ctx) {
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ orderId?: string; id?: string }> },
+) {
   try {
-    const { orderId } = await context.params;
+    const resolvedParams = await params;
+    const orderId = resolvedParams.orderId || resolvedParams.id;
     if (!orderId) {
       return NextResponse.json({ success: false, detail: "order_not_found" }, { status: 404 });
     }
 
-    const apiUrl = (
+    const backendBase =
       process.env.API_URL ||
       process.env.NEXT_PUBLIC_API_URL ||
-      "https://api.chifaglow.com"
-    ).replace(/\/+$/, "");
+      "https://api.chifaglow.com";
 
-    const cookie = request.headers.get("cookie") || "";
-    const authHeader = request.headers.get("authorization") || "";
+    const targetUrl = `${backendBase.replace(/\/$/, "")}/api/admin/orders/${orderId}/livraison`;
 
-    const res = await fetch(`${apiUrl}/api/admin/orders/${orderId}/livraison`, {
+    const cookie = req.headers.get("cookie") || "";
+    const authHeader = req.headers.get("authorization") || "";
+
+    const backendRes = await fetch(targetUrl, {
       method: "POST",
       cache: "no-store",
       headers: {
@@ -30,14 +33,16 @@ export async function POST(request: Request, context: Ctx) {
         ...(cookie ? { cookie } : {}),
         ...(authHeader ? { authorization: authHeader } : {}),
       },
-      signal: AbortSignal.timeout(20000),
     });
 
-    const data = await res.json().catch(() => ({}));
-    return NextResponse.json(data, { status: res.status });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error("Livraison proxy error:", err);
+    const data = await backendRes.json().catch(() => null);
+
+    return NextResponse.json(data || { success: false, detail: "Empty backend response" }, {
+      status: backendRes.status,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to reach backend";
+    console.error("[Livraison Proxy Error]:", error);
     return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }
