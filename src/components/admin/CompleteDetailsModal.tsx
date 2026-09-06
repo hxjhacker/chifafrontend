@@ -6,7 +6,7 @@ import { MetaCityCombobox } from "@/components/admin/MetaCityCombobox";
 import { isOfficialMetaCity } from "@/lib/meta-livraison-cities";
 import { matchOfficialMetaCity } from "@/lib/match-meta-city";
 import { copyablePhone, shortOrderRef, type AdminOrder } from "@/lib/admin";
-import { MOROCCO_REGIONS, regionIdForCity } from "@/lib/admin-geo";
+import { regionIdForCity } from "@/lib/admin-geo";
 import { IosSwitch } from "@/components/admin/IosSwitch";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import { cn } from "@/lib/cn";
@@ -39,7 +39,6 @@ export function CompleteDetailsModal({ open, order, onClose, onSaved }: Props) {
   const [name, setName] = useState("");
   const [city, setCity] = useState("");
   const [shippingCity, setShippingCity] = useState("");
-  const [regionId, setRegionId] = useState("MA06");
   const [address, setAddress] = useState("");
   const [primarySlug, setPrimarySlug] = useState("quran");
   const [primaryQty, setPrimaryQty] = useState(1);
@@ -73,7 +72,6 @@ export function CompleteDetailsModal({ open, order, onClose, onSaved }: Props) {
     setCity(order.city);
     const saved = (order.shipping_city || "").trim();
     setShippingCity(isOfficialMetaCity(saved) ? saved : matchOfficialMetaCity(order.city));
-    setRegionId(order.region_id || order.region || regionIdForCity(order.city));
     setAddress(order.address || order.full_address || "");
     setNotes(order.courier_notes || order.driver_comment || "");
     setPrimarySlug(
@@ -91,12 +89,6 @@ export function CompleteDetailsModal({ open, order, onClose, onSaved }: Props) {
     setPriceDirty(true);
   }, [open, order]);
 
-  function changeCity(next: string) {
-    setCity(next);
-    setRegionId(regionIdForCity(next));
-    if (!isOfficialMetaCity(shippingCity)) setShippingCity(matchOfficialMetaCity(next));
-  }
-
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!order) return;
@@ -104,6 +96,7 @@ export function CompleteDetailsModal({ open, order, onClose, onSaved }: Props) {
       setError("اختَر مدينة التوصيل الرسمية من قائمة Meta Livraison.");
       return;
     }
+    const regionId = regionIdForCity(shippingCity);
     setError("");
     setSaving(true);
     try {
@@ -140,6 +133,8 @@ export function CompleteDetailsModal({ open, order, onClose, onSaved }: Props) {
         full_name: name.trim(),
         city: city.trim(),
         shipping_city: shippingCity.trim(),
+        region_id: regionId,
+        region: regionId,
         address: address.trim(),
         product_slug: primary.slug,
         tier_qty: qty,
@@ -238,46 +233,32 @@ export function CompleteDetailsModal({ open, order, onClose, onSaved }: Props) {
           </button>
         </div>
 
-        <form onSubmit={(e) => void onSubmit(e)} className="space-y-4 text-xs">
+        <form onSubmit={(e) => void onSubmit(e)} className="space-y-3 text-xs">
           <div>
-            <label className="mb-1.5 block text-right font-bold text-slate-300">اسم الزبون الكامل *</label>
+            <label className="mb-1 block text-right font-bold text-slate-300">اسم الزبون الكامل *</label>
             <input value={name} onChange={(e) => setName(e.target.value)} required minLength={3} className={fieldClass} />
           </div>
 
           <div>
-            <label className="mb-1.5 block text-right font-bold text-slate-300">المدينة كما كتبها الزبون</label>
-            <input value={city} onChange={(e) => changeCity(e.target.value)} required className={fieldClass} />
-            <p className="mt-1 text-[11px] text-slate-500">يُحفظ كما هو. الحي يبقى في حقل العنوان.</p>
-          </div>
-
-          <div>
-            <label className="mb-1.5 block text-right font-bold text-slate-300">مدينة التوصيل Meta Livraison *</label>
-            <MetaCityCombobox value={shippingCity} onChange={setShippingCity} placeholder="Imouzzer-Kandar - FES, RABAT, Casablanca…" />
-          </div>
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="sm:col-span-2">
-              <label className="mb-1.5 block text-right font-bold text-slate-300">الجهة (لإحصائيات الخريطة) *</label>
-              <select value={regionId} onChange={(e) => setRegionId(e.target.value)} required className={fieldClass}>
-                {MOROCCO_REGIONS.map((region) => (
-                  <option key={region.id} value={region.id}>
-                    {region.name}
-                  </option>
-                ))}
-              </select>
+            <label className="mb-1 block text-right font-bold text-slate-400">المدينة كما كتبها الزبون</label>
+            <div className="rounded-xl border border-[#1e293b] bg-[#060b14] px-3.5 py-2.5 font-bold text-slate-300">
+              {city || "—"}
             </div>
           </div>
 
           <div>
-            <label className="mb-1.5 block text-right font-bold text-slate-300">
-              العنوان الكامل (الحي، الشارع، رقم المنزل/العمارة) *
-            </label>
+            <label className="mb-1 block text-right font-bold text-slate-300">مدينة التوصيل الرسمية *</label>
+            <MetaCityCombobox value={shippingCity} onChange={setShippingCity} placeholder="بحث: FES, Casablanca, Imouzzer Kandar…" />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-right font-bold text-slate-300">العنوان الكامل *</label>
             <textarea
               value={address}
               onChange={(e) => setAddress(e.target.value)}
               required
               rows={2}
-              placeholder="أدخل العنوان المفصل بعد تأكيد الطلب مع الزبون في الهاتف..."
+              placeholder="الحي، الشارع، رقم المنزل…"
               className={`${fieldClass} resize-none p-3 font-normal`}
             />
           </div>

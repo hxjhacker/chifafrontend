@@ -577,7 +577,10 @@ export async function updateAdminOrder(orderId: string, patch: OrderPatch): Prom
     else if (patch.quartier !== undefined || patch.street !== undefined || patch.building !== undefined || patch.landmark !== undefined) {
       address = composeAddress({ quartier, street, building, landmark, city: cityAr });
     }
-    if (patch.region_id !== undefined) {
+    if (shippingCity) {
+      const { regionIdForCity } = await import("@/lib/admin-geo");
+      regionId = regionIdForCity(shippingCity);
+    } else if (patch.region_id !== undefined) {
       const raw = String(patch.region_id ?? "").trim();
       const byId = raw.toUpperCase();
       if (/^MA(0[1-9]|1[0-2])$/.test(byId)) {
@@ -802,7 +805,10 @@ export async function createAdminOrder(input: {
   const bundleEnabled = Boolean(input.bundle_enabled && crossSlug);
   const secondaryQty = Math.min(20, Math.max(1, Math.round(Number(input.secondary_qty) || 1)));
   let regionId: string | null = null;
-  if (input.region_id) {
+  if (officialShipping) {
+    const { regionIdForCity } = await import("@/lib/admin-geo");
+    regionId = regionIdForCity(officialShipping);
+  } else if (input.region_id) {
     const raw = String(input.region_id).trim();
     const byId = raw.toUpperCase();
     if (/^MA(0[1-9]|1[0-2])$/.test(byId)) regionId = byId;

@@ -5,7 +5,7 @@ import { Pencil, Plus, ShoppingCart, X } from "lucide-react";
 import { MetaCityCombobox } from "@/components/admin/MetaCityCombobox";
 import { isOfficialMetaCity } from "@/lib/meta-livraison-cities";
 import { matchOfficialMetaCity } from "@/lib/match-meta-city";
-import { MANUAL_PRODUCTS } from "@/lib/admin-geo";
+import { MANUAL_PRODUCTS, regionIdForCity } from "@/lib/admin-geo";
 import { allowedNextStatuses, canTransitionStatus, copyablePhone, needsConfirmModal, type AdminOrder, type AdminStatus } from "@/lib/admin";
 import { digitsOnly, isTenDigitMaPhone } from "@/lib/phone";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
@@ -123,6 +123,7 @@ export function AddOrderModal({ open, editing, onClose, onCreated, onUpdated }: 
         phone,
         city,
         shipping_city: shippingCity,
+        region_id: regionIdForCity(shippingCity),
         product_slug: product.slug,
         tier_qty: product.qty,
         total_mad: Number(price),
