@@ -1,5 +1,8 @@
 import { CITIES, resolveCity } from "@/lib/cities";
-import { bestFuzzyMatch, foldCity } from "@/lib/fuzzy";
+import { bestFuzzyMatch } from "@/lib/fuzzy";
+import { getRegionForCity, regionIdForOfficialCity, UNKNOWN_REGION } from "@/lib/meta-city-regions";
+
+export { getRegionForCity, regionIdForOfficialCity, UNKNOWN_REGION };
 
 export const MANUAL_PRODUCTS = [
   { id: "quran", label: "USB القرآن الكريم كامل", price: 199, slug: "quran", qty: 1 },
@@ -27,147 +30,21 @@ export const MOROCCO_REGIONS = [
 
 export type RegionStat = { id: string; name: string; total: number; confirmed: number; unconfirmed: number };
 
-const CITY_TO_REGION = new Map<string, string>();
+const ARABIC_CITY_TO_REGION = new Map<string, string>();
 for (const region of MOROCCO_REGIONS) {
-  for (const city of region.cities) CITY_TO_REGION.set(city, region.name);
-}
-
-const HUB_TO_REGION: Record<string, string> = {
-  fes: "MA03",
-  meknes: "MA03",
-  sefrou: "MA03",
-  taounate: "MA03",
-  taza: "MA03",
-  "beni mellal": "MA05",
-  "beni-mellal": "MA05",
-  khenifra: "MA05",
-  casa: "MA06",
-  "had soualem": "MA06",
-  nador: "MA02",
-  chefchaouen: "MA01",
-  ouazzane: "MA01",
-  agadir: "MA09",
-  tiznit: "MA09",
-  marrakech: "MA07",
-  errachidia: "MA08",
-  tinghir: "MA08",
-};
-
-const REGION_KEYWORDS: Array<[string, string]> = [
-  ["imouzzer kandar", "MA03"],
-  ["imouzzer-kandar", "MA03"],
-  ["ait melloul", "MA09"],
-  ["el kelaa", "MA07"],
-  ["kelaa des sraghna", "MA07"],
-  ["had soualem", "MA06"],
-  ["sidi kacem", "MA04"],
-  ["sidi slimane", "MA04"],
-  ["sidi ifni", "MA10"],
-  ["fquih ben salah", "MA05"],
-  ["al hoceima", "MA01"],
-  ["m diq", "MA01"],
-  ["casablanca", "MA06"],
-  ["mohammedia", "MA06"],
-  ["benslimane", "MA06"],
-  ["berrechid", "MA06"],
-  ["berrchid", "MA06"],
-  ["bouskoura", "MA06"],
-  ["mediouna", "MA06"],
-  ["el jadida", "MA06"],
-  ["settat", "MA06"],
-  ["soualem", "MA06"],
-  ["marrakech", "MA07"],
-  ["chichaoua", "MA07"],
-  ["essaouira", "MA07"],
-  ["youssoufia", "MA07"],
-  ["rehamna", "MA07"],
-  ["beni mellal", "MA05"],
-  ["khouribga", "MA05"],
-  ["khenifra", "MA05"],
-  ["ouaouizeght", "MA05"],
-  ["fquih", "MA05"],
-  ["azilal", "MA05"],
-  ["inezgane", "MA09"],
-  ["taroudant", "MA09"],
-  ["chtouka", "MA09"],
-  ["errachidia", "MA08"],
-  ["ouarzazate", "MA08"],
-  ["tinghir", "MA08"],
-  ["zagora", "MA08"],
-  ["midelt", "MA08"],
-  ["chefchaouen", "MA01"],
-  ["tetouan", "MA01"],
-  ["tanger", "MA01"],
-  ["fnideq", "MA01"],
-  ["larache", "MA01"],
-  ["asilah", "MA01"],
-  ["hoceima", "MA01"],
-  ["mdiq", "MA01"],
-  ["oujda", "MA02"],
-  ["berkane", "MA02"],
-  ["driouch", "MA02"],
-  ["jerada", "MA02"],
-  ["taourirt", "MA02"],
-  ["guercif", "MA02"],
-  ["figuig", "MA02"],
-  ["nador", "MA02"],
-  ["meknes", "MA03"],
-  ["sefrou", "MA03"],
-  ["ifrane", "MA03"],
-  ["azrou", "MA03"],
-  ["taounate", "MA03"],
-  ["bhalil", "MA03"],
-  ["imouzzer", "MA03"],
-  ["temara", "MA04"],
-  ["kenitra", "MA04"],
-  ["skhirat", "MA04"],
-  ["khemisset", "MA04"],
-  ["rabat", "MA04"],
-  ["guelmim", "MA10"],
-  ["tantan", "MA10"],
-  ["tan tan", "MA10"],
-  ["boujdour", "MA11"],
-  ["tarfaya", "MA11"],
-  ["laayoune", "MA11"],
-  ["smara", "MA11"],
-  ["essmara", "MA11"],
-  ["dakhla", "MA12"],
-  ["aousserd", "MA12"],
-  ["agadir", "MA09"],
-  ["tiznit", "MA09"],
-  ["tata", "MA09"],
-  ["safi", "MA07"],
-  ["taza", "MA03"],
-  ["fes", "MA03"],
-  ["sale", "MA04"],
-  ["casa", "MA06"],
-  ["zag", "MA10"],
-  ["assa", "MA10"],
-];
-
-export function regionIdForOfficialCity(city: string) {
-  const raw = (city || "").trim();
-  if (!raw) return "MA06";
-  const hub = raw.includes(" - ") ? foldCity(raw.split(" - ").pop() || "") : "";
-  if (hub && HUB_TO_REGION[hub]) return HUB_TO_REGION[hub];
-  const folded = foldCity(raw);
-  if (!folded) return "MA06";
-  for (const [keyword, id] of REGION_KEYWORDS) {
-    if (folded.includes(keyword) || (keyword.length >= 5 && keyword.includes(folded))) return id;
-  }
-  return "";
+  for (const city of region.cities) ARABIC_CITY_TO_REGION.set(city, region.name);
 }
 
 export function regionForCity(city: string) {
-  const officialId = regionIdForOfficialCity(city);
-  if (officialId) return regionNameForId(officialId);
+  const official = getRegionForCity(city);
+  if (official !== UNKNOWN_REGION) return official;
 
   const resolved = resolveCity(city).ar;
-  if (CITY_TO_REGION.has(resolved)) return CITY_TO_REGION.get(resolved)!;
-  if (CITY_TO_REGION.has(city)) return CITY_TO_REGION.get(city)!;
+  if (ARABIC_CITY_TO_REGION.has(resolved)) return ARABIC_CITY_TO_REGION.get(resolved)!;
+  if (ARABIC_CITY_TO_REGION.has(city)) return ARABIC_CITY_TO_REGION.get(city)!;
 
   const fuzzyCity = bestFuzzyMatch(city, CITIES, (c) => [c.ar, c.fr, ...c.aliases], 0.6);
-  if (fuzzyCity && CITY_TO_REGION.has(fuzzyCity.ar)) return CITY_TO_REGION.get(fuzzyCity.ar)!;
+  if (fuzzyCity && ARABIC_CITY_TO_REGION.has(fuzzyCity.ar)) return ARABIC_CITY_TO_REGION.get(fuzzyCity.ar)!;
 
   const regionHit = bestFuzzyMatch(
     city,
@@ -177,19 +54,21 @@ export function regionForCity(city: string) {
   );
   if (regionHit) return regionHit.name;
 
-  return "الدار البيضاء - سطات";
+  return UNKNOWN_REGION;
 }
 
 export function regionIdForName(name: string) {
-  return MOROCCO_REGIONS.find((r) => r.name === name)?.id ?? "MA06";
+  return MOROCCO_REGIONS.find((r) => r.name === name)?.id ?? "";
 }
 
 export function regionIdForCity(city: string) {
+  const official = regionIdForOfficialCity(city);
+  if (official) return official;
   return regionIdForName(regionForCity(city));
 }
 
 export function regionNameForId(id: string) {
-  return MOROCCO_REGIONS.find((r) => r.id === id)?.name ?? regionForCity("");
+  return MOROCCO_REGIONS.find((r) => r.id === id)?.name ?? UNKNOWN_REGION;
 }
 
 const REGION_ZONES: Record<string, string> = {
