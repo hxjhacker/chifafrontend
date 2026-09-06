@@ -3,12 +3,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Check,
   CheckCircle2,
   CircleAlert,
   ChevronLeft,
   ChevronRight,
-  Copy,
   Download,
   Eye,
   EyeOff,
@@ -16,7 +14,6 @@ import {
   Loader2,
   LogOut,
   Menu,
-  Phone,
   PieChart,
   Plus,
   Search,
@@ -34,7 +31,7 @@ import { BulkActionBar } from "@/components/admin/BulkActionBar";
 import { CompleteDetailsModal } from "@/components/admin/CompleteDetailsModal";
 import { IosSwitch } from "@/components/admin/IosSwitch";
 import { MoroccoMap } from "@/components/admin/MoroccoMap";
-import { OrderActionsMenu } from "@/components/admin/OrderActionsMenu";
+import { OrderDesktopRow, OrderMobileCard } from "@/components/admin/OrderRow";
 import { OrderTimelineModal } from "@/components/admin/OrderTimelineModal";
 import { QuickWhatsAppOrderModal } from "@/components/admin/QuickWhatsAppOrderModal";
 import { PushToggle } from "@/components/admin/PushToggle";
@@ -42,21 +39,15 @@ import { ViewsObservatory } from "@/components/admin/ViewsObservatory";
 import { ShippingLabel } from "@/components/admin/ShippingLabel";
 import {
   ADMIN_STATUSES,
-  allowedNextStatuses,
   canTransitionStatus,
   cloneOrderCreatePayload,
   copyText,
   copyablePhone,
   downloadCsv,
-  formatMad,
   hasCompleteConfirmDetails,
   needsConfirmModal,
   ordersToCsv,
   pct,
-  shortOrderRef,
-  statusMeta,
-  telHref,
-  waHref,
   type AdminOrder,
   type AdminStats,
   type AdminStatus,
@@ -615,6 +606,30 @@ export function AdminDashboard() {
     if (!box) return;
     box.indeterminate = selectedOnPage > 0 && !allPageSelected;
   }, [selectedOnPage, allPageSelected]);
+
+  function orderRowProps(order: AdminOrder) {
+    return {
+      order,
+      selected: selectedIds.includes(order.order_id),
+      onToggleSelected: (on: boolean) => toggleSelected(order.order_id, on),
+      shipping: shippingId === order.order_id,
+      duplicating: duplicatingId === order.order_id,
+      saving: savingId === order.order_id,
+      copiedId,
+      copiedTrackingId,
+      hideNums: hideTableNums,
+      statusOptions: STATUS_OPTIONS,
+      onCopyPhone: () => void copyPhone(order),
+      onCopyTracking: () => void copyTracking(order),
+      onStatusSelect: (next: AdminStatus, el: HTMLSelectElement) => onStatusSelect(order, next, el),
+      onSendMeta: (row: AdminOrder) => void sendToMetaLivraison(row),
+      onPrint: printShipping,
+      onEdit: setCompleting,
+      onView: (row: AdminOrder) => setViewingId(row.order_id),
+      onDuplicate: (row: AdminOrder) => void duplicateOrder(row),
+      onDelete: setDeleteTarget,
+    };
+  }
   const viewing = useMemo(() => orders.find((o) => o.order_id === viewingId) ?? null, [orders, viewingId]);
   const printing = useMemo(() => orders.find((o) => o.order_id === printingId) ?? null, [orders, printingId]);
 
@@ -1127,7 +1142,21 @@ export function AdminDashboard() {
         </div>
 
         <div className="overflow-hidden rounded-2xl border border-gold/20 bg-white shadow-luxury dark:bg-cardDark">
-          <div className="overflow-x-auto">
+          <div className="space-y-3 p-3 md:hidden">
+            {loading ? (
+              <div className="p-16 text-center text-royal/60 dark:text-slate-400">
+                <Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin text-gold" />
+                جاري التحميل…
+              </div>
+            ) : pageRows.length === 0 ? (
+              <div className="p-16 text-center font-bold text-royal/50 dark:text-slate-400">لا توجد طلبات مطابقة.</div>
+            ) : (
+              pageRows.map((order) => (
+                <OrderMobileCard key={order.order_id} {...orderRowProps(order)} />
+              ))
+            )}
+          </div>
+          <div className="hidden overflow-x-auto md:block">
             <table id="orders-table" className="w-full text-right text-xs text-royal dark:text-slate-200">
               <thead className="border-b border-gold/10 bg-cream font-bold text-royal/70 dark:bg-brandDark dark:text-slate-400">
                 <tr>
@@ -1167,131 +1196,7 @@ export function AdminDashboard() {
                     </td>
                   </tr>
                 ) : (
-                  pageRows.map((order) => {
-                    const meta = statusMeta(order.status);
-                    const phone = copyablePhone(order);
-                    return (
-                      <tr key={order.order_id} className="transition hover:bg-cream/50 dark:hover:bg-brandDark/50">
-                        <td className="p-3.5 text-center">
-                          <input
-                            type="checkbox"
-                            checked={selectedIds.includes(order.order_id)}
-                            onChange={(e) => toggleSelected(order.order_id, e.target.checked)}
-                            className="h-4 w-4 accent-gold"
-                            aria-label={`تحديد طلبية ${order.full_name}`}
-                          />
-                        </td>
-                        <td className="p-3.5">
-                          <OrderActionsMenu
-                            order={order}
-                            shipping={shippingId === order.order_id}
-                            duplicating={duplicatingId === order.order_id}
-                            onSendMeta={(row) => void sendToMetaLivraison(row)}
-                            onPrint={printShipping}
-                            onEdit={setCompleting}
-                            onView={(row) => setViewingId(row.order_id)}
-                            onDuplicate={(row) => void duplicateOrder(row)}
-                            onDelete={setDeleteTarget}
-                          />
-                        </td>
-                        <td className="p-3.5 font-mono text-[11px] text-royal/60 dark:text-slate-400" title={order.order_id}>
-                          <div>{shortOrderRef(order.order_id)}</div>
-                          {order.meta_livraison_code ? (
-                            <button
-                              type="button"
-                              title="نسخ كود Meta Livraison"
-                              onClick={() => void copyTracking(order)}
-                              className="mt-1 inline-flex max-w-[9.5rem] items-center gap-1 rounded-full border border-sky-500/40 bg-sky-500/15 px-2 py-0.5 text-[10px] font-bold text-sky-600 transition hover:bg-sky-500/25 dark:text-sky-300"
-                            >
-                              {copiedTrackingId === order.order_id ? (
-                                <Check className="h-3 w-3 shrink-0 text-emeraldCustom" />
-                              ) : (
-                                <Copy className="h-3 w-3 shrink-0" />
-                              )}
-                              <span className="truncate">{order.meta_livraison_code}</span>
-                            </button>
-                          ) : null}
-                        </td>
-                        <td className="p-3.5 font-bold">{order.full_name}</td>
-                        <td className="p-3.5">
-                          <div className="flex flex-col items-start gap-0.5">
-                            <span className="rounded-md bg-gold/10 px-2 py-1 text-gold-600 dark:text-gold">{order.city}</span>
-                            {order.shipping_city ? (
-                              <span dir="ltr" className="px-1 text-[10px] font-bold text-royal/45 dark:text-slate-400">
-                                {order.shipping_city}
-                              </span>
-                            ) : null}
-                          </div>
-                        </td>
-                        <td className="p-3.5">
-                          <div className="flex items-center gap-1.5">
-                            <button
-                              type="button"
-                              title="انقر لنسخ الرقم"
-                              onClick={() => void copyPhone(order)}
-                              className={cn(
-                                "ml-1 rounded-md px-1.5 py-0.5 text-left font-mono text-xs font-bold transition hover:bg-gold/15 hover:text-gold",
-                                hideTableNums && "blurred-number",
-                                copiedId === order.order_id && "text-emeraldCustom",
-                              )}
-                              dir="ltr"
-                            >
-                              {copiedId === order.order_id ? "تم النسخ" : phone}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => void copyPhone(order)}
-                              className="flex h-6 w-6 items-center justify-center rounded-md bg-gold/10 text-gold transition hover:bg-gold hover:text-royal"
-                              title="نسخ رقم الهاتف"
-                            >
-                              {copiedId === order.order_id ? <Check className="h-3 w-3 text-emeraldCustom" /> : <Copy className="h-3 w-3" />}
-                            </button>
-                            <a
-                              href={telHref(order.phone || order.phone_national)}
-                              className="flex h-6 w-6 items-center justify-center rounded-md bg-blue-500/10 text-blue-500 transition hover:bg-blue-500 hover:text-white"
-                              title="اتصال"
-                            >
-                              <Phone className="h-3 w-3" />
-                            </a>
-                            <a
-                              href={waHref(order.phone || order.phone_national, order.full_name, order.pack_label, order.city)}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="flex h-6 w-6 items-center justify-center rounded-md bg-emeraldCustom/10 text-emeraldCustom transition hover:bg-emeraldCustom hover:text-white"
-                              title="واتساب"
-                            >
-                              <WhatsAppIcon className="h-3.5 w-3.5" />
-                            </a>
-                          </div>
-                        </td>
-                        <td className="p-3.5">{order.pack_label}</td>
-                        <td className={cn("p-3.5 font-bold text-emeraldCustom", hideTableNums && "blurred-number")}>
-                          {formatMad(order.total)}
-                        </td>
-                        <td className="p-3.5 text-center">
-                          <div className="inline-flex items-center gap-1.5">
-                            <select
-                              value={order.status}
-                              disabled={savingId === order.order_id || allowedNextStatuses(order.status).length === 0}
-                              onChange={(e) => onStatusSelect(order, e.target.value as AdminStatus, e.currentTarget)}
-                              className={cn("rounded-lg border px-2 py-1 text-[11px] font-bold focus:outline-none", meta.selectClass)}
-                            >
-                              {STATUS_OPTIONS.map((s) => (
-                                <option
-                                  key={s.id}
-                                  value={s.id}
-                                  disabled={s.id !== order.status && !canTransitionStatus(order.status, s.id)}
-                                >
-                                  {s.label}
-                                </option>
-                              ))}
-                            </select>
-                            {savingId === order.order_id ? <Loader2 className="h-3.5 w-3.5 animate-spin text-gold" /> : null}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })
+                  pageRows.map((order) => <OrderDesktopRow key={order.order_id} {...orderRowProps(order)} />)
                 )}
               </tbody>
             </table>
