@@ -21,6 +21,7 @@ import {
   Sun,
   Trash2,
   Moon,
+  RefreshCw,
   X,
 } from "lucide-react";
 import { ThemeToggle, WhatsAppIcon } from "@/components/Chrome";
@@ -75,6 +76,7 @@ const STATUS_OPTIONS: { id: AdminStatus; label: string }[] = [
   { id: "confirmed", label: "🔵 تم التأكيد" },
   { id: "shipped", label: "🟣 قيد الشحن" },
   { id: "delivered", label: "🟢 تم التسليم" },
+  { id: "returned", label: "🟠 مرتجع" },
   { id: "cancelled", label: "🔴 ملغاة" },
 ];
 
@@ -131,6 +133,7 @@ export function AdminDashboard() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkBusy, setBulkBusy] = useState<"dispatch" | "labels" | "manifest" | null>(null);
   const [bulkConfirm, setBulkConfirm] = useState(false);
+  const [syncingTracking, setSyncingTracking] = useState(false);
   const [notice, setNotice] = useState("");
   const [noticeKind, setNoticeKind] = useState<"ok" | "warn">("ok");
   useLockBodyScroll(Boolean(deleteTarget));
@@ -260,7 +263,7 @@ export function AdminDashboard() {
     if (next === order.status) return;
     if (!canTransitionStatus(order.status, next)) {
       selectEl.value = order.status;
-      setError("لا يمكن القفز في حالة الطلب. اتبع المسار: جديدة → تم التأكيد → قيد الشحن → تم التسليم.");
+      setError("لا يمكن القفز في حالة الطلب. اتبع المسار: جديدة → تم التأكيد → قيد الشحن → تم التسليم / مرتجع.");
       return;
     }
     if (needsConfirmModal(order, next)) {
@@ -376,8 +379,8 @@ export function AdminDashboard() {
       setNotice(`الطلب مرسل مسبقاً إلى Meta Livraison: ${order.meta_livraison_code}`);
       return;
     }
-    if (order.status === "cancelled") {
-      setError("لا يمكن شحن طلبية ملغاة.");
+    if (order.status === "cancelled" || order.status === "returned") {
+      setError(order.status === "returned" ? "لا يمكن شحن طلبية مرتجعة." : "لا يمكن شحن طلبية ملغاة.");
       return;
     }
     if (!hasCompleteConfirmDetails(order)) {
@@ -539,6 +542,44 @@ export function AdminDashboard() {
       setError(err instanceof Error ? err.message : "تعذر الإرسال الجماعي.");
     } finally {
       setBulkBusy(null);
+    }
+  }
+
+  async function syncTracking() {
+    if (syncingTracking) return;
+    setSyncingTracking(true);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/orders/sync-tracking", {
+        method: "POST",
+        credentials: "include",
+        cache: "no-store",
+        headers: { Accept: "application/json", "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const body = (await res.json().catch(() => ({}))) as {
+        updated_count?: number;
+        total_checked?: number;
+        detail?: string;
+        error?: string;
+        message?: string;
+      };
+      if (!res.ok) {
+        const map: Record<string, string> = {
+          meta_livraison_not_configured: "أضف مفاتيح Meta Livraison في الخادم أولاً.",
+          not_authenticated: "جلسة الأدمن غير صالحة. أعد تسجيل الدخول.",
+        };
+        throw new Error(map[String(body.detail || body.error || "")] || body.message || "تعذر تحديث التتبع.");
+      }
+      const n = Number(body.updated_count || 0);
+      setNoticeKind("ok");
+      setNotice(`تم تحديث حالات الشحن بنجاح (${n} طلبية تم تحديثها)`);
+      await load();
+    } catch (err) {
+      setNoticeKind("warn");
+      setNotice(err instanceof Error ? err.message : "تعذر تحديث التتبع. أعد المحاولة.");
+    } finally {
+      setSyncingTracking(false);
     }
   }
 
@@ -1130,6 +1171,15 @@ export function AdminDashboard() {
                 </option>
               ))}
             </select>
+            <button
+              type="button"
+              disabled={syncingTracking}
+              onClick={() => void syncTracking()}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-gold/30 bg-gold/10 px-3 py-2 text-xs font-bold text-royal transition hover:bg-gold/20 disabled:opacity-60 dark:text-gold"
+            >
+              <RefreshCw className={cn("h-3.5 w-3.5", syncingTracking && "animate-spin")} />
+              تحديث التتبع
+            </button>
             <button
               type="button"
               onClick={() => downloadCsv("orders-chifaglow.csv", ordersToCsv(filtered))}

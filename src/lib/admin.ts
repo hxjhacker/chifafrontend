@@ -1,4 +1,4 @@
-export type AdminStatus = "new" | "confirmed" | "shipped" | "delivered" | "cancelled";
+export type AdminStatus = "new" | "confirmed" | "shipped" | "delivered" | "returned" | "cancelled";
 
 export type DeliveryWindow = "anytime" | "morning" | "afternoon" | "weekend";
 
@@ -91,6 +91,12 @@ export const ADMIN_STATUSES: {
     selectClass: "bg-emeraldCustom/10 text-emeraldCustom border-emeraldCustom/30",
   },
   {
+    id: "returned",
+    label: "مرتجع",
+    tone: "bg-orange-100 text-orange-800 border-orange-300 dark:bg-orange-400/15 dark:text-orange-200 dark:border-orange-400/40",
+    selectClass: "bg-orange-500/10 text-orange-500 border-orange-500/30",
+  },
+  {
     id: "cancelled",
     label: "ملغاة",
     tone: "bg-red-100 text-red-800 border-red-300 dark:bg-red-400/15 dark:text-red-200 dark:border-red-400/40",
@@ -112,14 +118,18 @@ export const NEW_EQUIV = new Set(["pending", "upsell_accepted", "new"]);
 export const STATUS_TRANSITIONS: Record<AdminStatus, readonly AdminStatus[]> = {
   new: ["confirmed", "cancelled"],
   confirmed: ["shipped", "cancelled"],
-  shipped: ["delivered", "cancelled"],
+  shipped: ["delivered", "returned", "cancelled"],
   delivered: [],
+  returned: [],
   cancelled: ["new", "confirmed"],
 };
 
 export function displayStatus(raw: string): AdminStatus {
   if (NEW_EQUIV.has(raw) || raw === "new") return "new";
-  if (raw === "confirmed" || raw === "shipped" || raw === "delivered" || raw === "cancelled") return raw;
+  if (raw === "in_shipping") return "shipped";
+  if (raw === "confirmed" || raw === "shipped" || raw === "delivered" || raw === "returned" || raw === "cancelled") {
+    return raw;
+  }
   return "new";
 }
 

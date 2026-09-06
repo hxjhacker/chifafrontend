@@ -25,7 +25,7 @@ type Props = {
 };
 
 const STAGES: {
-  id: Exclude<AdminStatus, "new"> | "created";
+  id: Exclude<AdminStatus, "new" | "returned" | "cancelled"> | "created";
   title: string;
   hint: string;
   dot: string;
@@ -70,10 +70,10 @@ function reached(order: AdminOrder, stage: (typeof STAGES)[number]["id"] | "canc
   if (stage === "created") return true;
   if (stage === "cancelled") return order.status === "cancelled";
   if (stage === "confirmed") {
-    return Boolean(order.confirmed_at) || ["confirmed", "shipped", "delivered"].includes(order.status);
+    return Boolean(order.confirmed_at) || ["confirmed", "shipped", "delivered", "returned"].includes(order.status);
   }
   if (stage === "shipped") {
-    return Boolean(order.shipped_at) || ["shipped", "delivered"].includes(order.status);
+    return Boolean(order.shipped_at) || ["shipped", "delivered", "returned"].includes(order.status);
   }
   return Boolean(order.delivered_at) || order.status === "delivered";
 }
@@ -106,6 +106,7 @@ export function OrderTimelineModal({ order, onClose, onEdit }: Props) {
   const notes = (order.courier_notes || order.driver_comment || "").trim();
   const meta = statusMeta(order.status);
   const showCancel = order.status === "cancelled";
+  const showReturn = order.status === "returned";
 
   return (
     <div
@@ -230,7 +231,7 @@ export function OrderTimelineModal({ order, onClose, onEdit }: Props) {
                 }
                 return (
                   <li key={stage.id} className="relative flex gap-3 pb-6 last:pb-0">
-                    {index < STAGES.length - 1 || showCancel ? (
+                    {index < STAGES.length - 1 || showCancel || showReturn ? (
                       <span
                         className={cn(
                           "absolute right-[9px] top-5 h-[calc(100%-8px)] w-0.5",
@@ -255,6 +256,18 @@ export function OrderTimelineModal({ order, onClose, onEdit }: Props) {
                   </li>
                 );
               })}
+              {showReturn ? (
+                <li className="relative flex gap-3">
+                  <span className="relative z-10 mt-0.5 h-[20px] w-[20px] shrink-0 rounded-full bg-orange-500 ring-4 ring-orange-500/30" />
+                  <div className="min-w-0 flex-1 rounded-2xl border border-orange-500/30 bg-orange-500/10 px-3 py-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-black text-orange-200">مرتجع</p>
+                      <span className="text-[10px] font-mono text-orange-300/80">{formatStamp(order.updated_at)}</span>
+                    </div>
+                    <p className="mt-1 text-[11px] leading-5 text-orange-100/80">أرجع الموزع الطرد إلى المتجر</p>
+                  </div>
+                </li>
+              ) : null}
               {showCancel ? (
                 <li className="relative flex gap-3">
                   <span className="relative z-10 mt-0.5 h-[20px] w-[20px] shrink-0 rounded-full bg-rose-500 ring-4 ring-rose-500/30" />

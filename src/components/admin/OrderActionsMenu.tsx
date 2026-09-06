@@ -152,7 +152,7 @@ export function OrderActionsMenu({
               </h3>
               <button
                 type="button"
-                disabled={sent || shipping || order.status === "cancelled"}
+                disabled={sent || shipping || order.status === "cancelled" || order.status === "returned"}
                 onClick={() => run(() => onSendMeta(order))}
                 className={cn(CARD, "border-emerald-500/30 bg-emerald-950/20 text-emerald-400 hover:bg-emerald-900/30")}
               >
@@ -239,7 +239,7 @@ export function OrderActionsMenu({
           className="fixed z-[90] overflow-hidden rounded-2xl border border-gold/25 bg-white py-1.5 shadow-luxury dark:border-gold/20 dark:bg-cardDark"
         >
           <MenuItem
-            disabled={sent || shipping || order.status === "cancelled"}
+            disabled={sent || shipping || order.status === "cancelled" || order.status === "returned"}
             onSelect={() => run(() => onSendMeta(order))}
           >
             {shipping ? (

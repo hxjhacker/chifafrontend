@@ -6,7 +6,7 @@ import { deleteAdminOrder, updateAdminOrder } from "@/lib/server/admin-orders";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const ALLOWED: AdminStatus[] = ["new", "confirmed", "shipped", "delivered", "cancelled"];
+const ALLOWED: AdminStatus[] = ["new", "confirmed", "shipped", "delivered", "returned", "cancelled"];
 const WINDOWS: DeliveryWindow[] = ["anytime", "morning", "afternoon", "weekend"];
 
 type PatchBody = Record<string, unknown>;
