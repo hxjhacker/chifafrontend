@@ -133,6 +133,13 @@ export function displayStatus(raw: string): AdminStatus {
   return "new";
 }
 
+export const LABEL_PRINT_HINT =
+  "يجب إرسال الطلبية إلى Meta Livraison أولاً للحصول على رقم التتبع قبل الطباعة.";
+
+export function hasTracking(order: { meta_livraison_code?: string | null }): boolean {
+  return Boolean((order.meta_livraison_code || "").trim());
+}
+
 export function allowedNextStatuses(current: AdminStatus): AdminStatus[] {
   return [...(STATUS_TRANSITIONS[current] || [])];
 }

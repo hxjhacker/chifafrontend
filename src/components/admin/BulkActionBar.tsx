@@ -6,6 +6,8 @@ type Props = {
   count: number;
   busy: "dispatch" | "labels" | "manifest" | null;
   confirmOpen: boolean;
+  labelsLocked?: boolean;
+  labelsHint?: string;
   onConfirmOpen: () => void;
   onConfirmClose: () => void;
   onDispatch: () => void;
@@ -18,6 +20,8 @@ export function BulkActionBar({
   count,
   busy,
   confirmOpen,
+  labelsLocked,
+  labelsHint,
   onConfirmOpen,
   onConfirmClose,
   onDispatch,
@@ -42,15 +46,18 @@ export function BulkActionBar({
               {busy === "dispatch" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Truck className="h-3.5 w-3.5" />}
               إرسال إلى Meta Livraison
             </button>
-            <button
-              type="button"
-              disabled={locked}
-              onClick={onLabels}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-sky-400/40 bg-sky-500/15 px-3 py-2 text-xs font-bold text-sky-200 transition hover:bg-sky-500/25 disabled:opacity-60"
-            >
-              {busy === "labels" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Printer className="h-3.5 w-3.5" />}
-              طباعة البوالص (A6 PDF)
-            </button>
+            <span className="inline-flex" title={labelsHint || "طباعة البوالص (A6 PDF)"}>
+              <button
+                type="button"
+                disabled={locked || labelsLocked}
+                title={labelsHint || "طباعة البوالص (A6 PDF)"}
+                onClick={onLabels}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-sky-400/40 bg-sky-500/15 px-3 py-2 text-xs font-bold text-sky-200 transition hover:bg-sky-500/25 disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                {busy === "labels" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Printer className="h-3.5 w-3.5" />}
+                طباعة البوالص (A6 PDF)
+              </button>
+            </span>
             <button
               type="button"
               disabled={locked}

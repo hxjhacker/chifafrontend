@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { CheckCircle2, Eye, Loader2, MoreVertical, Pencil, Printer, Repeat2, Trash2, Truck } from "lucide-react";
-import { shortOrderRef, type AdminOrder } from "@/lib/admin";
+import { shortOrderRef, hasTracking, LABEL_PRINT_HINT, type AdminOrder } from "@/lib/admin";
 import { cn } from "@/lib/cn";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 
@@ -43,6 +43,7 @@ export function OrderActionsMenu({
   );
   const [pos, setPos] = useState({ top: 0, left: 0 });
   const sent = Boolean(order.meta_livraison_code);
+  const canPrint = hasTracking(order);
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 767px)");
@@ -172,10 +173,20 @@ export function OrderActionsMenu({
               </button>
               <button
                 type="button"
-                onClick={() => run(() => onPrint(order))}
+                disabled={!canPrint}
+                title={canPrint ? "طباعة البوليصة الحرارية" : LABEL_PRINT_HINT}
+                onClick={() => {
+                  if (!canPrint) return;
+                  run(() => onPrint(order));
+                }}
                 className={cn(CARD, "border-teal-500/30 bg-teal-950/20 text-teal-400 hover:bg-teal-900/30")}
               >
-                <span>طباعة البوليصة</span>
+                <span className="min-w-0 flex-1 text-right">
+                  طباعة التذكرة / الملصق
+                  {!canPrint ? (
+                    <span className="mt-0.5 block text-[10px] font-bold text-amber-300">{LABEL_PRINT_HINT}</span>
+                  ) : null}
+                </span>
                 <Printer className="h-5 w-5 shrink-0" />
               </button>
               <button
@@ -258,9 +269,23 @@ export function OrderActionsMenu({
               ) : null}
             </span>
           </MenuItem>
-          <MenuItem onSelect={() => run(() => onPrint(order))}>
+          <MenuItem
+            disabled={!canPrint}
+            title={canPrint ? "طباعة التذكرة / الملصق" : LABEL_PRINT_HINT}
+            onSelect={() => {
+              if (!canPrint) return;
+              run(() => onPrint(order));
+            }}
+          >
             <Printer className="h-4 w-4 shrink-0 text-emerald-500" />
-            Imprimer le ticket / Étiquette Meta
+            <span className="min-w-0 flex-1 text-left">
+              Imprimer le ticket / Étiquette
+              {!canPrint ? (
+                <span className="mt-0.5 block text-[10px] font-bold leading-4 text-amber-600 dark:text-amber-300">
+                  {LABEL_PRINT_HINT}
+                </span>
+              ) : null}
+            </span>
           </MenuItem>
           <MenuItem onSelect={() => run(() => onEdit(order))}>
             <Pencil className="h-4 w-4 shrink-0 text-gold" />
@@ -295,24 +320,27 @@ function MenuItem({
   onSelect,
   disabled,
   danger,
+  title,
 }: {
   children: ReactNode;
   onSelect: () => void;
   disabled?: boolean;
   danger?: boolean;
+  title?: string;
 }) {
   return (
     <button
       type="button"
       role="menuitem"
       disabled={disabled}
+      title={title}
       onClick={onSelect}
       className={cn(
         "flex w-full items-start gap-2.5 px-3 py-2.5 text-left text-[13px] font-bold transition",
         danger
           ? "text-rose-600 hover:bg-rose-500/10 dark:text-rose-400"
           : "text-royal hover:bg-gold/10 dark:text-slate-100",
-        disabled && "cursor-default opacity-55 hover:bg-transparent",
+        disabled && "cursor-not-allowed opacity-55 hover:bg-transparent",
       )}
     >
       {children}
