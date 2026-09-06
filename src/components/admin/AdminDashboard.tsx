@@ -37,6 +37,7 @@ import { OrderTimelineModal } from "@/components/admin/OrderTimelineModal";
 import { QuickWhatsAppOrderModal } from "@/components/admin/QuickWhatsAppOrderModal";
 import { PushToggle } from "@/components/admin/PushToggle";
 import { ViewsObservatory } from "@/components/admin/ViewsObservatory";
+import { ShippingLabel } from "@/components/admin/ShippingLabel";
 import {
   ADMIN_STATUSES,
   canTransitionStatus,
@@ -125,6 +126,7 @@ export function AdminDashboard() {
   const [quickOpen, setQuickOpen] = useState(false);
   const [completing, setCompleting] = useState<AdminOrder | null>(null);
   const [viewingId, setViewingId] = useState<string | null>(null);
+  const [printingId, setPrintingId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AdminOrder | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
@@ -152,6 +154,7 @@ export function AdminDashboard() {
   const selectAllRef = useRef<HTMLInputElement>(null);
 
   const closeTimeline = useCallback(() => setViewingId(null), []);
+  const closePrint = useCallback(() => setPrintingId(null), []);
 
   useEffect(() => {
     if (!notice) return;
@@ -333,7 +336,7 @@ export function AdminDashboard() {
       setNotice(LABEL_PRINT_HINT);
       return;
     }
-    window.open(`/api/admin/orders/${order.order_id}/label-pdf`, "_blank", "noopener,noreferrer");
+    setPrintingId(order.order_id);
   }
 
   async function duplicateOrder(order: AdminOrder) {
@@ -671,6 +674,7 @@ export function AdminDashboard() {
     };
   }
   const viewing = useMemo(() => orders.find((o) => o.order_id === viewingId) ?? null, [orders, viewingId]);
+  const printing = useMemo(() => orders.find((o) => o.order_id === printingId) ?? null, [orders, printingId]);
   const printableSelected = useMemo(
     () => orders.filter((order) => selectedIds.includes(order.order_id) && hasTracking(order)),
     [orders, selectedIds],
@@ -1325,6 +1329,7 @@ export function AdminDashboard() {
         © 2026 Chifaglow Admin Panel — نظام إدارة وتصنيف الطلبيات
       </footer>
     </div>
+      {printing ? <ShippingLabel order={printing} onClose={closePrint} /> : null}
       <BulkActionBar
         count={selectedIds.length}
         busy={bulkBusy}

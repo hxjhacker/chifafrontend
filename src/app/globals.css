@@ -172,264 +172,202 @@ html.dark body {
   50% { transform: scale(1.07); }
 }
 
-#shipping-label-print {
+#thermal-label-container {
   box-sizing: border-box;
   width: 100mm;
-  min-height: 150mm;
-  height: 150mm;
+  height: 100mm;
   overflow: hidden;
-  padding: 3mm;
+  padding: 2mm;
   background: #fff;
   color: #000;
-  font-family: var(--font-tajawal), Tajawal, sans-serif;
-  border: 2px solid #000;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Cairo", "Noto Sans Arabic", var(--font-cairo), sans-serif;
+  border: 1.4px solid #000;
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 1.2mm;
+  direction: ltr;
+  unicode-bidi: isolate;
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
 }
 
-#shipping-label-print .label-top {
+#thermal-label-container p {
+  margin: 0;
+  color: #000;
+}
+
+#thermal-label-container .tl-header {
   display: grid;
   grid-template-columns: 1.15fr 0.85fr;
-  gap: 2.5mm;
-  align-items: center;
-  border-bottom: 2px solid #000;
-  padding-bottom: 2mm;
-}
-
-#shipping-label-print .label-brand {
-  display: flex;
-  align-items: center;
   gap: 2mm;
+  align-items: start;
 }
 
-#shipping-label-print .brand-mark {
-  display: flex;
-  width: 7mm;
-  height: 7mm;
-  align-items: center;
-  justify-content: center;
-  background: #000;
-  color: #fff;
-  font-size: 8px;
-  font-weight: 900;
-}
-
-#shipping-label-print .brand-name {
-  margin: 0;
-  font-size: 12px;
-  font-weight: 900;
-  letter-spacing: 0.04em;
-  line-height: 1.1;
-}
-
-#shipping-label-print .brand-tag {
-  margin: 0.4mm 0 0;
+#thermal-label-container .tl-expediteur,
+#thermal-label-container .tl-depart {
   font-size: 7px;
   font-weight: 700;
-  color: #334155;
+  line-height: 1.35;
 }
 
-#shipping-label-print .label-zone {
+#thermal-label-container .tl-depart {
+  text-align: right;
+}
+
+#thermal-label-container .tl-header span {
+  font-weight: 800;
+}
+
+#thermal-label-container .tl-hub {
   background: #000;
   color: #fff;
   text-align: center;
-  padding: 1.6mm 1.5mm;
-}
-
-#shipping-label-print .label-zone span {
-  display: block;
-  font-size: 7px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #e2e8f0;
-}
-
-#shipping-label-print .label-zone strong {
-  display: block;
-  margin-top: 0.4mm;
-  font-size: 16px;
+  font-size: 13px;
   font-weight: 900;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  padding: 2.4mm 1mm;
 }
 
-#shipping-label-print .label-parties {
+#thermal-label-container .tl-body {
+  flex: 1;
+  min-height: 0;
   display: grid;
-  grid-template-columns: 0.85fr 1fr 1.15fr;
-  border-bottom: 2px solid #000;
-  min-height: 32mm;
+  grid-template-columns: 1.25fr 0.75fr;
+  border: 1.4px solid #000;
 }
 
-#shipping-label-print .label-qr,
-#shipping-label-print .label-sender,
-#shipping-label-print .label-receiver {
-  padding: 2mm;
+#thermal-label-container .tl-details {
+  padding: 1.6mm 1.8mm;
+  border-right: 1.4px solid #000;
+  overflow: hidden;
 }
 
-#shipping-label-print .label-qr,
-#shipping-label-print .label-sender {
-  border-right: 2px solid #000;
+#thermal-label-container .tl-details p {
+  font-size: 7.4px;
+  font-weight: 800;
+  line-height: 1.32;
+  margin-bottom: 0.7mm;
+  unicode-bidi: plaintext;
 }
 
-#shipping-label-print .label-qr {
+#thermal-label-container .tl-details span {
+  font-weight: 700;
+  color: #111;
+}
+
+#thermal-label-container .tl-address,
+#thermal-label-container .tl-goods {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+#thermal-label-container .tl-track {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
-  gap: 1mm;
+  padding: 1.4mm 1mm 1.8mm;
+  gap: 0;
 }
 
-#shipping-label-print .label-qr span,
-#shipping-label-print .party-kicker {
-  margin: 0;
-  font-size: 8px;
-  font-weight: 900;
-}
-
-#shipping-label-print .label-qr svg {
+#thermal-label-container .tl-track svg {
   width: 18mm;
   height: 18mm;
+  display: block;
 }
 
-#shipping-label-print .party-kicker {
-  border-bottom: 1px solid #000;
-  padding-bottom: 0.8mm;
-  margin-bottom: 1.2mm;
-}
-
-#shipping-label-print .party-line,
-#shipping-label-print .party-city,
-#shipping-label-print .party-address {
-  margin: 0 0 0.8mm;
-  font-size: 8.5px;
+#thermal-label-container .tl-montant-kicker {
+  margin-top: 1.4mm;
+  font-size: 6.5px;
   font-weight: 800;
-  line-height: 1.35;
+  letter-spacing: 0.08em;
 }
 
-#shipping-label-print .party-name {
-  margin: 0 0 0.8mm;
+#thermal-label-container .tl-price {
+  margin-top: 0.4mm;
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+#thermal-label-container .tl-cod {
+  margin-top: 0.6mm;
+  font-size: 6.5px;
+  font-weight: 800;
+}
+
+#thermal-label-container .tl-colis {
+  background: #000;
+  color: #fff;
+  text-align: center;
   font-size: 10px;
   font-weight: 900;
-  line-height: 1.25;
+  letter-spacing: 0.12em;
+  padding: 1.5mm 1mm;
 }
 
-#shipping-label-print .party-phone {
-  margin: 0 0 0.8mm;
-  font-size: 10px;
+#thermal-label-container .tl-footer {
+  display: grid;
+  grid-template-columns: 1fr 8.5mm;
+  min-height: 16mm;
+  border: 1.4px solid #000;
+}
+
+#thermal-label-container .tl-barcode {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1mm 1.5mm 0.6mm;
+  overflow: hidden;
+}
+
+#thermal-label-container .tl-barcode svg {
+  display: block;
+  width: 100%;
+  height: 10mm;
+}
+
+#thermal-label-container .tl-ord {
+  margin-top: 0.6mm;
+  font-size: 6.5px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+#thermal-label-container .tl-badge {
+  background: #000;
+  color: #fff;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 7px;
   font-weight: 900;
   letter-spacing: 0.04em;
-  direction: ltr;
+  padding: 1mm 0;
   unicode-bidi: isolate;
 }
 
-#shipping-label-print .stock-pill {
-  margin: 2mm 0 0;
-  background: #f1f5f9;
-  border: 1px solid #000;
+#thermal-label-container .tl-disclaimer {
+  background: #000;
+  color: #fff;
   text-align: center;
-  font-size: 8px;
-  font-weight: 900;
-  padding: 1mm 0;
-}
-
-#shipping-label-print .label-bans {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  background: #f1f5f9;
-  border-bottom: 2px solid #000;
-  font-size: 9px;
-  font-weight: 900;
-  text-align: center;
-}
-
-#shipping-label-print .label-bans span {
-  padding: 1.4mm 1mm;
-}
-
-#shipping-label-print .label-bans span:first-child {
-  border-right: 1px solid #000;
-}
-
-#shipping-label-print .label-goods {
-  display: grid;
-  grid-template-columns: 1.7fr 0.8fr;
-  border-bottom: 2px solid #000;
-  min-height: 22mm;
-  flex: 1;
-}
-
-#shipping-label-print .goods-list {
-  border-right: 2px solid #000;
-  padding: 2mm;
-  display: flex;
-  flex-direction: column;
-}
-
-#shipping-label-print .goods-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1.5mm;
-  align-items: center;
-  justify-content: center;
-  flex: 1;
-}
-
-#shipping-label-print .goods-chips span {
-  border: 1px solid #000;
-  background: #f8fafc;
-  font-size: 9px;
-  font-weight: 900;
-  padding: 1mm 2mm;
-}
-
-#shipping-label-print .goods-crbt {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  background: #f8fafc;
-  padding: 2mm;
-}
-
-#shipping-label-print .goods-crbt span {
-  font-size: 8px;
-  font-weight: 900;
-  text-transform: uppercase;
-}
-
-#shipping-label-print .goods-crbt strong {
-  margin-top: 1mm;
-  font-size: 16px;
-  font-weight: 900;
-}
-
-#shipping-label-print .label-barcode {
-  padding: 2mm 1mm 0;
-  text-align: center;
-}
-
-#shipping-label-print .label-barcode svg {
-  display: block;
-  width: 100%;
-  height: 16mm;
-}
-
-#shipping-label-print .label-barcode p {
-  margin: 1mm 0 0;
-  font-size: 6.5px;
-  font-weight: 700;
-  color: #334155;
-  line-height: 1.35;
+  font-size: 5.2px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  padding: 1.3mm 1mm;
+  line-height: 1.2;
 }
 
 @media print {
   @page {
-    size: 100mm 150mm;
+    size: 100mm 100mm;
     margin: 0;
   }
 
@@ -437,6 +375,17 @@ html.dark body {
   body {
     background: #fff !important;
     color: #000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  #thermal-label-container,
+  #thermal-label-container * {
+    visibility: visible;
   }
 
   .admin-print-root,
@@ -445,13 +394,16 @@ html.dark body {
     display: none !important;
   }
 
-  #shipping-label-print {
+  #thermal-label-container {
     position: fixed;
-    inset: 0;
+    left: 0;
+    top: 0;
     width: 100mm;
-    height: 150mm;
+    height: 100mm;
+    margin: 0;
+    padding: 2mm;
+    box-sizing: border-box;
     box-shadow: none;
-    border: 2px solid #000 !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
