@@ -43,6 +43,7 @@ export type AdminOrder = {
   cancelled_at: string | null;
   meta_livraison_code?: string | null;
   meta_livraison_sent_at?: string | null;
+  meta_livraison_ticket_url?: string | null;
 };
 
 export type AdminStats = {

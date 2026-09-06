@@ -84,7 +84,8 @@ CREATE TABLE IF NOT EXISTS orders (
   delivered_at timestamptz,
   cancelled_at timestamptz,
   meta_livraison_code varchar(80),
-  meta_livraison_sent_at timestamptz
+  meta_livraison_sent_at timestamptz,
+  meta_livraison_ticket_url text
 );
 CREATE INDEX IF NOT EXISTS ix_orders_phone ON orders (phone);
 CREATE INDEX IF NOT EXISTS ix_orders_status ON orders (status);
@@ -165,6 +166,7 @@ const SCHEMA_ALTERS = [
   `ALTER TABLE orders ADD COLUMN IF NOT EXISTS cancelled_at timestamptz`,
   `ALTER TABLE orders ADD COLUMN IF NOT EXISTS meta_livraison_code varchar(80)`,
   `ALTER TABLE orders ADD COLUMN IF NOT EXISTS meta_livraison_sent_at timestamptz`,
+  `ALTER TABLE orders ADD COLUMN IF NOT EXISTS meta_livraison_ticket_url text`,
   `CREATE TABLE IF NOT EXISTS page_views (
     id uuid PRIMARY KEY,
     kind varchar(32) NOT NULL,

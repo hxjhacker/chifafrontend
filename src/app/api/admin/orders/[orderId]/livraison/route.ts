@@ -33,15 +33,17 @@ export async function POST(
     });
 
     const rawText = await backendRes.text();
-    let data: unknown;
+    let data: Record<string, unknown> | unknown;
     try {
       data = JSON.parse(rawText);
     } catch {
       data = { raw: rawText };
     }
+    const payload = data && typeof data === "object" && !Array.isArray(data) ? (data as Record<string, unknown>) : { backend_response: data };
 
     return NextResponse.json(
       {
+        ...payload,
         proxied_status: backendRes.status,
         target_url: targetUrl,
         backend_response: data,

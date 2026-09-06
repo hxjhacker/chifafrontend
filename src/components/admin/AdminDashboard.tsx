@@ -138,6 +138,7 @@ export function AdminDashboard() {
   const [deleting, setDeleting] = useState(false);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
   const [shippingId, setShippingId] = useState<string | null>(null);
+  const [copiedTrackingId, setCopiedTrackingId] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
   const [noticeKind, setNoticeKind] = useState<"ok" | "warn">("ok");
   useLockBodyScroll(Boolean(deleteTarget));
@@ -319,6 +320,27 @@ export function AdminDashboard() {
     window.setTimeout(() => setCopiedId(null), 1800);
   }
 
+  async function copyTracking(order: AdminOrder) {
+    const code = (order.meta_livraison_code || "").trim();
+    if (!code) return;
+    const ok = await copyText(code);
+    if (!ok) {
+      setError("تعذر نسخ كود التتبع. انسخه يدوياً.");
+      return;
+    }
+    setCopiedTrackingId(order.order_id);
+    window.setTimeout(() => setCopiedTrackingId(null), 1800);
+  }
+
+  function printShipping(order: AdminOrder) {
+    const ticket = (order.meta_livraison_ticket_url || "").trim();
+    if (ticket) {
+      window.open(ticket, "_blank", "noopener,noreferrer");
+      return;
+    }
+    setPrintingId(order.order_id);
+  }
+
   async function duplicateOrder(order: AdminOrder) {
     if (duplicatingId) return;
     setDuplicatingId(order.order_id);
@@ -379,14 +401,17 @@ export function AdminDashboard() {
         cache: "no-store",
         headers: { Accept: "application/json" },
       });
-      const body = (await res.json().catch(() => ({}))) as AdminOrder & {
+      const raw = (await res.json().catch(() => ({}))) as Record<string, unknown> & {
         detail?: string | Record<string, unknown>;
         success?: boolean;
         message?: string;
         error?: string;
         origin?: string;
         status_code?: number;
+        backend_response?: Record<string, unknown>;
       };
+      const nested = raw.backend_response && typeof raw.backend_response === "object" ? raw.backend_response : {};
+      const body = { ...raw, ...nested } as AdminOrder & typeof raw;
       if (!res.ok || body.success === false) {
         const map: Record<string, string> = {
           meta_livraison_not_configured: "أضف مفاتيح Meta Livraison في الخادم أولاً.",
@@ -403,7 +428,20 @@ export function AdminDashboard() {
             "تعذر إرسال الطرد إلى Meta Livraison.",
         );
       }
-      setOrders((list) => list.map((row) => (row.order_id === order.order_id ? { ...row, ...body } : row)));
+      setOrders((list) =>
+        list.map((row) =>
+          row.order_id === order.order_id
+            ? {
+                ...row,
+                ...body,
+                proxied_status: undefined,
+                target_url: undefined,
+                backend_response: undefined,
+                success: undefined,
+              }
+            : row,
+        ),
+      );
       setNoticeKind("ok");
       setNotice(body.meta_livraison_code ? `تم إرسال الطرد. كود التتبع: ${body.meta_livraison_code}` : "تم إرسال الطرد إلى Meta Livraison.");
       await refreshStats();
@@ -1012,25 +1050,35 @@ export function AdminDashboard() {
                           <div className="flex items-center gap-1.5">
                             <button
                               type="button"
-                              title="طباعة بوليصة الشحن"
-                              onClick={() => setPrintingId(order.order_id)}
+                              title={
+                                order.meta_livraison_ticket_url
+                                  ? "طباعة تذكرة Meta Livraison"
+                                  : "طباعة بوليصة الشحن"
+                              }
+                              onClick={() => printShipping(order)}
                               className="flex h-8 w-8 items-center justify-center rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 transition hover:bg-emerald-500 hover:text-white"
                             >
                               <Printer className="h-3.5 w-3.5" />
                             </button>
                             <button
                               type="button"
-                              title={order.meta_livraison_code ? `Meta Livraison: ${order.meta_livraison_code}` : "إرسال بنقرة إلى Meta Livraison"}
-                              disabled={shippingId === order.order_id}
+                              title={order.meta_livraison_code ? "Envoyé à Meta Livraison" : "إرسال بنقرة إلى Meta Livraison"}
+                              disabled={Boolean(order.meta_livraison_code) || shippingId === order.order_id}
                               onClick={() => void sendToMetaLivraison(order)}
                               className={cn(
-                                "flex h-8 w-8 items-center justify-center rounded-xl border transition disabled:opacity-60",
+                                "flex h-8 w-8 items-center justify-center rounded-xl border transition disabled:opacity-80",
                                 order.meta_livraison_code
-                                  ? "border-sky-500/40 bg-sky-500/15 text-sky-400"
-                                  : "border-gold/40 bg-gold/10 text-gold hover:bg-gold hover:text-royal",
+                                  ? "cursor-default border-emerald-500/40 bg-emerald-500/15 text-emerald-400"
+                                  : "border-gold/40 bg-gold/10 text-gold hover:bg-gold hover:text-royal disabled:opacity-60",
                               )}
                             >
-                              {shippingId === order.order_id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Truck className="h-3.5 w-3.5" />}
+                              {shippingId === order.order_id ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : order.meta_livraison_code ? (
+                                <CheckCircle2 className="h-3.5 w-3.5" />
+                              ) : (
+                                <Truck className="h-3.5 w-3.5" />
+                              )}
                             </button>
                             <button
                               type="button"
@@ -1074,7 +1122,19 @@ export function AdminDashboard() {
                         <td className="p-3.5 font-mono text-[11px] text-royal/60 dark:text-slate-400" title={order.order_id}>
                           <div>{shortOrderRef(order.order_id)}</div>
                           {order.meta_livraison_code ? (
-                            <div className="mt-1 text-[10px] font-bold text-sky-500">{order.meta_livraison_code}</div>
+                            <button
+                              type="button"
+                              title="نسخ كود Meta Livraison"
+                              onClick={() => void copyTracking(order)}
+                              className="mt-1 inline-flex max-w-[9.5rem] items-center gap-1 rounded-full border border-sky-500/40 bg-sky-500/15 px-2 py-0.5 text-[10px] font-bold text-sky-600 transition hover:bg-sky-500/25 dark:text-sky-300"
+                            >
+                              {copiedTrackingId === order.order_id ? (
+                                <Check className="h-3 w-3 shrink-0 text-emeraldCustom" />
+                              ) : (
+                                <Copy className="h-3 w-3 shrink-0" />
+                              )}
+                              <span className="truncate">{order.meta_livraison_code}</span>
+                            </button>
                           ) : null}
                         </td>
                         <td className="p-3.5 font-bold">{order.full_name}</td>

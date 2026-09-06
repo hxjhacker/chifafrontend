@@ -35,6 +35,7 @@ type OrderRow = {
   secondary_qty: number;
   meta_livraison_code?: string | null;
   meta_livraison_sent_at?: Date | string | null;
+  meta_livraison_ticket_url?: string | null;
 };
 
 const ALLOWED: AdminStatus[] = ["new", "confirmed", "shipped", "delivered", "cancelled"];
@@ -178,6 +179,7 @@ function serialize(row: OrderRow): AdminOrder {
     cancelled_at: stampReached(row.cancelled_at, updated, status === "cancelled"),
     meta_livraison_code: row.meta_livraison_code || null,
     meta_livraison_sent_at: iso(row.meta_livraison_sent_at || null),
+    meta_livraison_ticket_url: row.meta_livraison_ticket_url || null,
   };
 }
 
@@ -192,7 +194,7 @@ export async function getAdminOrder(orderId: string): Promise<AdminOrder | null>
   }
 }
 
-export async function markMetaLivraisonSent(orderId: string, code: string): Promise<AdminOrder | null> {
+export async function markMetaLivraisonSent(orderId: string, code: string, ticketUrl = ""): Promise<AdminOrder | null> {
   await ensureSchema();
   const client = await getPool().connect();
   try {
@@ -212,6 +214,10 @@ export async function markMetaLivraisonSent(orderId: string, code: string): Prom
     }
     if (cols.has("meta_livraison_sent_at")) {
       assignments.push("meta_livraison_sent_at = COALESCE(meta_livraison_sent_at, now())");
+    }
+    if (cols.has("meta_livraison_ticket_url") && ticketUrl) {
+      values.push(ticketUrl);
+      assignments.push(`meta_livraison_ticket_url = $${values.length}`);
     }
     const result = await client.query<OrderRow>(
       `UPDATE orders SET ${assignments.join(", ")} WHERE id = $1 RETURNING *`,
