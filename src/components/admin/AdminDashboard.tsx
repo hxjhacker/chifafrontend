@@ -107,7 +107,7 @@ const NAV_BTN =
 const NAV_TARIFS = `${NAV_BTN} border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10 dark:text-emerald-400`;
 const NAV_WHATSAPP = `${NAV_BTN} border-green-500/30 text-green-600 hover:bg-green-500/10 dark:text-green-400`;
 const NAV_PUSH = `${NAV_BTN} border-amber-500/30 text-amber-600 hover:bg-amber-500/10 dark:text-amber-400`;
-const NAV_PREFS = `${NAV_BTN} border-violet-500/30 text-violet-600 hover:bg-violet-500/10 dark:text-violet-400`;
+const NAV_PREFS = `${NAV_BTN} cursor-pointer border-violet-500/30 text-violet-600 hover:bg-violet-500/10 dark:text-violet-400`;
 const NAV_HIDE = `${NAV_BTN} border-cyan-500/30 text-cyan-600 hover:bg-cyan-500/10 dark:text-cyan-400`;
 const NAV_GHOST = `${NAV_BTN} border-slate-200/90 bg-slate-50/80 text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:bg-white/[0.08] dark:hover:text-white`;
 const NAV_PRIMARY =
@@ -182,7 +182,6 @@ export function AdminDashboard() {
   const [syncingTracking, setSyncingTracking] = useState(false);
   const [notice, setNotice] = useState("");
   const [noticeKind, setNoticeKind] = useState<"ok" | "warn">("ok");
-  useLockBodyScroll(Boolean(deleteTarget));
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [hideAll, setHideAll] = useState(false);
   const [hideOverview, setHideOverview] = useState(false);
@@ -194,9 +193,10 @@ export function AdminDashboard() {
   const [prefsOpen, setPrefsOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
-  const prefsRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const selectAllRef = useRef<HTMLInputElement>(null);
+
+  useLockBodyScroll(Boolean(deleteTarget) || prefsOpen);
 
   const closeTimeline = useCallback(() => setViewingId(null), []);
   const closePrint = useCallback(() => setPrintingId(null), []);
@@ -220,7 +220,6 @@ export function AdminDashboard() {
   useEffect(() => {
     function onDocClick(e: MouseEvent) {
       const t = e.target as Node;
-      if (prefsRef.current && !prefsRef.current.contains(t)) setPrefsOpen(false);
       if (menuRef.current && !menuRef.current.contains(t)) setMenuOpen(false);
     }
     function onKey(e: KeyboardEvent) {
@@ -789,6 +788,66 @@ export function AdminDashboard() {
         }}
       />
       <CityTarifsModal open={tarifsOpen} onClose={() => setTarifsOpen(false)} />
+      {prefsOpen ? (
+        <div
+          className="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto bg-black/60 p-3 backdrop-blur-sm sm:p-4"
+          role="presentation"
+          onClick={() => setPrefsOpen(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="prefs-modal-title"
+            className="relative w-full max-w-sm rounded-3xl border-2 border-gold/40 bg-[#0F1E33] p-5 text-white shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <p id="prefs-modal-title" className="text-sm font-black">
+                تخصيص الواجهة
+              </p>
+              <button
+                type="button"
+                aria-label="إغلاق"
+                onClick={() => setPrefsOpen(false)}
+                className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-slate-300 transition hover:bg-white/10 hover:text-white"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <p className="mb-3 text-[12px] font-semibold text-slate-400">أقسام اللوحة</p>
+            <div className="space-y-1">
+              {SECTION_ITEMS.map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  role="switch"
+                  aria-checked={prefs[item.key]}
+                  onClick={() => toggleSection(item.key)}
+                  className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-xl px-1 py-2.5 text-right transition hover:bg-white/5"
+                >
+                  <span className="text-[13px] font-bold text-white">{item.label}</span>
+                  <IosSwitch checked={prefs[item.key]} />
+                </button>
+              ))}
+            </div>
+            <div className="mt-2 border-t border-white/10 pt-2">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={darkMode}
+                onClick={toggleDarkMode}
+                className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-xl px-1 py-2.5 text-right transition hover:bg-white/5"
+              >
+                <span className="inline-flex items-center gap-2 text-[13px] font-bold text-white">
+                  <Moon className="h-3.5 w-3.5 text-slate-300" />
+                  الوضع الداكن
+                </span>
+                <IosSwitch checked={darkMode} />
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       <QuickWhatsAppOrderModal
         open={quickOpen}
         onClose={() => setQuickOpen(false)}
@@ -1035,57 +1094,21 @@ export function AdminDashboard() {
                   setNotice(message);
                 }}
               />
-              <div className="relative" ref={prefsRef}>
-                <button
-                  type="button"
-                  aria-label="تخصيص الواجهة"
-                  aria-expanded={prefsOpen}
-                  onClick={() => setPrefsOpen((v) => !v)}
-                  className={NAV_PREFS}
-                >
-                  <SlidersHorizontal className="h-4 w-4" />
-                  <span className="hidden xl:inline">تخصيص الواجهة</span>
-                  <span className="xl:hidden">تخصيص</span>
-                </button>
-                {prefsOpen ? (
-                  <div
-                    role="menu"
-                    className="absolute left-0 top-11 z-50 w-80 rounded-2xl border border-white/10 bg-[#0F1E33] p-4 text-white shadow-2xl dark:bg-[#0F1E33]"
-                  >
-                    <p className="mb-3 text-sm font-black text-white">أقسام اللوحة</p>
-                    <div className="space-y-1">
-                      {SECTION_ITEMS.map((item) => (
-                        <button
-                          key={item.key}
-                          type="button"
-                          role="switch"
-                          aria-checked={prefs[item.key]}
-                          onClick={() => toggleSection(item.key)}
-                          className="flex w-full items-center justify-between gap-3 rounded-xl px-1 py-2.5 text-right transition hover:bg-white/5"
-                        >
-                          <span className="text-[13px] font-bold text-white">{item.label}</span>
-                          <IosSwitch checked={prefs[item.key]} />
-                        </button>
-                      ))}
-                    </div>
-                    <div className="mt-2 border-t border-white/10 pt-2">
-                      <button
-                        type="button"
-                        role="switch"
-                        aria-checked={darkMode}
-                        onClick={toggleDarkMode}
-                        className="flex w-full items-center justify-between gap-3 rounded-xl px-1 py-2.5 text-right transition hover:bg-white/5"
-                      >
-                        <span className="inline-flex items-center gap-2 text-[13px] font-bold text-white">
-                          <Moon className="h-3.5 w-3.5 text-slate-300" />
-                          الوضع الداكن
-                        </span>
-                        <IosSwitch checked={darkMode} />
-                      </button>
-                    </div>
-                  </div>
-                ) : null}
-              </div>
+              <button
+                type="button"
+                aria-label="تخصيص الواجهة"
+                aria-haspopup="dialog"
+                aria-expanded={prefsOpen}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setPrefsOpen(true);
+                }}
+                className={NAV_PREFS}
+              >
+                <SlidersHorizontal className="h-4 w-4" />
+                <span className="hidden xl:inline">تخصيص الواجهة</span>
+                <span className="xl:hidden">تخصيص</span>
+              </button>
               <button
                 type="button"
                 aria-label={hideAll ? "إظهار كل الأرقام" : "إخفاء الأرقام"}
