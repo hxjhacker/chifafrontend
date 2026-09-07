@@ -172,197 +172,9 @@ html.dark body {
   50% { transform: scale(1.07); }
 }
 
-#thermal-label-container {
-  box-sizing: border-box;
-  width: 100mm;
-  height: 100mm;
-  overflow: hidden;
-  padding: 2mm;
-  background: #fff;
-  color: #000;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Cairo", "Noto Sans Arabic", var(--font-cairo), sans-serif;
-  border: 1.4px solid #000;
-  display: flex;
-  flex-direction: column;
-  gap: 1.2mm;
-  direction: ltr;
-  unicode-bidi: isolate;
+#printable-ticket {
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
-}
-
-#thermal-label-container p {
-  margin: 0;
-  color: #000;
-}
-
-#thermal-label-container .tl-header {
-  display: grid;
-  grid-template-columns: 1.15fr 0.85fr;
-  gap: 2mm;
-  align-items: start;
-}
-
-#thermal-label-container .tl-expediteur,
-#thermal-label-container .tl-depart {
-  font-size: 7px;
-  font-weight: 700;
-  line-height: 1.35;
-}
-
-#thermal-label-container .tl-depart {
-  text-align: right;
-}
-
-#thermal-label-container .tl-header span {
-  font-weight: 800;
-}
-
-#thermal-label-container .tl-hub {
-  background: #000;
-  color: #fff;
-  text-align: center;
-  font-size: 13px;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  line-height: 1;
-  padding: 2.4mm 1mm;
-}
-
-#thermal-label-container .tl-body {
-  flex: 1;
-  min-height: 0;
-  display: grid;
-  grid-template-columns: 1.25fr 0.75fr;
-  border: 1.4px solid #000;
-}
-
-#thermal-label-container .tl-details {
-  padding: 1.6mm 1.8mm;
-  border-right: 1.4px solid #000;
-  overflow: hidden;
-}
-
-#thermal-label-container .tl-details p {
-  font-size: 7.4px;
-  font-weight: 800;
-  line-height: 1.32;
-  margin-bottom: 0.7mm;
-  unicode-bidi: plaintext;
-}
-
-#thermal-label-container .tl-details span {
-  font-weight: 700;
-  color: #111;
-}
-
-#thermal-label-container .tl-address,
-#thermal-label-container .tl-goods {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-#thermal-label-container .tl-track {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 1.4mm 1mm 1.8mm;
-  gap: 0;
-}
-
-#thermal-label-container .tl-track svg {
-  width: 18mm;
-  height: 18mm;
-  display: block;
-}
-
-#thermal-label-container .tl-montant-kicker {
-  margin-top: 1.4mm;
-  font-size: 6.5px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-}
-
-#thermal-label-container .tl-price {
-  margin-top: 0.4mm;
-  font-size: 13px;
-  font-weight: 900;
-  line-height: 1;
-}
-
-#thermal-label-container .tl-cod {
-  margin-top: 0.6mm;
-  font-size: 6.5px;
-  font-weight: 800;
-}
-
-#thermal-label-container .tl-colis {
-  background: #000;
-  color: #fff;
-  text-align: center;
-  font-size: 10px;
-  font-weight: 900;
-  letter-spacing: 0.12em;
-  padding: 1.5mm 1mm;
-}
-
-#thermal-label-container .tl-footer {
-  display: grid;
-  grid-template-columns: 1fr 8.5mm;
-  min-height: 16mm;
-  border: 1.4px solid #000;
-}
-
-#thermal-label-container .tl-barcode {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 1mm 1.5mm 0.6mm;
-  overflow: hidden;
-}
-
-#thermal-label-container .tl-barcode svg {
-  display: block;
-  width: 100%;
-  height: 10mm;
-}
-
-#thermal-label-container .tl-ord {
-  margin-top: 0.6mm;
-  font-size: 6.5px;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-}
-
-#thermal-label-container .tl-badge {
-  background: #000;
-  color: #fff;
-  writing-mode: vertical-rl;
-  transform: rotate(180deg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 7px;
-  font-weight: 900;
-  letter-spacing: 0.04em;
-  padding: 1mm 0;
-  unicode-bidi: isolate;
-}
-
-#thermal-label-container .tl-disclaimer {
-  background: #000;
-  color: #fff;
-  text-align: center;
-  font-size: 5.2px;
-  font-weight: 800;
-  letter-spacing: 0.03em;
-  padding: 1.3mm 1mm;
-  line-height: 1.2;
 }
 
 @media print {
@@ -383,8 +195,8 @@ html.dark body {
     visibility: hidden;
   }
 
-  #thermal-label-container,
-  #thermal-label-container * {
+  #printable-ticket,
+  #printable-ticket * {
     visibility: visible;
   }
 
@@ -394,16 +206,15 @@ html.dark body {
     display: none !important;
   }
 
-  #thermal-label-container {
-    position: fixed;
-    left: 0;
-    top: 0;
-    width: 100mm;
-    height: 100mm;
-    margin: 0;
-    padding: 2mm;
-    box-sizing: border-box;
-    box-shadow: none;
+  #printable-ticket {
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100mm !important;
+    height: 100mm !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+    box-shadow: none !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
