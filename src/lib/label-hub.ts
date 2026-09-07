@@ -55,7 +55,7 @@ function canonHub(raw: string) {
   return Object.values(HUB_CANON).includes(upper) ? upper : "";
 }
 
-export function destinationHub(city: string, shippingCity?: string | null, regionId?: string | null) {
+export function destinationHub(city?: string | null, shippingCity?: string | null, regionId?: string | null) {
   for (const candidate of [shippingCity, city]) {
     const text = (candidate || "").trim();
     if (!text) continue;
@@ -75,8 +75,9 @@ export function destinationHub(city: string, shippingCity?: string | null, regio
   return REGION_HUB[region] || "FES";
 }
 
-export function parcelOrderCode(orderId: string) {
-  return `ORD-${orderId}`;
+export function parcelOrderCode(orderId?: string | null) {
+  const id = String(orderId || "").trim() || "ORDER";
+  return `ORD-${id}`;
 }
 
 export function labelDate() {
@@ -128,7 +129,7 @@ export function labelQrValue(order: {
   meta_livraison_ticket_url?: string | null;
   meta_livraison_code?: string | null;
   tracking_number?: string | null;
-  order_id: string;
+  order_id?: string | null;
 }) {
   return (
     (order.meta_livraison_ticket_url || "").trim() ||
@@ -137,7 +138,7 @@ export function labelQrValue(order: {
   );
 }
 
-export function trackingCode(order: { meta_livraison_code?: string | null; tracking_number?: string | null; order_id: string }) {
+export function trackingCode(order: { meta_livraison_code?: string | null; tracking_number?: string | null; order_id?: string | null }) {
   return (order.meta_livraison_code || order.tracking_number || "").trim() || parcelOrderCode(order.order_id);
 }
 

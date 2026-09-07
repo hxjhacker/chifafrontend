@@ -1,3 +1,5 @@
+"use client";
+
 import type { CSSProperties } from "react";
 
 export const TICKET_FONT =

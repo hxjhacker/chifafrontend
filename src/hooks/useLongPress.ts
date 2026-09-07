@@ -21,6 +21,7 @@ export function useLongPress(onLongPress: () => void, options: Options = {}) {
   const startPoint = useRef<{ x: number; y: number } | null>(null);
 
   const clear = useCallback(() => {
+    if (typeof window === "undefined") return;
     if (timer.current != null) {
       window.clearTimeout(timer.current);
       timer.current = null;
@@ -30,7 +31,7 @@ export function useLongPress(onLongPress: () => void, options: Options = {}) {
 
   const start = useCallback(
     (x: number, y: number, target: EventTarget | null) => {
-      if (!enabled || isInteractive(target)) return;
+      if (!enabled || isInteractive(target) || typeof window === "undefined") return;
       clear();
       fired.current = false;
       startPoint.current = { x, y };

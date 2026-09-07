@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import JsBarcode from "jsbarcode";
-import { QRCodeSVG } from "qrcode.react";
+import { useEffect, useState } from "react";
 import { copyablePhone, detailedAddress, type AdminOrder } from "@/lib/admin";
+import { LabelBarcode, LabelQr } from "@/components/admin/labels/LabelCodes";
 import {
   META_SENDER,
   canOpenParcel,
@@ -34,47 +33,32 @@ function MetaLogo() {
 }
 
 export function MetaLivraisonLabel({ order }: { order: AdminOrder }) {
-  const barcodeRef = useRef<SVGSVGElement>(null);
-  const tracking = (order.meta_livraison_code || order.tracking_number || "").trim();
-  const code = parcelOrderCode(order.order_id);
-  const allowed = canOpenParcel(order);
+  const tracking = (order?.meta_livraison_code || order?.tracking_number || "").trim();
+  const code = parcelOrderCode(order?.order_id);
+  const allowed = canOpenParcel(order || {});
   const [tarifHub, setTarifHub] = useState("");
-  const fallbackHub = destinationHub(order.city, order.shipping_city, order.region_id || order.region);
-  const hub = hubCode(tarifHub || fallbackHub) || (order.shipping_city || order.city || "DESTINATION").toUpperCase();
-  const phone = formatMetaPhone(copyablePhone(order));
-  const ville = (order.shipping_city || order.city || "—").trim().toUpperCase() || "—";
-  const address = detailedAddress(order) || "—";
-  const notes = (order.courier_notes || order.driver_comment || "").trim();
-  const marchendise = metaMerchandise(order);
-  const price = labelAmount(order);
-  const qr = labelQrValue(order);
+  const fallbackHub = destinationHub(order?.city, order?.shipping_city, order?.region_id || order?.region);
+  const hub = hubCode(tarifHub || fallbackHub) || (order?.shipping_city || order?.city || "DESTINATION").toUpperCase();
+  const phone = formatMetaPhone(copyablePhone(order || { phone: "", phone_national: "" }));
+  const ville = (order?.shipping_city || order?.city || "—").trim().toUpperCase() || "—";
+  const address = detailedAddress(order || {}) || "—";
+  const notes = (order?.courier_notes || order?.driver_comment || "").trim();
+  const marchendise = metaMerchandise(order || {});
+  const price = labelAmount(order || {});
+  const qr = labelQrValue(order || { order_id: "" });
 
   useEffect(() => {
     let alive = true;
     void loadAdminCityTarifs().then((rows) => {
       if (!alive) return;
-      const hit = findCityTarif(buildTarifIndex(rows), order.shipping_city, order.city);
+      const hit = findCityTarif(buildTarifIndex(rows), order?.shipping_city, order?.city);
       const resolved = hubCode(hit?.hub_code || hit?.hub_name);
       if (resolved) setTarifHub(resolved);
     });
     return () => {
       alive = false;
     };
-  }, [order.city, order.shipping_city]);
-
-  useEffect(() => {
-    const node = barcodeRef.current;
-    if (!node || !code) return;
-    JsBarcode(node, code, {
-      format: "CODE128",
-      lineColor: "#000000",
-      background: "#ffffff",
-      width: 1.05,
-      height: 38,
-      displayValue: false,
-      margin: 0,
-    });
-  }, [code]);
+  }, [order?.city, order?.shipping_city]);
 
   const rows: { label: string; value: string; dir?: "ltr" | "rtl" | "auto" }[] = [
     { label: "Destinataire", value: order.full_name || "—", dir: "auto" },
@@ -190,7 +174,7 @@ export function MetaLivraisonLabel({ order }: { order: AdminOrder }) {
         </div>
         <div style={{ display: "flex", flexDirection: "column", minHeight: 0 }}>
           <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "1.5mm" }}>
-            <QRCodeSVG value={qr} size={78} level="M" marginSize={0} bgColor="#ffffff" fgColor="#000000" title={tracking || code} />
+            <LabelQr value={qr} size={78} title={tracking || code} />
           </div>
           <div style={{ borderTop: thick, textAlign: "center", padding: "1.2mm 1mm 1.6mm" }}>
             <div style={{ fontSize: "7px", fontWeight: 900, letterSpacing: "0.6px" }}>MONTANT</div>
@@ -225,7 +209,7 @@ export function MetaLivraisonLabel({ order }: { order: AdminOrder }) {
         }}
       >
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "1mm 1.5mm 0.6mm" }}>
-          <svg ref={barcodeRef} role="img" aria-label={code} style={{ height: "10mm", width: "100%", maxWidth: "72mm" }} />
+          <LabelBarcode value={code} height={38} width={1.05} style={{ height: "10mm", width: "100%", maxWidth: "72mm" }} />
           <div style={{ fontSize: "6.5px", fontWeight: 700, letterSpacing: "0.2px", marginTop: "0.4mm", wordBreak: "break-all", textAlign: "center" }}>
             {code}
           </div>

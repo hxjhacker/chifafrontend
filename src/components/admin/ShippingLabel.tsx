@@ -12,9 +12,6 @@ type Props = {
   onClose: () => void;
 };
 
-export { MetaLivraisonLabel } from "@/components/admin/labels/MetaLivraisonLabel";
-export { QuickLivraisonLabel } from "@/components/admin/labels/QuickLivraisonLabel";
-
 export function ShippingLabel({ order, onClose }: Props) {
   useLockBodyScroll(Boolean(order));
 

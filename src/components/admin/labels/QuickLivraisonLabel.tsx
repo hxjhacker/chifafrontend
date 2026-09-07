@@ -1,9 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import JsBarcode from "jsbarcode";
-import { QRCodeSVG } from "qrcode.react";
 import { copyablePhone, detailedAddress, type AdminOrder } from "@/lib/admin";
+import { LabelBarcode, LabelQr } from "@/components/admin/labels/LabelCodes";
 import {
   QUICK_SENDER,
   canOpenParcel,
@@ -33,29 +31,14 @@ function QuickLogo() {
 }
 
 export function QuickLivraisonLabel({ order }: { order: AdminOrder }) {
-  const barcodeRef = useRef<SVGSVGElement>(null);
-  const tracking = trackingCode(order);
-  const allowed = canOpenParcel(order);
-  const phone = formatQuickPhone(copyablePhone(order));
-  const ville = (order.shipping_city || order.city || "—").trim().toUpperCase() || "—";
-  const address = detailedAddress(order) || "—";
-  const goods = quickMerchandise(order);
-  const price = labelAmount(order);
-  const qr = labelQrValue(order);
-
-  useEffect(() => {
-    const node = barcodeRef.current;
-    if (!node || !tracking) return;
-    JsBarcode(node, tracking, {
-      format: "CODE128",
-      lineColor: "#000000",
-      background: "#ffffff",
-      width: 1.2,
-      height: 42,
-      displayValue: false,
-      margin: 0,
-    });
-  }, [tracking]);
+  const tracking = trackingCode(order || { order_id: "" });
+  const allowed = canOpenParcel(order || {});
+  const phone = formatQuickPhone(copyablePhone(order || { phone: "", phone_national: "" }));
+  const ville = (order?.shipping_city || order?.city || "—").trim().toUpperCase() || "—";
+  const address = detailedAddress(order || {}) || "—";
+  const goods = quickMerchandise(order || {});
+  const price = labelAmount(order || {});
+  const qr = labelQrValue(order || { order_id: "" });
 
   return (
     <div id="printable-ticket" dir="ltr" style={ticketBox}>
@@ -102,7 +85,7 @@ export function QuickLivraisonLabel({ order }: { order: AdminOrder }) {
       >
         <div style={{ borderRight: hair, padding: "1.2mm", display: "flex", flexDirection: "column", alignItems: "center" }}>
           <div style={{ fontSize: "7.5px", fontWeight: 800, alignSelf: "flex-start", marginBottom: "1mm" }}>Zone Reception:</div>
-          <QRCodeSVG value={qr} size={86} level="M" marginSize={0} bgColor="#ffffff" fgColor="#000000" title={tracking} />
+          <LabelQr value={qr} size={86} title={tracking} />
         </div>
         <div
           style={{
@@ -196,7 +179,7 @@ export function QuickLivraisonLabel({ order }: { order: AdminOrder }) {
           minHeight: "18mm",
         }}
       >
-        <svg ref={barcodeRef} role="img" aria-label={tracking} style={{ height: "12mm", width: "100%" }} />
+        <LabelBarcode value={tracking} height={42} width={1.2} style={{ height: "12mm", width: "100%" }} />
         <div
           style={{
             marginTop: "1mm",

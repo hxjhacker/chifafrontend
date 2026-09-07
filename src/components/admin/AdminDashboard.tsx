@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import {
   Calculator,
@@ -40,7 +41,6 @@ import { OrderTimelineModal } from "@/components/admin/OrderTimelineModal";
 import { QuickWhatsAppOrderModal } from "@/components/admin/QuickWhatsAppOrderModal";
 import { PushToggle } from "@/components/admin/PushToggle";
 import { ViewsObservatory } from "@/components/admin/ViewsObservatory";
-import { ShippingLabel } from "@/components/admin/ShippingLabel";
 import {
   ADMIN_STATUSES,
   canTransitionStatus,
@@ -87,6 +87,11 @@ const STATUS_OPTIONS: { id: AdminStatus; label: string }[] = [
   { id: "returned", label: "🟠 مرتجع" },
   { id: "cancelled", label: "🔴 ملغاة" },
 ];
+
+const ShippingLabel = dynamic(
+  () => import("@/components/admin/ShippingLabel").then((mod) => mod.ShippingLabel),
+  { ssr: false },
+);
 
 const PREFS_KEY = "chifaglow_view_prefs";
 const LEGACY_PREFS_KEY = "cg_admin_sections";
