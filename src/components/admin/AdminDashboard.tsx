@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  Calculator,
   CheckCircle2,
   CircleAlert,
   ChevronLeft,
@@ -29,6 +30,7 @@ import SplashScreen from "@/components/SplashScreen";
 import { AddOrderModal } from "@/components/admin/AddOrderModal";
 import { AdminDoughnut } from "@/components/admin/AdminDoughnut";
 import { BulkActionBar } from "@/components/admin/BulkActionBar";
+import { CityTarifsModal } from "@/components/admin/CityTarifsModal";
 import { CompleteDetailsModal } from "@/components/admin/CompleteDetailsModal";
 import { IosSwitch } from "@/components/admin/IosSwitch";
 import { LogisticsKpiCards } from "@/components/admin/LogisticsKpiCards";
@@ -144,6 +146,7 @@ export function AdminDashboard() {
   const [savingId, setSavingId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
+  const [tarifsOpen, setTarifsOpen] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
   const [completing, setCompleting] = useState<AdminOrder | null>(null);
   const [viewingId, setViewingId] = useState<string | null>(null);
@@ -751,6 +754,7 @@ export function AdminDashboard() {
           void refreshStats();
         }}
       />
+      <CityTarifsModal open={tarifsOpen} onClose={() => setTarifsOpen(false)} />
       <QuickWhatsAppOrderModal
         open={quickOpen}
         onClose={() => setQuickOpen(false)}
@@ -841,6 +845,17 @@ export function AdminDashboard() {
           <div className="flex shrink-0 items-center gap-1.5 md:hidden">
             <button
               type="button"
+              aria-label="دليل الأسعار والمدن"
+              onClick={() => {
+                setMenuOpen(false);
+                setTarifsOpen(true);
+              }}
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-gold/30 bg-gold/10 text-gold-600 shadow-sm transition hover:bg-gold hover:text-royal active:scale-95 dark:text-gold"
+            >
+              <Calculator className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
               aria-label="إضافة سريعة من الواتساب"
               onClick={() => {
                 setMenuOpen(false);
@@ -868,6 +883,18 @@ export function AdminDashboard() {
                   role="menu"
                   className="absolute left-0 top-11 z-50 max-h-[min(80vh,32rem)] w-[min(20rem,calc(100vw-1.5rem))] overflow-y-auto rounded-2xl border border-gold/20 bg-[#0F1E33] p-2 text-white shadow-2xl"
                 >
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      setTarifsOpen(true);
+                    }}
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-right transition hover:bg-white/5"
+                  >
+                    <Calculator className="h-4 w-4 text-gold" />
+                    <span className="text-[13px] font-bold">دليل الأسعار والمدن</span>
+                  </button>
                   <button
                     type="button"
                     role="menuitem"
@@ -943,6 +970,15 @@ export function AdminDashboard() {
           </div>
 
           <div className="hidden shrink-0 items-center gap-1.5 md:flex md:gap-3">
+            <button
+              type="button"
+              aria-label="دليل الأسعار والمدن"
+              onClick={() => setTarifsOpen(true)}
+              className="flex items-center gap-1.5 rounded-xl border border-gold/30 bg-gold/10 px-3.5 py-2 text-gold-600 shadow-sm transition hover:bg-gold hover:text-royal active:scale-95 dark:text-gold"
+            >
+              <Calculator className="h-4 w-4" />
+              <span className="text-xs font-black">دليل الأسعار والمدن</span>
+            </button>
             <button
               type="button"
               aria-label="إضافة طلب"
