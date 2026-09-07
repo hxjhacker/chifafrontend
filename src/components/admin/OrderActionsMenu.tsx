@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { CheckCircle2, Eye, Loader2, MoreVertical, Pencil, Printer, Repeat2, Trash2, Truck } from "lucide-react";
-import { shortOrderRef, hasTracking, LABEL_PRINT_HINT, type AdminOrder } from "@/lib/admin";
+import { ADMIN_CARRIERS, shortOrderRef, hasTracking, LABEL_PRINT_HINT, type AdminCarrier, type AdminOrder } from "@/lib/admin";
 import { cn } from "@/lib/cn";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 
@@ -11,7 +11,7 @@ type Props = {
   order: AdminOrder;
   shipping: boolean;
   duplicating: boolean;
-  onSendMeta: (order: AdminOrder) => void;
+  onSendCarrier: (order: AdminOrder, carrier: AdminCarrier) => void;
   onPrint: (order: AdminOrder) => void;
   onEdit: (order: AdminOrder) => void;
   onView: (order: AdminOrder) => void;
@@ -27,7 +27,7 @@ export function OrderActionsMenu({
   order,
   shipping,
   duplicating,
-  onSendMeta,
+  onSendCarrier,
   onPrint,
   onEdit,
   onView,
@@ -151,26 +151,37 @@ export function OrderActionsMenu({
               <h3 className="mb-4 text-center text-base font-black text-white">
                 إجراءات لـ {shortOrderRef(order.order_id)}
               </h3>
-              <button
-                type="button"
-                disabled={sent || shipping || order.status === "cancelled" || order.status === "returned"}
-                onClick={() => run(() => onSendMeta(order))}
-                className={cn(CARD, "border-emerald-500/30 bg-emerald-950/20 text-emerald-400 hover:bg-emerald-900/30")}
-              >
-                <span className="min-w-0 flex-1 text-right">
-                  {sent ? "تم الإرسال إلى Meta Livraison" : "إرسال إلى Meta Livraison"}
-                  {sent && order.meta_livraison_code ? (
-                    <span className="mt-0.5 block truncate font-mono text-[10px] font-bold">{order.meta_livraison_code}</span>
-                  ) : null}
-                </span>
-                {shipping ? (
-                  <Loader2 className="h-5 w-5 shrink-0 animate-spin" />
-                ) : sent ? (
-                  <CheckCircle2 className="h-5 w-5 shrink-0" />
-                ) : (
-                  <Truck className="h-5 w-5 shrink-0" />
-                )}
-              </button>
+              {ADMIN_CARRIERS.map((row) => (
+                <button
+                  key={row.id}
+                  type="button"
+                  disabled={!row.enabled || sent || shipping || order.status === "cancelled" || order.status === "returned"}
+                  onClick={() => run(() => onSendCarrier(order, row.id))}
+                  className={cn(
+                    CARD,
+                    row.id === "quick_livraison"
+                      ? "border-sky-500/30 bg-sky-950/20 text-sky-300 hover:bg-sky-900/30"
+                      : "border-emerald-500/30 bg-emerald-950/20 text-emerald-400 hover:bg-emerald-900/30",
+                  )}
+                >
+                  <span className="min-w-0 flex-1 text-right">
+                    {sent && (order.carrier || "meta_livraison") === row.id
+                      ? `تم الإرسال إلى ${row.label}`
+                      : `إرسال إلى ${row.label}`}
+                    {sent && (order.carrier || "meta_livraison") === row.id && order.meta_livraison_code ? (
+                      <span className="mt-0.5 block truncate font-mono text-[10px] font-bold">{order.meta_livraison_code}</span>
+                    ) : null}
+                    {!row.enabled ? <span className="mt-0.5 block text-[10px] font-bold text-amber-300">قريباً</span> : null}
+                  </span>
+                  {shipping ? (
+                    <Loader2 className="h-5 w-5 shrink-0 animate-spin" />
+                  ) : sent && (order.carrier || "meta_livraison") === row.id ? (
+                    <CheckCircle2 className="h-5 w-5 shrink-0" />
+                  ) : (
+                    <Truck className="h-5 w-5 shrink-0" />
+                  )}
+                </button>
+              ))}
               <button
                 type="button"
                 disabled={!canPrint}
@@ -249,26 +260,32 @@ export function OrderActionsMenu({
           style={{ top: pos.top, left: pos.left, width: MENU_WIDTH }}
           className="fixed z-[90] overflow-hidden rounded-2xl border border-gold/25 bg-white py-1.5 shadow-luxury dark:border-gold/20 dark:bg-cardDark"
         >
-          <MenuItem
-            disabled={sent || shipping || order.status === "cancelled" || order.status === "returned"}
-            onSelect={() => run(() => onSendMeta(order))}
-          >
-            {shipping ? (
-              <Loader2 className="h-4 w-4 shrink-0 animate-spin text-gold" />
-            ) : sent ? (
-              <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
-            ) : (
-              <Truck className="h-4 w-4 shrink-0 text-gold" />
-            )}
-            <span className="min-w-0 flex-1 text-left">
-              {sent ? `Envoyé à Meta Livraison` : "Envoyer à Meta Livraison"}
-              {sent && order.meta_livraison_code ? (
-                <span className="mt-0.5 block truncate font-mono text-[10px] font-bold text-sky-600 dark:text-sky-300">
-                  {order.meta_livraison_code}
-                </span>
-              ) : null}
-            </span>
-          </MenuItem>
+          {ADMIN_CARRIERS.map((row) => (
+            <MenuItem
+              key={row.id}
+              disabled={!row.enabled || sent || shipping || order.status === "cancelled" || order.status === "returned"}
+              onSelect={() => run(() => onSendCarrier(order, row.id))}
+            >
+              {shipping ? (
+                <Loader2 className="h-4 w-4 shrink-0 animate-spin text-gold" />
+              ) : sent && (order.carrier || "meta_livraison") === row.id ? (
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
+              ) : (
+                <Truck className="h-4 w-4 shrink-0 text-gold" />
+              )}
+              <span className="min-w-0 flex-1 text-left">
+                {sent && (order.carrier || "meta_livraison") === row.id
+                  ? `Envoyé à ${row.label}`
+                  : `Envoyer à ${row.label}`}
+                {sent && (order.carrier || "meta_livraison") === row.id && order.meta_livraison_code ? (
+                  <span className="mt-0.5 block truncate font-mono text-[10px] font-bold text-sky-600 dark:text-sky-300">
+                    {order.meta_livraison_code}
+                  </span>
+                ) : null}
+                {!row.enabled ? <span className="mt-0.5 block text-[10px] font-bold text-amber-500">Bientôt</span> : null}
+              </span>
+            </MenuItem>
+          ))}
           <MenuItem
             disabled={!canPrint}
             title={canPrint ? "طباعة التذكرة / الملصق" : LABEL_PRINT_HINT}

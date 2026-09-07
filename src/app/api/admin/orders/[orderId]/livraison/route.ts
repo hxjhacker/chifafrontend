@@ -30,6 +30,7 @@ export async function POST(
         ...(cookie ? { cookie } : {}),
         ...(authHeader ? { authorization: authHeader } : {}),
       },
+      body: await req.text(),
     });
 
     const rawText = await backendRes.text();

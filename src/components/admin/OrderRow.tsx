@@ -12,6 +12,7 @@ import {
   statusMeta,
   telHref,
   waHref,
+  type AdminCarrier,
   type AdminOrder,
   type AdminStatus,
 } from "@/lib/admin";
@@ -33,7 +34,7 @@ export type OrderRowProps = {
   onCopyPhone: () => void;
   onCopyTracking: () => void;
   onStatusSelect: (next: AdminStatus, el: HTMLSelectElement) => void;
-  onSendMeta: (order: AdminOrder) => void;
+  onSendCarrier: (order: AdminOrder, carrier: AdminCarrier) => void;
   onPrint: (order: AdminOrder) => void;
   onEdit: (order: AdminOrder) => void;
   onView: (order: AdminOrder) => void;
@@ -143,7 +144,7 @@ function Menu({ props }: { props: OrderRowProps }) {
       order={props.order}
       shipping={props.shipping}
       duplicating={props.duplicating}
-      onSendMeta={props.onSendMeta}
+      onSendCarrier={props.onSendCarrier}
       onPrint={props.onPrint}
       onEdit={props.onEdit}
       onView={props.onView}

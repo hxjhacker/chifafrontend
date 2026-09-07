@@ -37,6 +37,7 @@ type OrderRow = {
   meta_livraison_sent_at?: Date | string | null;
   meta_livraison_ticket_url?: string | null;
   shipping_city?: string | null;
+  carrier?: string | null;
 };
 
 const ALLOWED: AdminStatus[] = ["new", "confirmed", "shipped", "delivered", "returned", "cancelled"];
@@ -183,6 +184,8 @@ function serialize(row: OrderRow): AdminOrder {
     meta_livraison_code: row.meta_livraison_code || null,
     meta_livraison_sent_at: iso(row.meta_livraison_sent_at || null),
     meta_livraison_ticket_url: row.meta_livraison_ticket_url || null,
+    carrier: (row.carrier === "quick_livraison" || row.carrier === "force_log" ? row.carrier : "meta_livraison"),
+    tracking_number: row.meta_livraison_code || null,
   };
 }
 

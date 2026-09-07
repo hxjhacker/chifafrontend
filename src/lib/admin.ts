@@ -1,5 +1,18 @@
 export type AdminStatus = "new" | "confirmed" | "shipped" | "delivered" | "returned" | "cancelled";
 
+export type AdminCarrier = "meta_livraison" | "quick_livraison" | "force_log";
+
+export const ADMIN_CARRIERS: { id: AdminCarrier; label: string; enabled: boolean }[] = [
+  { id: "meta_livraison", label: "Meta Livraison", enabled: true },
+  { id: "quick_livraison", label: "Quick Livraison", enabled: true },
+  { id: "force_log", label: "Force Log", enabled: false },
+];
+
+export function carrierLabel(carrier?: string | null) {
+  const hit = ADMIN_CARRIERS.find((row) => row.id === carrier);
+  return hit?.label || "Meta Livraison";
+}
+
 export type DeliveryWindow = "anytime" | "morning" | "afternoon" | "weekend";
 
 export type AdminOrder = {
@@ -45,6 +58,8 @@ export type AdminOrder = {
   meta_livraison_code?: string | null;
   meta_livraison_sent_at?: string | null;
   meta_livraison_ticket_url?: string | null;
+  carrier?: AdminCarrier;
+  tracking_number?: string | null;
 };
 
 export type AdminStats = {

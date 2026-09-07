@@ -44,6 +44,7 @@ import { ShippingLabel } from "@/components/admin/ShippingLabel";
 import {
   ADMIN_STATUSES,
   canTransitionStatus,
+  carrierLabel,
   cloneOrderCreatePayload,
   copyText,
   copyablePhone,
@@ -54,6 +55,7 @@ import {
   needsConfirmModal,
   ordersToCsv,
   pct,
+  type AdminCarrier,
   type AdminOrder,
   type AdminStats,
   type AdminStatus,
@@ -159,6 +161,7 @@ export function AdminDashboard() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkBusy, setBulkBusy] = useState<"dispatch" | "labels" | "manifest" | null>(null);
   const [bulkConfirm, setBulkConfirm] = useState(false);
+  const [dispatchCarrier, setDispatchCarrier] = useState<AdminCarrier>("meta_livraison");
   const [syncingTracking, setSyncingTracking] = useState(false);
   const [notice, setNotice] = useState("");
   const [noticeKind, setNoticeKind] = useState<"ok" | "warn">("ok");
@@ -428,11 +431,11 @@ export function AdminDashboard() {
     }
   }
 
-  async function sendToMetaLivraison(order: AdminOrder) {
+  async function sendToLivraison(order: AdminOrder, carrier: AdminCarrier = "meta_livraison") {
     if (shippingId) return;
     if (order.meta_livraison_code) {
       setNoticeKind("ok");
-      setNotice(`الطلب مرسل مسبقاً إلى Meta Livraison: ${order.meta_livraison_code}`);
+      setNotice(`الطلب مرسل مسبقاً إلى ${carrierLabel(order.carrier)}: ${order.meta_livraison_code}`);
       return;
     }
     if (order.status === "cancelled" || order.status === "returned") {
@@ -441,7 +444,12 @@ export function AdminDashboard() {
     }
     if (!hasCompleteConfirmDetails(order)) {
       setCompleting(order);
-      setError("كمّل عنوان التوصيل قبل إرسال الطرد إلى Meta Livraison.");
+      setError("كمّل عنوان التوصيل قبل إرسال الطرد.");
+      return;
+    }
+    if (carrier === "force_log") {
+      setNoticeKind("warn");
+      setNotice("Force Log غير مفعّل بعد.");
       return;
     }
     setShippingId(order.order_id);
@@ -451,7 +459,8 @@ export function AdminDashboard() {
         method: "POST",
         credentials: "include",
         cache: "no-store",
-        headers: { Accept: "application/json" },
+        headers: { Accept: "application/json", "Content-Type": "application/json" },
+        body: JSON.stringify({ carrier }),
       });
       const raw = (await res.json().catch(() => ({}))) as Record<string, unknown> & {
         detail?: string | Record<string, unknown>;
@@ -467,6 +476,9 @@ export function AdminDashboard() {
       if (!res.ok || body.success === false) {
         const map: Record<string, string> = {
           meta_livraison_not_configured: "أضف مفاتيح Meta Livraison في الخادم أولاً.",
+          quick_livraison_not_configured: "أضف مفتاح Quick Livraison في الخادم أولاً.",
+          quick_district_not_mapped: "هذه المدينة غير مربوطة بـ Quick Livraison. زامن قائمة المدن أولاً.",
+          force_log_not_implemented: "Force Log غير مفعّل بعد.",
           confirmation_details_required: "كمّل معلومات التوصيل قبل الشحن.",
           cannot_ship_cancelled: "لا يمكن شحن طلبية ملغاة.",
           order_not_found: "الطلبية غير موجودة.",
@@ -475,9 +487,8 @@ export function AdminDashboard() {
         throw new Error(
           body.message ||
             body.error ||
-            (typeof body.detail === "object" && body.detail ? JSON.stringify(body.detail) : body.detail) ||
-            map[String(body.detail || "")] ||
-            "تعذر إرسال الطرد إلى Meta Livraison.",
+            (typeof body.detail === "object" && body.detail ? JSON.stringify(body.detail) : map[String(body.detail || "")] || String(body.detail || "")) ||
+            `تعذر إرسال الطرد إلى ${carrierLabel(carrier)}.`,
         );
       }
       setOrders((list) =>
@@ -495,10 +506,14 @@ export function AdminDashboard() {
         ),
       );
       setNoticeKind("ok");
-      setNotice(body.meta_livraison_code ? `تم إرسال الطرد. كود التتبع: ${body.meta_livraison_code}` : "تم إرسال الطرد إلى Meta Livraison.");
+      setNotice(
+        body.meta_livraison_code
+          ? `تم إرسال الطرد عبر ${carrierLabel(carrier)}. كود التتبع: ${body.meta_livraison_code}`
+          : `تم إرسال الطرد عبر ${carrierLabel(carrier)}.`,
+      );
       await refreshStats();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "تعذر إرسال الطرد إلى Meta Livraison.");
+      setError(err instanceof Error ? err.message : `تعذر إرسال الطرد إلى ${carrierLabel(carrier)}.`);
     } finally {
       setShippingId(null);
     }
@@ -569,7 +584,7 @@ export function AdminDashboard() {
       const res = await adminFetch("/api/admin/orders/bulk-livraison", {
         method: "POST",
         headers: { Accept: "application/json", "Content-Type": "application/json" },
-        body: JSON.stringify({ order_ids: selectedIds }),
+        body: JSON.stringify({ order_ids: selectedIds, carrier: dispatchCarrier }),
       }, 120000);
       const body = (await res.json().catch(() => ({}))) as {
         success_count?: number;
@@ -581,6 +596,8 @@ export function AdminDashboard() {
       if (!res.ok) throw new Error(await (async () => {
         const map: Record<string, string> = {
           meta_livraison_not_configured: "أضف مفاتيح Meta Livraison في الخادم أولاً.",
+          quick_livraison_not_configured: "أضف مفتاح Quick Livraison في الخادم أولاً.",
+          force_log_not_implemented: "Force Log غير مفعّل بعد.",
           order_ids_required: "حدّد طلبيات أولاً.",
           not_authenticated: "جلسة الأدمن غير صالحة. أعد تسجيل الدخول.",
         };
@@ -590,7 +607,7 @@ export function AdminDashboard() {
       const fail = Number(body.failed_count || 0);
       const firstFail = (body.results || []).find((row) => !row.success)?.error;
       setNoticeKind(fail ? "warn" : "ok");
-      setNotice(`تم إرسال ${ok} طلبية إلى Meta Livraison${fail ? ` — فشل ${fail}${firstFail ? ` (${firstFail})` : ""}` : ""}.`);
+      setNotice(`تم إرسال ${ok} طلبية إلى ${carrierLabel(dispatchCarrier)}${fail ? ` — فشل ${fail}${firstFail ? ` (${firstFail})` : ""}` : ""}.`);
       setBulkConfirm(false);
       await load();
       await refreshStats();
@@ -721,7 +738,7 @@ export function AdminDashboard() {
       onCopyPhone: () => void copyPhone(order),
       onCopyTracking: () => void copyTracking(order),
       onStatusSelect: (next: AdminStatus, el: HTMLSelectElement) => onStatusSelect(order, next, el),
-      onSendMeta: (row: AdminOrder) => void sendToMetaLivraison(row),
+      onSendCarrier: (row: AdminOrder, carrier: AdminCarrier) => void sendToLivraison(row, carrier),
       onPrint: printShipping,
       onEdit: setCompleting,
       onView: (row: AdminOrder) => setViewingId(row.order_id),
@@ -1438,6 +1455,8 @@ export function AdminDashboard() {
               ? `سيتم طباعة ${printableSelected.length} بوليصة فقط — الطلبيات بدون تتبع ستُتجاهل.`
               : "طباعة البوالص الحرارية A6"
         }
+        carrier={dispatchCarrier}
+        onCarrierChange={setDispatchCarrier}
         onConfirmOpen={() => setBulkConfirm(true)}
         onConfirmClose={() => setBulkConfirm(false)}
         onDispatch={() => void bulkDispatch()}

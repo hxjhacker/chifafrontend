@@ -1,6 +1,7 @@
 "use client";
 
 import { FileText, Loader2, Printer, Truck, X } from "lucide-react";
+import { ADMIN_CARRIERS, type AdminCarrier } from "@/lib/admin";
 
 type Props = {
   count: number;
@@ -8,6 +9,8 @@ type Props = {
   confirmOpen: boolean;
   labelsLocked?: boolean;
   labelsHint?: string;
+  carrier: AdminCarrier;
+  onCarrierChange: (carrier: AdminCarrier) => void;
   onConfirmOpen: () => void;
   onConfirmClose: () => void;
   onDispatch: () => void;
@@ -22,6 +25,8 @@ export function BulkActionBar({
   confirmOpen,
   labelsLocked,
   labelsHint,
+  carrier,
+  onCarrierChange,
   onConfirmOpen,
   onConfirmClose,
   onDispatch,
@@ -44,7 +49,7 @@ export function BulkActionBar({
               className="inline-flex items-center gap-1.5 rounded-xl bg-gold px-3 py-2 text-xs font-black text-royal transition hover:bg-gold/90 disabled:opacity-60"
             >
               {busy === "dispatch" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Truck className="h-3.5 w-3.5" />}
-              إرسال إلى Meta Livraison
+              إرسال إلى الناقل
             </button>
             <span className="inline-flex" title={labelsHint || "طباعة البوالص (A6 PDF)"}>
               <button
@@ -84,8 +89,23 @@ export function BulkActionBar({
           <div className="w-full max-w-sm rounded-3xl border border-gold/30 bg-white p-6 shadow-2xl dark:bg-cardDark">
             <h3 className="text-sm font-black text-royal dark:text-white">تأكيد الإرسال الجماعي</h3>
             <p className="mt-2 text-xs font-bold leading-6 text-royal/75 dark:text-slate-300">
-              سيتم إرسال <span className="text-gold">{count}</span> طلبية إلى Meta Livraison. الطلبيات غير المؤكدة أو بدون مدينة لن تُرسل.
+              سيتم إرسال <span className="text-gold">{count}</span> طلبية إلى الناقل المختار. الطلبيات غير المؤكدة أو بدون مدينة لن تُرسل.
             </p>
+            <label className="mt-4 block text-[11px] font-black text-royal/70 dark:text-slate-300">
+              شركة التوصيل
+              <select
+                value={carrier}
+                onChange={(e) => onCarrierChange(e.target.value as AdminCarrier)}
+                className="mt-1 w-full rounded-xl border border-gold/25 bg-cream px-3 py-2 text-xs font-bold text-royal outline-none dark:bg-brandDark dark:text-white"
+              >
+                {ADMIN_CARRIERS.map((row) => (
+                  <option key={row.id} value={row.id} disabled={!row.enabled}>
+                    {row.label}
+                    {!row.enabled ? " — قريباً" : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
             <div className="mt-5 flex items-center gap-2">
               <button
                 type="button"
