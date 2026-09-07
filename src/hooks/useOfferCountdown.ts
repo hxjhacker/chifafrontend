@@ -17,15 +17,29 @@ export function useOfferCountdown(storageKey: string) {
   const [left, setLeft] = useState(() => splitTime(OFFER_MS));
 
   useEffect(() => {
-    let end = Number(sessionStorage.getItem(storageKey) || 0);
-    if (!end || end < Date.now()) {
-      end = Date.now() + OFFER_MS;
-      sessionStorage.setItem(storageKey, String(end));
+    try {
+      let end = Number(sessionStorage.getItem(storageKey) || 0);
+      if (!Number.isFinite(end) || !end || end < Date.now()) {
+        end = Date.now() + OFFER_MS;
+        sessionStorage.setItem(storageKey, String(end));
+      }
+      const tick = () => setLeft(splitTime(end - Date.now()));
+      tick();
+      const id = window.setInterval(tick, 1000);
+      return () => window.clearInterval(id);
+    } catch (e) {
+      console.warn("Failed to parse cached settings:", e);
+      try {
+        sessionStorage.removeItem(storageKey);
+      } catch {
+        /* ignore */
+      }
+      const end = Date.now() + OFFER_MS;
+      const tick = () => setLeft(splitTime(end - Date.now()));
+      tick();
+      const id = window.setInterval(tick, 1000);
+      return () => window.clearInterval(id);
     }
-    const tick = () => setLeft(splitTime(end - Date.now()));
-    tick();
-    const id = window.setInterval(tick, 1000);
-    return () => window.clearInterval(id);
   }, [storageKey]);
 
   return left;

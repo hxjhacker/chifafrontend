@@ -20,15 +20,20 @@ export function LoginForm() {
   const [spot, setSpot] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(REMEMBER_KEY);
-      if (saved) {
-        setUsername(saved);
-        setRemember(true);
+      try {
+        const saved = localStorage.getItem(REMEMBER_KEY);
+        if (saved) {
+          setUsername(saved);
+          setRemember(true);
+        }
+      } catch (e) {
+        console.warn("Failed to parse cached settings:", e);
+        try {
+          localStorage.removeItem(REMEMBER_KEY);
+        } catch {
+          /* ignore */
+        }
       }
-    } catch {
-      /* ignore */
-    }
   }, []);
 
   function onCardMove(e: MouseEvent<HTMLDivElement>) {

@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { ArrowUp, Moon, Sun } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { applyTheme, resolveIsDark, storedTheme, THEME_STORAGE_KEY } from "@/lib/theme";
+import { writeStorage } from "@/lib/safe-storage";
 
 export function waLink(message: string) {
   return `https://wa.me/212620863895?text=${encodeURIComponent(message)}`;
@@ -61,7 +62,7 @@ export function ThemeToggle({ className }: { className?: string }) {
   function toggle() {
     const next = !document.documentElement.classList.contains("dark");
     applyTheme(next);
-    localStorage.setItem(THEME_STORAGE_KEY, next ? "dark" : "light");
+    writeStorage(THEME_STORAGE_KEY, next ? "dark" : "light");
     setDark(next);
   }
 

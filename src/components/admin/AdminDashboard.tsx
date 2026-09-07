@@ -65,6 +65,7 @@ import { EMPTY_LOGISTICS, type LogisticsAnalytics } from "@/lib/logistics";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import { cn } from "@/lib/cn";
 import { applyTheme, resolveIsDark, THEME_STORAGE_KEY } from "@/lib/theme";
+import { clearStorage, readStorage, writeJsonStorage, writeStorage } from "@/lib/safe-storage";
 
 const EMPTY_STATS: AdminStats = {
   revenue: 0,
@@ -142,16 +143,22 @@ function serverErrorMessage(status: number, detail?: string, fallback = "تعذ�
 }
 
 function readPrefs(): SectionPrefs {
+  const raw = readStorage(PREFS_KEY) || readStorage(LEGACY_PREFS_KEY);
+  if (!raw) return DEFAULT_PREFS;
   try {
-    const raw = localStorage.getItem(PREFS_KEY) || localStorage.getItem(LEGACY_PREFS_KEY);
-    if (!raw) return DEFAULT_PREFS;
     const parsed = JSON.parse(raw) as Partial<SectionPrefs> & { table?: boolean };
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      throw new Error("invalid prefs");
+    }
     return {
       ...DEFAULT_PREFS,
       ...parsed,
       orders: parsed.orders ?? parsed.table ?? DEFAULT_PREFS.orders,
     };
-  } catch {
+  } catch (e) {
+    console.warn("Failed to parse cached settings:", e);
+    clearStorage(PREFS_KEY);
+    clearStorage(LEGACY_PREFS_KEY);
     return DEFAULT_PREFS;
   }
 }
@@ -242,7 +249,8 @@ export function AdminDashboard() {
   }, []);
 
   function persistPrefs(next: SectionPrefs) {
-    localStorage.setItem(PREFS_KEY, JSON.stringify(next));
+    writeJsonStorage(PREFS_KEY, next);
+    clearStorage(LEGACY_PREFS_KEY);
   }
 
   function toggleSection(key: keyof SectionPrefs) {
@@ -256,7 +264,7 @@ export function AdminDashboard() {
   function toggleDarkMode() {
     const next = !document.documentElement.classList.contains("dark");
     applyTheme(next);
-    localStorage.setItem(THEME_STORAGE_KEY, next ? "dark" : "light");
+    writeStorage(THEME_STORAGE_KEY, next ? "dark" : "light");
     setDarkMode(next);
   }
 

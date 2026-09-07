@@ -7,8 +7,8 @@ export function storedTheme(): "dark" | "light" | null {
   try {
     const t = localStorage.getItem(THEME_STORAGE_KEY);
     if (t === "dark" || t === "light") return t;
-  } catch {
-    /* private mode / blocked storage */
+  } catch (e) {
+    console.warn("Failed to parse cached settings:", e);
   }
   return null;
 }
@@ -16,7 +16,11 @@ export function storedTheme(): "dark" | "light" | null {
 export function resolveIsDark(): boolean {
   const stored = storedTheme();
   if (stored) return stored === "dark";
-  return window.matchMedia("(prefers-color-scheme: dark)").matches;
+  try {
+    return window.matchMedia("(prefers-color-scheme: dark)").matches;
+  } catch {
+    return false;
+  }
 }
 
 export function applyTheme(dark: boolean) {
