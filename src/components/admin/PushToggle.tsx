@@ -16,9 +16,11 @@ type Status = "loading" | "unsupported" | "off" | "on" | "blocked";
 export function PushToggle({
   onNotice,
   variant = "toolbar",
+  className,
 }: {
   onNotice?: (message: string, kind?: "ok" | "warn") => void;
   variant?: "toolbar" | "menu";
+  className?: string;
 }) {
   const [status, setStatus] = useState<Status>("loading");
   const [busy, setBusy] = useState(false);
@@ -92,8 +94,8 @@ export function PushToggle({
           (busy || status === "unsupported") && "opacity-60",
         )}
       >
-        <span className={cn("text-gold", on && "text-emerald-400")}>{icon}</span>
-        <span className="text-[13px] font-bold text-white">{label}</span>
+        <span className="text-slate-300">{icon}</span>
+        <span className="text-[13px] font-semibold text-white">{label}</span>
       </button>
     );
   }
@@ -106,15 +108,13 @@ export function PushToggle({
       disabled={busy || status === "loading" || status === "unsupported"}
       onClick={() => void toggle()}
       className={cn(
-        "flex h-9 w-9 items-center justify-center rounded-xl border shadow-sm transition active:scale-95 md:h-auto md:w-auto md:gap-1.5 md:px-3 md:py-2",
-        on
-          ? "border-emeraldCustom/30 bg-emeraldCustom/10 text-emeraldCustom hover:bg-emeraldCustom hover:text-white"
-          : "border-gold/30 bg-gold/10 text-gold-600 hover:bg-gold hover:text-royal dark:text-gold",
+        "inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200/90 bg-slate-50/80 px-3 text-[13px] font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:bg-white/[0.08] dark:hover:text-white",
         (busy || status === "unsupported") && "opacity-60",
+        className,
       )}
     >
       {icon}
-      <span className="hidden text-xs font-black md:inline">{on ? "إشعارات مفعّلة" : "إشعارات الطلبات"}</span>
+      <span className="hidden md:inline">{on ? "إشعارات مفعّلة" : "إشعارات الطلبات"}</span>
     </button>
   );
 }

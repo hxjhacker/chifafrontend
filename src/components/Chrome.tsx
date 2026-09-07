@@ -32,7 +32,7 @@ export function ThemeSync() {
   return null;
 }
 
-export function ThemeToggle() {
+export function ThemeToggle({ className }: { className?: string }) {
   const [dark, setDark] = useState(false);
 
   useLayoutEffect(() => {
@@ -70,9 +70,13 @@ export function ThemeToggle() {
       type="button"
       aria-label="تبديل الوضع"
       onClick={toggle}
-      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-gold/30 bg-gold/10 text-gold transition hover:scale-105 active:scale-95 dark:bg-brandDark"
+      suppressHydrationWarning
+      className={cn(
+        "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-gold/30 bg-gold/10 text-gold transition hover:scale-105 active:scale-95 dark:bg-brandDark",
+        className,
+      )}
     >
-      {dark ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4" />}
+      {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
     </button>
   );
 }

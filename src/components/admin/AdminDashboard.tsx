@@ -102,6 +102,15 @@ const SECTION_ITEMS: { key: keyof SectionPrefs; label: string }[] = [
   { key: "observatory", label: "إظهار/إخفاء مرصد المشاهدات والأداء" },
 ];
 
+const NAV_GHOST =
+  "inline-flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border border-slate-200/90 bg-slate-50/80 px-3 text-[13px] font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:bg-white/[0.08] dark:hover:text-white";
+const NAV_PRIMARY =
+  "inline-flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg bg-gold px-4 text-[13px] font-bold text-royal shadow-sm transition hover:bg-gold-600 active:scale-[0.98]";
+const NAV_ICON =
+  "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200/90 bg-slate-50/80 text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:bg-white/[0.08] dark:hover:text-white";
+const NAV_LOGOUT =
+  "inline-flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border border-transparent bg-transparent px-3 text-[13px] font-semibold text-slate-500 transition hover:bg-rose-50 hover:text-rose-600 dark:text-slate-400 dark:hover:bg-rose-500/10 dark:hover:text-rose-300";
+
 async function adminFetch(url: string, init: RequestInit = {}, timeoutMs = 12000): Promise<Response> {
   const controller = new AbortController();
   const timer = window.setTimeout(() => controller.abort(), timeoutMs);
@@ -845,8 +854,8 @@ export function AdminDashboard() {
         </div>
       ) : null}
 
-      <header className="sticky top-0 z-40 border-b border-gold/20 bg-white/95 px-3 py-2.5 shadow-sm backdrop-blur-md dark:bg-cardDark/95 md:px-4 md:py-3.5">
-        <div className="relative mx-auto flex max-w-7xl items-center justify-between gap-2">
+      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 px-3 py-2.5 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-cardDark/95 md:px-4 md:py-3">
+        <div className="relative mx-auto flex max-w-7xl items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-2.5">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border-2 border-gold bg-royal shadow-sm dark:bg-brandDark md:h-10 md:w-10">
               <span className="font-cinzel text-lg font-black text-gold md:text-xl">C</span>
@@ -859,28 +868,18 @@ export function AdminDashboard() {
             </div>
           </div>
 
-          <div className="flex shrink-0 items-center gap-1.5 md:hidden">
+          <div className="flex shrink-0 items-center gap-2 md:hidden">
             <button
               type="button"
-              aria-label="دليل الأسعار والمدن"
+              aria-label="إضافة طلب"
               onClick={() => {
                 setMenuOpen(false);
-                setTarifsOpen(true);
+                setModalOpen(true);
               }}
-              className="flex h-9 w-9 items-center justify-center rounded-xl border border-gold/30 bg-gold/10 text-gold-600 shadow-sm transition hover:bg-gold hover:text-royal active:scale-95 dark:text-gold"
+              className={NAV_PRIMARY}
             >
-              <Calculator className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              aria-label="إضافة سريعة من الواتساب"
-              onClick={() => {
-                setMenuOpen(false);
-                setQuickOpen(true);
-              }}
-              className="flex h-9 w-9 items-center justify-center rounded-xl border border-emeraldCustom/30 bg-emeraldCustom/10 text-emeraldCustom shadow-sm transition hover:bg-emeraldCustom hover:text-white active:scale-95"
-            >
-              <WhatsAppIcon className="h-4 w-4" />
+              <Plus className="h-4 w-4" />
+              <span>إضافة طلب</span>
             </button>
             <div className="relative" ref={menuRef}>
               <button
@@ -891,14 +890,14 @@ export function AdminDashboard() {
                   setPrefsOpen(false);
                   setMenuOpen((v) => !v);
                 }}
-                className="flex h-9 w-9 items-center justify-center rounded-xl border border-gold/30 bg-gold/10 text-gold-600 transition hover:bg-gold hover:text-royal dark:text-gold"
+                className={NAV_ICON}
               >
                 {menuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
               </button>
               {menuOpen ? (
                 <div
                   role="menu"
-                  className="absolute left-0 top-11 z-50 max-h-[min(80vh,32rem)] w-[min(20rem,calc(100vw-1.5rem))] overflow-y-auto rounded-2xl border border-gold/20 bg-[#0F1E33] p-2 text-white shadow-2xl"
+                  className="absolute left-0 top-11 z-50 max-h-[min(80vh,32rem)] w-[min(20rem,calc(100vw-1.5rem))] overflow-y-auto rounded-2xl border border-white/10 bg-[#0F1E33] p-2 text-white shadow-2xl"
                 >
                   <button
                     type="button"
@@ -907,22 +906,22 @@ export function AdminDashboard() {
                       setMenuOpen(false);
                       setTarifsOpen(true);
                     }}
-                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-right transition hover:bg-white/5"
+                    className="inline-flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-right transition hover:bg-white/5"
                   >
-                    <Calculator className="h-4 w-4 text-gold" />
-                    <span className="text-[13px] font-bold">دليل الأسعار والمدن</span>
+                    <Calculator className="h-4 w-4 text-slate-300" />
+                    <span className="text-[13px] font-semibold">دليل الأسعار والمدن</span>
                   </button>
                   <button
                     type="button"
                     role="menuitem"
                     onClick={() => {
                       setMenuOpen(false);
-                      setModalOpen(true);
+                      setQuickOpen(true);
                     }}
-                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-right transition hover:bg-white/5"
+                    className="inline-flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-right transition hover:bg-white/5"
                   >
-                    <Plus className="h-4 w-4 text-gold" />
-                    <span className="text-[13px] font-bold">إضافة طلبية يدوية</span>
+                    <WhatsAppIcon className="h-4 w-4 text-slate-300" />
+                    <span className="text-[13px] font-semibold">إضافة سريعة من الواتساب</span>
                   </button>
                   <PushToggle
                     variant="menu"
@@ -932,7 +931,7 @@ export function AdminDashboard() {
                     }}
                   />
                   <div className="my-1 border-t border-white/10 px-3 py-2">
-                    <p className="mb-1 flex items-center gap-2 text-[11px] font-black text-gold">
+                    <p className="mb-1 inline-flex items-center gap-2 text-[11px] font-semibold text-slate-400">
                       <SlidersHorizontal className="h-3.5 w-3.5" />
                       تخصيص الواجهة
                     </p>
@@ -946,7 +945,7 @@ export function AdminDashboard() {
                           onClick={() => toggleSection(item.key)}
                           className="flex w-full items-center justify-between gap-3 rounded-xl px-1 py-2 text-right transition hover:bg-white/5"
                         >
-                          <span className="text-[12px] font-bold text-white">{item.label}</span>
+                          <span className="text-[12px] font-semibold text-white">{item.label}</span>
                           <IosSwitch checked={prefs[item.key]} />
                         </button>
                       ))}
@@ -956,29 +955,41 @@ export function AdminDashboard() {
                     type="button"
                     role="menuitem"
                     onClick={() => setHideAll((v) => !v)}
-                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-right transition hover:bg-white/5"
+                    className="inline-flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-right transition hover:bg-white/5"
                   >
-                    {hideAll ? <Eye className="h-4 w-4 text-emerald-400" /> : <EyeOff className="h-4 w-4 text-gold" />}
-                    <span className="text-[13px] font-bold">{hideAll ? "إظهار الأرقام" : "إخفاء الأرقام"}</span>
+                    {hideAll ? <Eye className="h-4 w-4 text-slate-300" /> : <EyeOff className="h-4 w-4 text-slate-300" />}
+                    <span className="text-[13px] font-semibold">{hideAll ? "إظهار الأرقام" : "إخفاء الأرقام"}</span>
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      downloadCsv("orders-chifaglow.csv", ordersToCsv(filtered));
+                    }}
+                    className="inline-flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-right transition hover:bg-white/5"
+                  >
+                    <FileSpreadsheet className="h-4 w-4 text-slate-300" />
+                    <span className="text-[13px] font-semibold">تصدير Excel</span>
                   </button>
                   <button
                     type="button"
                     role="menuitem"
                     onClick={toggleDarkMode}
-                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-right transition hover:bg-white/5"
+                    className="inline-flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-right transition hover:bg-white/5"
                   >
-                    {darkMode ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-gold" />}
-                    <span className="text-[13px] font-bold">{darkMode ? "الوضع النهاري" : "الوضع الليلي"}</span>
+                    {darkMode ? <Sun className="h-4 w-4 text-slate-300" /> : <Moon className="h-4 w-4 text-slate-300" />}
+                    <span className="text-[13px] font-semibold">{darkMode ? "الوضع النهاري" : "الوضع الليلي"}</span>
                   </button>
                   <div className="mt-1 border-t border-white/10 pt-1">
                     <button
                       type="button"
                       role="menuitem"
                       onClick={() => void logout()}
-                      className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-right text-rose-300 transition hover:bg-rose-500/10"
+                      className="inline-flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-right text-rose-300/90 transition hover:bg-rose-500/10 hover:text-rose-200"
                     >
                       <LogOut className="h-4 w-4" />
-                      <span className="text-[13px] font-bold">تسجيل الخروج</span>
+                      <span className="text-[13px] font-semibold">تسجيل الخروج</span>
                     </button>
                   </div>
                 </div>
@@ -986,117 +997,126 @@ export function AdminDashboard() {
             </div>
           </div>
 
-          <div className="hidden shrink-0 items-center gap-1.5 md:flex md:gap-3">
-            <button
-              type="button"
-              aria-label="دليل الأسعار والمدن"
-              onClick={() => setTarifsOpen(true)}
-              className="flex items-center gap-1.5 rounded-xl border border-gold/30 bg-gold/10 px-3.5 py-2 text-gold-600 shadow-sm transition hover:bg-gold hover:text-royal active:scale-95 dark:text-gold"
-            >
-              <Calculator className="h-4 w-4" />
-              <span className="text-xs font-black">دليل الأسعار والمدن</span>
-            </button>
+          <div className="hidden min-w-0 shrink items-center gap-2 md:flex">
+            <div className="flex min-w-0 items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <button
+                type="button"
+                aria-label="دليل الأسعار والمدن"
+                onClick={() => setTarifsOpen(true)}
+                className={NAV_GHOST}
+              >
+                <Calculator className="h-4 w-4" />
+                <span className="hidden lg:inline">دليل الأسعار والمدن</span>
+                <span className="lg:hidden">الأسعار</span>
+              </button>
+              <button
+                type="button"
+                aria-label="إضافة سريعة من الواتساب"
+                onClick={() => setQuickOpen(true)}
+                className={NAV_GHOST}
+              >
+                <WhatsAppIcon className="h-4 w-4" />
+                <span className="hidden lg:inline">إضافة سريعة من الواتساب</span>
+                <span className="lg:hidden">واتساب</span>
+              </button>
+              <PushToggle
+                className={NAV_GHOST}
+                onNotice={(message, kind) => {
+                  setNoticeKind(kind || "ok");
+                  setNotice(message);
+                }}
+              />
+              <div className="relative" ref={prefsRef}>
+                <button
+                  type="button"
+                  aria-label="تخصيص الواجهة"
+                  aria-expanded={prefsOpen}
+                  onClick={() => setPrefsOpen((v) => !v)}
+                  className={NAV_GHOST}
+                >
+                  <SlidersHorizontal className="h-4 w-4" />
+                  <span className="hidden xl:inline">تخصيص الواجهة</span>
+                  <span className="xl:hidden">تخصيص</span>
+                </button>
+                {prefsOpen ? (
+                  <div
+                    role="menu"
+                    className="absolute left-0 top-11 z-50 w-80 rounded-2xl border border-white/10 bg-[#0F1E33] p-4 text-white shadow-2xl dark:bg-[#0F1E33]"
+                  >
+                    <p className="mb-3 text-sm font-black text-white">أقسام اللوحة</p>
+                    <div className="space-y-1">
+                      {SECTION_ITEMS.map((item) => (
+                        <button
+                          key={item.key}
+                          type="button"
+                          role="switch"
+                          aria-checked={prefs[item.key]}
+                          onClick={() => toggleSection(item.key)}
+                          className="flex w-full items-center justify-between gap-3 rounded-xl px-1 py-2.5 text-right transition hover:bg-white/5"
+                        >
+                          <span className="text-[13px] font-bold text-white">{item.label}</span>
+                          <IosSwitch checked={prefs[item.key]} />
+                        </button>
+                      ))}
+                    </div>
+                    <div className="mt-2 border-t border-white/10 pt-2">
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={darkMode}
+                        onClick={toggleDarkMode}
+                        className="flex w-full items-center justify-between gap-3 rounded-xl px-1 py-2.5 text-right transition hover:bg-white/5"
+                      >
+                        <span className="inline-flex items-center gap-2 text-[13px] font-bold text-white">
+                          <Moon className="h-3.5 w-3.5 text-slate-300" />
+                          الوضع الداكن
+                        </span>
+                        <IosSwitch checked={darkMode} />
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+              <button
+                type="button"
+                aria-label={hideAll ? "إظهار كل الأرقام" : "إخفاء الأرقام"}
+                onClick={() => setHideAll((v) => !v)}
+                className={NAV_GHOST}
+              >
+                {hideAll ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                <span>{hideAll ? "إظهار الأرقام" : "إخفاء الأرقام"}</span>
+              </button>
+              <button
+                type="button"
+                aria-label="تصدير Excel"
+                onClick={() => downloadCsv("orders-chifaglow.csv", ordersToCsv(filtered))}
+                className={NAV_GHOST}
+              >
+                <FileSpreadsheet className="h-4 w-4" />
+                <span>تصدير Excel</span>
+              </button>
+            </div>
             <button
               type="button"
               aria-label="إضافة طلب"
               onClick={() => setModalOpen(true)}
-              className="flex items-center gap-1.5 rounded-xl bg-gold px-3.5 py-2 text-royal shadow-sm transition hover:bg-gold-600 active:scale-95"
+              className={NAV_PRIMARY}
             >
               <Plus className="h-4 w-4" />
-              <span className="text-xs font-black">إضافة طلب</span>
+              <span>إضافة طلب</span>
             </button>
-            <button
-              type="button"
-              aria-label="إضافة سريعة من الواتساب"
-              onClick={() => setQuickOpen(true)}
-              className="flex items-center gap-1.5 rounded-xl border border-emeraldCustom/30 bg-emeraldCustom/10 px-3.5 py-2 text-emeraldCustom shadow-sm transition hover:bg-emeraldCustom hover:text-white active:scale-95"
-            >
-              <WhatsAppIcon className="h-4 w-4" />
-              <span className="text-xs font-black">إضافة سريعة من الواتساب</span>
-            </button>
-            <PushToggle
-              onNotice={(message, kind) => {
-                setNoticeKind(kind || "ok");
-                setNotice(message);
-              }}
-            />
-            <div className="relative" ref={prefsRef}>
+            <div className="flex items-center gap-1.5 border-s border-slate-200/90 ps-2 dark:border-white/10">
+              <ThemeToggle className={cn(NAV_ICON, "hover:scale-100")} />
               <button
                 type="button"
-                aria-label="تخصيص الواجهة"
-                aria-expanded={prefsOpen}
-                onClick={() => setPrefsOpen((v) => !v)}
-                className="flex items-center gap-1.5 rounded-xl border border-gold/30 bg-gold/10 px-3 py-2 text-gold-600 transition hover:bg-gold hover:text-royal dark:text-gold"
+                aria-label="خروج"
+                onClick={() => void logout()}
+                className={NAV_LOGOUT}
               >
-                <SlidersHorizontal className="h-3.5 w-3.5" />
-                <span className="text-xs font-bold">تخصيص الواجهة</span>
+                <LogOut className="h-4 w-4" />
+                <span>خروج</span>
               </button>
-              {prefsOpen ? (
-                <div
-                  role="menu"
-                  className="absolute left-0 top-11 z-50 w-80 rounded-2xl border border-gold/20 bg-[#0F1E33] p-4 text-white shadow-2xl dark:bg-[#0F1E33]"
-                >
-                  <p className="mb-3 text-sm font-black text-white">أقسام اللوحة</p>
-                  <div className="space-y-1">
-                    {SECTION_ITEMS.map((item) => (
-                      <button
-                        key={item.key}
-                        type="button"
-                        role="switch"
-                        aria-checked={prefs[item.key]}
-                        onClick={() => toggleSection(item.key)}
-                        className="flex w-full items-center justify-between gap-3 rounded-xl px-1 py-2.5 text-right transition hover:bg-white/5"
-                      >
-                        <span className="text-[13px] font-bold text-white">{item.label}</span>
-                        <IosSwitch checked={prefs[item.key]} />
-                      </button>
-                    ))}
-                  </div>
-                  <div className="mt-2 border-t border-white/10 pt-2">
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={darkMode}
-                      onClick={toggleDarkMode}
-                      className="flex w-full items-center justify-between gap-3 rounded-xl px-1 py-2.5 text-right transition hover:bg-white/5"
-                    >
-                      <span className="flex items-center gap-2 text-[13px] font-bold text-white">
-                        <Moon className="h-3.5 w-3.5 text-gold" />
-                        الوضع الداكن
-                      </span>
-                      <IosSwitch checked={darkMode} />
-                    </button>
-                  </div>
-                </div>
-              ) : null}
             </div>
-            <button
-              type="button"
-              aria-label={hideAll ? "إظهار كل الأرقام" : "إخفاء الأرقام"}
-              onClick={() => setHideAll((v) => !v)}
-              className="flex items-center gap-1.5 rounded-xl border border-gold/30 bg-gold/10 px-3 py-2 text-gold-600 transition hover:bg-gold hover:text-royal dark:text-gold"
-            >
-              {hideAll ? <Eye className="h-3.5 w-3.5 text-emeraldCustom" /> : <EyeOff className="h-3.5 w-3.5" />}
-              <span className="text-xs font-bold">{hideAll ? "إظهار كل الأرقام" : "إخفاء الأرقام"}</span>
-            </button>
-            <ThemeToggle />
-            <button
-              type="button"
-              onClick={() => downloadCsv("orders-chifaglow.csv", ordersToCsv(filtered))}
-              className="flex items-center gap-1.5 rounded-xl border border-emeraldCustom/30 bg-emeraldCustom/10 px-3 py-2 text-xs font-bold text-emeraldCustom transition hover:bg-emeraldCustom hover:text-white"
-            >
-              <FileSpreadsheet className="h-3.5 w-3.5" />
-              <span>تصدير CSV / Excel</span>
-            </button>
-            <button
-              type="button"
-              aria-label="خروج"
-              onClick={() => void logout()}
-              className="flex items-center gap-1.5 rounded-xl border border-moroccoRed/30 bg-moroccoRed/10 px-3.5 py-2 text-moroccoRed transition hover:bg-moroccoRed hover:text-white"
-            >
-              <LogOut className="h-3.5 w-3.5" />
-              <span className="text-xs font-bold">خروج</span>
-            </button>
           </div>
         </div>
       </header>
