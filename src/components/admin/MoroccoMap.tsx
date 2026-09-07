@@ -3,24 +3,59 @@
 import { useMemo, useState } from "react";
 import { Eye, EyeOff, Info, Minus, Plus, X } from "lucide-react";
 import { MOROCCO_PATHS } from "@/lib/admin-map/paths";
-import type { RegionStat } from "@/lib/admin-geo";
+import { formatMad } from "@/lib/admin";
+import { MOROCCO_REGIONS } from "@/lib/admin-geo";
+import { regionRateFill, RATE_AMBER, RATE_GRAY, RATE_GREEN, RATE_ROSE, type LogisticsRegion } from "@/lib/logistics";
 import { cn } from "@/lib/cn";
 
 type Props = {
-  stats: RegionStat[];
+  regions: LogisticsRegion[];
   hideNumbers: boolean;
   onToggleNumbers: () => void;
   className?: string;
 };
 
-export function MoroccoMap({ stats, hideNumbers, onToggleNumbers, className }: Props) {
-  const [active, setActive] = useState<RegionStat | null>(null);
+const LEGEND = [
+  { label: "≥ 75%", color: RATE_GREEN },
+  { label: "55–74%", color: RATE_AMBER },
+  { label: "< 55%", color: RATE_ROSE },
+  { label: "بدون طلبيات", color: RATE_GRAY },
+];
+
+export function MoroccoMap({ regions, hideNumbers, onToggleNumbers, className }: Props) {
+  const [pinned, setPinned] = useState<LogisticsRegion | null>(null);
+  const [hovered, setHovered] = useState<LogisticsRegion | null>(null);
   const [zoom, setZoom] = useState(1);
 
-  const byName = useMemo(() => new Map(stats.map((s) => [s.name, s])), [stats]);
+  const byName = useMemo(() => {
+    const map = new Map<string, LogisticsRegion>();
+    for (const region of MOROCCO_REGIONS) {
+      const hit = regions.find((r) => r.region_id === region.id || r.name === region.name);
+      map.set(region.name, hit || {
+        region_id: region.id,
+        name: region.name,
+        total_orders: 0,
+        delivered: 0,
+        returned: 0,
+        cancelled: 0,
+        in_transit: 0,
+        delivery_rate: 0,
+        cod_generated: 0,
+        top_cities: [],
+      });
+    }
+    return map;
+  }, [regions]);
+
+  const active = pinned || hovered;
+
+  function lookup(name: string) {
+    return byName.get(name) || null;
+  }
 
   function select(name: string) {
-    setActive(byName.get(name) || { id: "", name, total: 0, confirmed: 0, unconfirmed: 0 });
+    const next = lookup(name);
+    setPinned((prev) => (prev && next && prev.region_id === next.region_id ? null : next));
   }
 
   return (
@@ -28,7 +63,7 @@ export function MoroccoMap({ stats, hideNumbers, onToggleNumbers, className }: P
       <div className="mb-2 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <h3 className="text-base font-black text-royal dark:text-white">الخرائط</h3>
-          <span className="cursor-pointer text-xs text-royal/50 dark:text-slate-400" title="توزيع الطلبيات الجغرافية حسب جهات المملكة">
+          <span className="cursor-pointer text-xs text-royal/50 dark:text-slate-400" title="نسبة التوصيل الحقيقية حسب جهات المملكة">
             <Info className="h-3.5 w-3.5" />
           </span>
         </div>
@@ -42,7 +77,7 @@ export function MoroccoMap({ stats, hideNumbers, onToggleNumbers, className }: P
             <span>أرقام الخريطة</span>
           </button>
           <span className="rounded-lg border border-emeraldCustom/20 bg-emeraldCustom/10 px-2.5 py-1 text-[11px] font-bold text-emeraldCustom">
-            توزيع مباشر ⚡
+            معدل التوصيل
           </span>
         </div>
       </div>
@@ -75,52 +110,70 @@ export function MoroccoMap({ stats, hideNumbers, onToggleNumbers, className }: P
         >
           <div className="mb-2 flex items-center justify-between border-b border-gold/10 pb-2">
             <div className="flex items-center gap-2">
-              <span className="h-2.5 w-2.5 animate-ping rounded-full bg-emeraldCustom" />
+              <span className="h-2.5 w-2.5 rounded-full" style={{ background: active ? regionRateFill(active) : RATE_GRAY }} />
               <div>
                 <h4 className="text-xs font-black text-royal dark:text-white">جهة {active?.name}</h4>
-                {active?.id ? <span className="text-[10px] font-bold text-gold">{active.id}</span> : null}
+                {active?.region_id ? <span className="text-[10px] font-bold text-gold">{active.region_id}</span> : null}
               </div>
             </div>
-            <button type="button" onClick={() => setActive(null)} className="text-xs text-royal/40 hover:text-rose-500 dark:text-slate-400">
+            <button type="button" onClick={() => setPinned(null)} className="text-xs text-royal/40 hover:text-rose-500 dark:text-slate-400">
               <X className="h-3.5 w-3.5" />
             </button>
           </div>
-          <div className="grid grid-cols-3 gap-2 text-center text-xs">
+          <div className="grid grid-cols-2 gap-2 text-center text-xs sm:grid-cols-4">
             <div className="rounded-xl border border-gold/10 bg-cream p-2 dark:bg-brandDark">
               <span className="block text-[10px] font-semibold text-royal/60 dark:text-slate-400">مجموع الطلبات</span>
               <span className={cn("mt-0.5 block text-sm font-black text-royal dark:text-gold", hideNumbers && "blurred-number")}>
-                {active?.total ?? 0}
+                {active?.total_orders ?? 0}
               </span>
             </div>
             <div className="rounded-xl border border-gold/10 bg-cream p-2 dark:bg-brandDark">
-              <span className="block text-[10px] font-semibold text-emeraldCustom">المؤكدة</span>
+              <span className="block text-[10px] font-semibold text-emeraldCustom">تم التسليم</span>
               <span className={cn("mt-0.5 block text-sm font-black text-emeraldCustom", hideNumbers && "blurred-number")}>
-                {active?.confirmed ?? 0}
+                {active?.delivered ?? 0}
               </span>
             </div>
             <div className="rounded-xl border border-gold/10 bg-cream p-2 dark:bg-brandDark">
-              <span className="block text-[10px] font-semibold text-rose-500">غير مؤكدة</span>
+              <span className="block text-[10px] font-semibold text-rose-500">مرتجع</span>
               <span className={cn("mt-0.5 block text-sm font-black text-rose-500", hideNumbers && "blurred-number")}>
-                {active?.unconfirmed ?? 0}
+                {active?.returned ?? 0}
+              </span>
+            </div>
+            <div className="rounded-xl border border-gold/10 bg-cream p-2 dark:bg-brandDark">
+              <span className="block text-[10px] font-semibold text-gold">COD المحصّل</span>
+              <span className={cn("mt-0.5 block text-sm font-black text-gold", hideNumbers && "blurred-number")}>
+                {formatMad(active?.cod_generated ?? 0)}
               </span>
             </div>
           </div>
+          <p className={cn("mt-2 text-center text-[11px] font-bold text-royal/60 dark:text-slate-400", hideNumbers && "blurred-number")}>
+            نسبة التوصيل {active ? `${active.delivery_rate.toFixed(1)}%` : "—"}
+            {active?.top_cities?.[0] ? ` · أعلى مدينة: ${active.top_cities[0].city}` : ""}
+          </p>
         </div>
 
         <svg viewBox="0 0 465 400" className="h-80 w-full max-w-[370px] origin-center sm:h-96" style={{ transform: `scale(${zoom})` }}>
           <g transform="scale(0.6) translate(87.5, -130.16666666666669)">
-            {MOROCCO_PATHS.map((region) => (
-              <path
-                key={region.name}
-                d={region.d}
-                className={cn("morocco-region", active?.name === region.name && "active-region")}
-                onClick={() => select(region.name)}
-              />
-            ))}
+            {MOROCCO_PATHS.map((region) => {
+              const stat = lookup(region.name);
+              const fill = stat ? regionRateFill(stat) : RATE_GRAY;
+              const isActive = active?.name === region.name;
+              return (
+                <path
+                  key={region.name}
+                  d={region.d}
+                  className={cn("morocco-region", isActive && "active-region")}
+                  style={{ fill }}
+                  onMouseEnter={() => setHovered(stat)}
+                  onMouseLeave={() => setHovered(null)}
+                  onClick={() => select(region.name)}
+                />
+              );
+            })}
           </g>
           <g>
             {MOROCCO_PATHS.map((region) => {
-              const stat = byName.get(region.name);
+              const stat = lookup(region.name);
               return (
                 <text
                   key={`${region.name}-label`}
@@ -130,7 +183,7 @@ export function MoroccoMap({ stats, hideNumbers, onToggleNumbers, className }: P
                   y={region.labelY}
                   className={cn("region-count-label", hideNumbers && "blurred-number")}
                 >
-                  {stat?.total ?? 0}
+                  {stat?.total_orders ?? 0}
                 </text>
               );
             })}
@@ -138,8 +191,13 @@ export function MoroccoMap({ stats, hideNumbers, onToggleNumbers, className }: P
         </svg>
       </div>
 
-      <div className="mt-3 text-center text-[11px] font-semibold text-royal/60 dark:text-slate-400">
-        اضغط على أي جهة لمعاينة مجموع الطلبات ونسبة التأكيد فيها
+      <div className="mt-3 flex flex-wrap items-center justify-center gap-3 text-[11px] font-semibold text-royal/60 dark:text-slate-400">
+        {LEGEND.map((item) => (
+          <span key={item.label} className="inline-flex items-center gap-1.5">
+            <span className="h-2.5 w-2.5 rounded-sm" style={{ background: item.color }} />
+            {item.label}
+          </span>
+        ))}
       </div>
     </div>
   );

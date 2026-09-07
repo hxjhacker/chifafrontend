@@ -31,6 +31,7 @@ import { AdminDoughnut } from "@/components/admin/AdminDoughnut";
 import { BulkActionBar } from "@/components/admin/BulkActionBar";
 import { CompleteDetailsModal } from "@/components/admin/CompleteDetailsModal";
 import { IosSwitch } from "@/components/admin/IosSwitch";
+import { LogisticsKpiCards } from "@/components/admin/LogisticsKpiCards";
 import { MoroccoMap } from "@/components/admin/MoroccoMap";
 import { OrderDesktopRow, OrderMobileCard } from "@/components/admin/OrderRow";
 import { OrderTimelineModal } from "@/components/admin/OrderTimelineModal";
@@ -55,7 +56,8 @@ import {
   type AdminStats,
   type AdminStatus,
 } from "@/lib/admin";
-import { buildRegionStats, CITY_CHART_COLORS } from "@/lib/admin-geo";
+import { CITY_CHART_COLORS } from "@/lib/admin-geo";
+import { EMPTY_LOGISTICS, type LogisticsAnalytics } from "@/lib/logistics";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import { cn } from "@/lib/cn";
 import { applyTheme, resolveIsDark, THEME_STORAGE_KEY } from "@/lib/theme";
@@ -84,10 +86,11 @@ const STATUS_OPTIONS: { id: AdminStatus; label: string }[] = [
 
 const PREFS_KEY = "chifaglow_view_prefs";
 const LEGACY_PREFS_KEY = "cg_admin_sections";
-type SectionPrefs = { overview: boolean; cities: boolean; map: boolean; orders: boolean; observatory: boolean };
-const DEFAULT_PREFS: SectionPrefs = { overview: true, cities: true, map: true, orders: true, observatory: true };
+type SectionPrefs = { logistics: boolean; overview: boolean; cities: boolean; map: boolean; orders: boolean; observatory: boolean };
+const DEFAULT_PREFS: SectionPrefs = { logistics: true, overview: true, cities: true, map: true, orders: true, observatory: true };
 
 const SECTION_ITEMS: { key: keyof SectionPrefs; label: string }[] = [
+  { key: "logistics", label: "التحصيل والتوصيل" },
   { key: "overview", label: "نظرة عامة على الطلبات" },
   { key: "cities", label: "الطرود حسب المدن" },
   { key: "map", label: "خريطة المغرب" },
@@ -113,6 +116,7 @@ function readPrefs(): SectionPrefs {
 export function AdminDashboard() {
   const router = useRouter();
   const [stats, setStats] = useState<AdminStats>(EMPTY_STATS);
+  const [logistics, setLogistics] = useState<LogisticsAnalytics>(EMPTY_LOGISTICS);
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [username, setUsername] = useState("");
   const [q, setQ] = useState("");
@@ -142,6 +146,7 @@ export function AdminDashboard() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [hideAll, setHideAll] = useState(false);
   const [hideOverview, setHideOverview] = useState(false);
+  const [hideLogistics, setHideLogistics] = useState(false);
   const [hideCity, setHideCity] = useState(false);
   const [hideMap, setHideMap] = useState(false);
   const [showAllCities, setShowAllCities] = useState(false);
@@ -214,12 +219,13 @@ export function AdminDashboard() {
   const load = useCallback(async () => {
     setError("");
     try {
-      const [meRes, statsRes, ordersRes] = await Promise.all([
+      const [meRes, statsRes, ordersRes, logisticsRes] = await Promise.all([
         fetch("/api/admin/me", { credentials: "include", cache: "no-store" }),
         fetch("/api/admin/stats", { credentials: "include", cache: "no-store" }),
         fetch("/api/admin/orders?limit=2000", { credentials: "include", cache: "no-store" }),
+        fetch("/api/admin/analytics/logistics", { credentials: "include", cache: "no-store" }),
       ]);
-      if ([meRes, statsRes, ordersRes].some((r) => r.status === 401)) {
+      if ([meRes, statsRes, ordersRes, logisticsRes].some((r) => r.status === 401)) {
         router.replace("/mydashboard/login");
         return;
       }
@@ -228,6 +234,7 @@ export function AdminDashboard() {
         setUsername(me.username || "");
       }
       if (statsRes.ok) setStats((await statsRes.json()) as AdminStats);
+      if (logisticsRes.ok) setLogistics((await logisticsRes.json()) as LogisticsAnalytics);
       if (ordersRes.ok) {
         const payload = (await ordersRes.json()) as { orders: AdminOrder[] };
         setOrders(payload.orders || []);
@@ -251,8 +258,12 @@ export function AdminDashboard() {
   }, [load]);
 
   async function refreshStats() {
-    const statsRes = await fetch("/api/admin/stats", { credentials: "include", cache: "no-store" });
+    const [statsRes, logisticsRes] = await Promise.all([
+      fetch("/api/admin/stats", { credentials: "include", cache: "no-store" }),
+      fetch("/api/admin/analytics/logistics", { credentials: "include", cache: "no-store" }),
+    ]);
     if (statsRes.ok) setStats((await statsRes.json()) as AdminStats);
+    if (logisticsRes.ok) setLogistics((await logisticsRes.json()) as LogisticsAnalytics);
   }
 
   async function logout() {
@@ -607,11 +618,10 @@ export function AdminDashboard() {
 
   const confirmedWon = stats.confirmed_orders + stats.shipped_orders + stats.delivered_orders;
   const hideOverviewNums = hideAll || hideOverview;
+  const hideLogisticsNums = hideAll || hideLogistics;
   const hideCityNums = hideAll || hideCity;
   const hideMapNums = hideAll || hideMap;
   const hideTableNums = hideAll;
-
-  const regionStats = useMemo(() => buildRegionStats(orders), [orders]);
 
   const cityRows = stats.city_breakdown || [];
   const cityTotal = cityRows.reduce((sum, row) => sum + row.count, 0);
@@ -1001,6 +1011,13 @@ export function AdminDashboard() {
             {error}
           </p>
         ) : null}
+        {prefs.logistics ? (
+          <LogisticsKpiCards
+            data={logistics}
+            hidden={hideLogisticsNums}
+            onToggleNumbers={() => setHideLogistics((v) => !v)}
+          />
+        ) : null}
         {prefs.overview ? (
         <div className="relative rounded-3xl border border-gold/20 bg-white p-6 shadow-luxury transition-all dark:bg-cardDark">
           <div className="flex items-center justify-between border-b border-gold/10 pb-4">
@@ -1132,7 +1149,7 @@ export function AdminDashboard() {
 
           {prefs.map ? (
             <MoroccoMap
-              stats={regionStats}
+              regions={logistics.regions}
               hideNumbers={hideMapNums}
               onToggleNumbers={() => setHideMap((v) => !v)}
               className={prefs.cities ? "lg:col-span-5" : "lg:col-span-12"}
