@@ -60,6 +60,7 @@ export type AdminOrder = {
   meta_livraison_ticket_url?: string | null;
   carrier?: AdminCarrier;
   tracking_number?: string | null;
+  can_open?: boolean | null;
 };
 
 export type AdminStats = {

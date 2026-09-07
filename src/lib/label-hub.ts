@@ -87,3 +87,98 @@ export function labelDate() {
     year: "numeric",
   }).format(new Date());
 }
+
+export const META_SENDER = { name: "CHIFA GLOW", account: "7605", phone: "06-20-86-38-95", hub: "FES" };
+export const QUICK_SENDER = { name: "chifaglow", account: "7513", phone: "0644183475", hub: "CASA", stock: "STOCK" };
+
+function nationalPhoneDigits(raw: string) {
+  let digits = (raw || "").replace(/\D/g, "");
+  if (digits.startsWith("212") && digits.length >= 12) digits = `0${digits.slice(3, 12)}`;
+  else if (digits.startsWith("0") && digits.length >= 10) digits = digits.slice(0, 10);
+  else if (digits.length === 9) digits = `0${digits}`;
+  return digits;
+}
+
+export function formatMetaPhone(raw: string) {
+  const national = nationalPhoneDigits(raw);
+  if (national.length === 10) {
+    return `${national.slice(0, 2)}-${national.slice(2, 4)}-${national.slice(4, 6)}-${national.slice(6, 8)}-${national.slice(8)}`;
+  }
+  return raw || "—";
+}
+
+export function formatQuickPhone(raw: string) {
+  const national = nationalPhoneDigits(raw);
+  if (national.length === 10) {
+    return `${national.slice(0, 2)}-${national.slice(2, 5)}-${national.slice(5, 8)}-${national.slice(8)}`;
+  }
+  return raw || "—";
+}
+
+export function spacedTracking(code: string) {
+  return (code || "").trim().split("").join(" ");
+}
+
+export function canOpenParcel(order: { can_open?: boolean | null; canOpen?: boolean | null }) {
+  const raw = order.can_open ?? order.canOpen;
+  return raw === true;
+}
+
+export function labelQrValue(order: {
+  meta_livraison_ticket_url?: string | null;
+  meta_livraison_code?: string | null;
+  tracking_number?: string | null;
+  order_id: string;
+}) {
+  return (
+    (order.meta_livraison_ticket_url || "").trim() ||
+    (order.meta_livraison_code || order.tracking_number || "").trim() ||
+    parcelOrderCode(order.order_id)
+  );
+}
+
+export function trackingCode(order: { meta_livraison_code?: string | null; tracking_number?: string | null; order_id: string }) {
+  return (order.meta_livraison_code || order.tracking_number || "").trim() || parcelOrderCode(order.order_id);
+}
+
+export function merchandiseLines(order: {
+  product_slug?: string | null;
+  pack_label?: string | null;
+  tier_qty?: number | null;
+  primary_qty?: number | null;
+  cross_sell_slug?: string | null;
+  secondary_product?: string | null;
+  secondary_qty?: number | null;
+  upsell_slug?: string | null;
+  bundle_enabled?: boolean;
+}) {
+  const lines: { sku: string; qty: number }[] = [
+    {
+      sku: (order.product_slug || order.pack_label || "Produit").trim() || "Produit",
+      qty: Math.max(1, Number(order.tier_qty || order.primary_qty) || 1),
+    },
+  ];
+  const extra = (order.cross_sell_slug || order.secondary_product || "").trim();
+  if (order.bundle_enabled || extra) {
+    lines.push({ sku: extra || "extra", qty: Math.max(1, Number(order.secondary_qty) || 1) });
+  }
+  const upsell = (order.upsell_slug || "").trim();
+  if (upsell && upsell !== extra) lines.push({ sku: upsell, qty: 1 });
+  return lines;
+}
+
+export function metaMerchandise(order: Parameters<typeof merchandiseLines>[0]) {
+  return merchandiseLines(order)
+    .map((line) => line.sku)
+    .join(" | ");
+}
+
+export function quickMerchandise(order: Parameters<typeof merchandiseLines>[0]) {
+  return merchandiseLines(order)
+    .map((line) => `${line.sku} (${line.qty})`)
+    .join(" | ");
+}
+
+export function labelAmount(order: { total?: number | null; total_price?: number | null }) {
+  return Math.round(Number(order.total ?? order.total_price) || 0);
+}
