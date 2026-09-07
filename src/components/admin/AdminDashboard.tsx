@@ -112,6 +112,8 @@ const NAV_HIDE = `${NAV_BTN} border-cyan-500/30 text-cyan-600 hover:bg-cyan-500/
 const NAV_GHOST = `${NAV_BTN} border-slate-200/90 bg-slate-50/80 text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:bg-white/[0.08] dark:hover:text-white`;
 const NAV_PRIMARY =
   "inline-flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg bg-gold px-4 text-[13px] font-bold text-royal shadow-sm transition hover:bg-gold-600 active:scale-[0.98]";
+const NAV_QUICK_PRIMARY =
+  "inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg bg-gold px-3 text-[13px] font-bold text-royal shadow-sm ring-2 ring-[#25D366]/70 transition hover:bg-gold-600 active:scale-[0.98]";
 const NAV_ICON =
   "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200/90 bg-slate-50/80 text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:bg-white/[0.08] dark:hover:text-white";
 const NAV_LOGOUT =
@@ -877,15 +879,16 @@ export function AdminDashboard() {
           <div className="flex shrink-0 items-center gap-2 md:hidden">
             <button
               type="button"
-              aria-label="إضافة طلب"
+              aria-label="إضافة سريعة من الواتساب"
               onClick={() => {
                 setMenuOpen(false);
-                setModalOpen(true);
+                setQuickOpen(true);
               }}
-              className={NAV_PRIMARY}
+              className={NAV_QUICK_PRIMARY}
             >
-              <Plus className="h-4 w-4" />
-              <span>إضافة طلب</span>
+              <WhatsAppIcon className="h-4 w-4 text-[#128C7E]" />
+              <Plus className="h-3.5 w-3.5" />
+              <span>إضافة سريعة</span>
             </button>
             <div className="relative" ref={menuRef}>
               <button
@@ -922,12 +925,12 @@ export function AdminDashboard() {
                     role="menuitem"
                     onClick={() => {
                       setMenuOpen(false);
-                      setQuickOpen(true);
+                      setModalOpen(true);
                     }}
                     className="inline-flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-right transition hover:bg-white/5"
                   >
-                    <WhatsAppIcon className="h-4 w-4 text-slate-300" />
-                    <span className="text-[13px] font-semibold">إضافة سريعة من الواتساب</span>
+                    <Plus className="h-4 w-4 text-slate-300" />
+                    <span className="text-[13px] font-semibold">إضافة طلب</span>
                   </button>
                   <PushToggle
                     variant="menu"
