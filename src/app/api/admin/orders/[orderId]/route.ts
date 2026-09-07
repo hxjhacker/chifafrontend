@@ -148,7 +148,13 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ orderId?:
     ];
     const status = known.includes(message) ? 422 : 500;
     if (status === 500) console.error("admin_order_patch_failed", err);
-    return NextResponse.json({ detail: known.includes(message) ? message : "update_failed" }, { status });
+    return NextResponse.json(
+      {
+        detail: known.includes(message) ? message : "update_failed",
+        message: known.includes(message) ? message : message.slice(0, 280),
+      },
+      { status },
+    );
   }
 }
 

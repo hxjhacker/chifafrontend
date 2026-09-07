@@ -73,29 +73,36 @@ export async function proxyAdminBody(req: NextRequest, path: string, accept: str
   return new NextResponse(buf, { status: backendRes.status, headers });
 }
 
-export async function proxyAdminGet(req: NextRequest, path: string, accept: string) {
+export async function proxyAdminGet(req: NextRequest, path: string, accept: string, timeoutMs = 0) {
   const targetUrl = `${adminBackendBase()}${path}`;
-  const backendRes = await fetch(targetUrl, {
-    method: "GET",
-    cache: "no-store",
-    headers: {
-      Accept: accept,
-      ...adminAuthHeaders(req),
-    },
-  });
-  const contentType = backendRes.headers.get("content-type") || "";
-  if (contentType.includes("application/json") || backendRes.status >= 400) {
-    const rawText = await backendRes.text();
-    try {
-      return NextResponse.json(JSON.parse(rawText), { status: backendRes.status });
-    } catch {
-      return NextResponse.json({ success: false, detail: rawText || "proxy_failed" }, { status: backendRes.status });
+  const controller = timeoutMs > 0 ? new AbortController() : null;
+  const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
+  try {
+    const backendRes = await fetch(targetUrl, {
+      method: "GET",
+      cache: "no-store",
+      headers: {
+        Accept: accept,
+        ...adminAuthHeaders(req),
+      },
+      ...(controller ? { signal: controller.signal } : {}),
+    });
+    const contentType = backendRes.headers.get("content-type") || "";
+    if (contentType.includes("application/json") || backendRes.status >= 400) {
+      const rawText = await backendRes.text();
+      try {
+        return NextResponse.json(JSON.parse(rawText), { status: backendRes.status });
+      } catch {
+        return NextResponse.json({ success: false, detail: rawText || "proxy_failed" }, { status: backendRes.status });
+      }
     }
+    const buf = await backendRes.arrayBuffer();
+    const headers = new Headers();
+    headers.set("Content-Type", contentType || "application/octet-stream");
+    const disposition = backendRes.headers.get("content-disposition");
+    if (disposition) headers.set("Content-Disposition", disposition);
+    return new NextResponse(buf, { status: backendRes.status, headers });
+  } finally {
+    if (timer) clearTimeout(timer);
   }
-  const buf = await backendRes.arrayBuffer();
-  const headers = new Headers();
-  headers.set("Content-Type", contentType || "application/octet-stream");
-  const disposition = backendRes.headers.get("content-disposition");
-  if (disposition) headers.set("Content-Disposition", disposition);
-  return new NextResponse(buf, { status: backendRes.status, headers });
 }

@@ -98,6 +98,23 @@ const SECTION_ITEMS: { key: keyof SectionPrefs; label: string }[] = [
   { key: "observatory", label: "إظهار/إخفاء مرصد المشاهدات والأداء" },
 ];
 
+async function adminFetch(url: string, init: RequestInit = {}, timeoutMs = 12000): Promise<Response> {
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { credentials: "include", cache: "no-store", ...init, signal: controller.signal });
+  } finally {
+    window.clearTimeout(timer);
+  }
+}
+
+function serverErrorMessage(status: number, detail?: string, fallback = "تعذر الاتصال بالخادم.") {
+  const text = String(detail || "").trim();
+  if (text && !["orders_failed", "update_failed", "logistics_failed", "fail"].includes(text)) return text;
+  if (status >= 500) return "تعذر الاتصال بقاعدة البيانات. تحقق من PostgreSQL.";
+  return fallback;
+}
+
 function readPrefs(): SectionPrefs {
   try {
     const raw = localStorage.getItem(PREFS_KEY) || localStorage.getItem(LEGACY_PREFS_KEY);
@@ -219,13 +236,8 @@ export function AdminDashboard() {
   const load = useCallback(async () => {
     setError("");
     try {
-      const [meRes, statsRes, ordersRes, logisticsRes] = await Promise.all([
-        fetch("/api/admin/me", { credentials: "include", cache: "no-store" }),
-        fetch("/api/admin/stats", { credentials: "include", cache: "no-store" }),
-        fetch("/api/admin/orders?limit=2000", { credentials: "include", cache: "no-store" }),
-        fetch("/api/admin/analytics/logistics", { credentials: "include", cache: "no-store" }),
-      ]);
-      if ([meRes, statsRes, ordersRes, logisticsRes].some((r) => r.status === 401)) {
+      const meRes = await adminFetch("/api/admin/me", {}, 8000);
+      if (meRes.status === 401) {
         router.replace("/mydashboard/login");
         return;
       }
@@ -233,24 +245,46 @@ export function AdminDashboard() {
         const me = (await meRes.json()) as { username?: string };
         setUsername(me.username || "");
       }
-      if (statsRes.ok) setStats((await statsRes.json()) as AdminStats);
-      if (logisticsRes.ok) setLogistics((await logisticsRes.json()) as LogisticsAnalytics);
+
+      const ordersRes = await adminFetch("/api/admin/orders?limit=2000", {}, 20000);
+      if (ordersRes.status === 401) {
+        router.replace("/mydashboard/login");
+        return;
+      }
       if (ordersRes.ok) {
         const payload = (await ordersRes.json()) as { orders: AdminOrder[] };
         setOrders(payload.orders || []);
+      } else {
+        const body = (await ordersRes.json().catch(() => ({}))) as { detail?: string; message?: string };
+        const msg = serverErrorMessage(ordersRes.status, body.message || body.detail, "تعذر تحميل الطلبات.");
+        setError(msg);
+        setNoticeKind("warn");
+        setNotice(msg);
       }
-      if (!statsRes.ok || !ordersRes.ok) {
-        setError(
-          statsRes.status === 500 || ordersRes.status === 500
-            ? "تعذر الاتصال بقاعدة البيانات. تحقق من PostgreSQL."
-            : "تعذر تحميل الطلبات.",
-        );
-      }
-    } catch {
-      setError("تعذر الاتصال بالخادم.");
+    } catch (err) {
+      const msg =
+        err instanceof DOMException && err.name === "AbortError"
+          ? "انتهت مهلة الاتصال بالخادم."
+          : "تعذر الاتصال بالخادم.";
+      setError(msg);
+      setNoticeKind("warn");
+      setNotice(msg);
     } finally {
       setLoading(false);
     }
+
+    void (async () => {
+      try {
+        const [statsRes, logisticsRes] = await Promise.all([
+          adminFetch("/api/admin/stats", {}, 8000).catch(() => null),
+          adminFetch("/api/admin/analytics/logistics", {}, 6000).catch(() => null),
+        ]);
+        if (statsRes?.ok) setStats((await statsRes.json()) as AdminStats);
+        if (logisticsRes?.ok) setLogistics((await logisticsRes.json()) as LogisticsAnalytics);
+      } catch {
+        /* stats/logistics must never freeze the dashboard */
+      }
+    })();
   }, [router]);
 
   useEffect(() => {
@@ -258,12 +292,16 @@ export function AdminDashboard() {
   }, [load]);
 
   async function refreshStats() {
-    const [statsRes, logisticsRes] = await Promise.all([
-      fetch("/api/admin/stats", { credentials: "include", cache: "no-store" }),
-      fetch("/api/admin/analytics/logistics", { credentials: "include", cache: "no-store" }),
-    ]);
-    if (statsRes.ok) setStats((await statsRes.json()) as AdminStats);
-    if (logisticsRes.ok) setLogistics((await logisticsRes.json()) as LogisticsAnalytics);
+    try {
+      const [statsRes, logisticsRes] = await Promise.all([
+        adminFetch("/api/admin/stats", {}, 8000).catch(() => null),
+        adminFetch("/api/admin/analytics/logistics", {}, 6000).catch(() => null),
+      ]);
+      if (statsRes?.ok) setStats((await statsRes.json()) as AdminStats);
+      if (logisticsRes?.ok) setLogistics((await logisticsRes.json()) as LogisticsAnalytics);
+    } catch {
+      /* ignore background stats errors */
+    }
   }
 
   async function logout() {
@@ -292,27 +330,29 @@ export function AdminDashboard() {
     setOrders((list) => list.map((o) => (o.order_id === order.order_id ? { ...o, status: next } : o)));
     setSavingId(order.order_id);
     try {
-      const res = await fetch(`/api/admin/orders/${order.order_id}`, {
+      const res = await adminFetch(`/api/admin/orders/${order.order_id}`, {
         method: "PATCH",
-        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: next }),
-      });
+      }, 15000);
       if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as { detail?: string };
+        const body = (await res.json().catch(() => ({}))) as { detail?: string; message?: string };
         const map: Record<string, string> = {
           invalid_status_transition: "لا يمكن القفز في حالة الطلب. اتبع المسار بالترتيب.",
           confirmation_details_required: "لازم تكمل معلومات التوصيل قبل التأكيد.",
           invalid_status: "حالة الطلب غير صالحة.",
         };
-        throw new Error(map[body.detail || ""] || "fail");
+        throw new Error(map[body.detail || ""] || serverErrorMessage(res.status, body.message || body.detail, "فشل تحديث الحالة. أعد المحاولة."));
       }
       const updated = (await res.json()) as AdminOrder;
       setOrders((list) => list.map((o) => (o.order_id === order.order_id ? updated : o)));
       await refreshStats();
     } catch (err) {
       setOrders((list) => list.map((o) => (o.order_id === order.order_id ? { ...o, status: prev } : o)));
-      setError(err instanceof Error && err.message !== "fail" ? err.message : "فشل تحديث الحالة. أعد المحاولة.");
+      const msg = err instanceof Error && err.message !== "fail" ? err.message : "فشل تحديث الحالة. أعد المحاولة.";
+      setError(msg);
+      setNoticeKind("warn");
+      setNotice(msg);
     } finally {
       setSavingId(null);
     }
@@ -523,18 +563,17 @@ export function AdminDashboard() {
     setBulkBusy("dispatch");
     setError("");
     try {
-      const res = await fetch("/api/admin/orders/bulk-livraison", {
+      const res = await adminFetch("/api/admin/orders/bulk-livraison", {
         method: "POST",
-        credentials: "include",
-        cache: "no-store",
         headers: { Accept: "application/json", "Content-Type": "application/json" },
         body: JSON.stringify({ order_ids: selectedIds }),
-      });
+      }, 120000);
       const body = (await res.json().catch(() => ({}))) as {
         success_count?: number;
         failed_count?: number;
         detail?: string;
         message?: string;
+        results?: Array<{ error?: string; success?: boolean }>;
       };
       if (!res.ok) throw new Error(await (async () => {
         const map: Record<string, string> = {
@@ -542,17 +581,21 @@ export function AdminDashboard() {
           order_ids_required: "حدّد طلبيات أولاً.",
           not_authenticated: "جلسة الأدمن غير صالحة. أعد تسجيل الدخول.",
         };
-        return map[String(body.detail || "")] || body.message || body.detail || "تعذر الإرسال الجماعي.";
+        return map[String(body.detail || "")] || serverErrorMessage(res.status, body.message || body.detail, "تعذر الإرسال الجماعي.");
       })());
       const ok = Number(body.success_count || 0);
       const fail = Number(body.failed_count || 0);
+      const firstFail = (body.results || []).find((row) => !row.success)?.error;
       setNoticeKind(fail ? "warn" : "ok");
-      setNotice(`تم إرسال ${ok} طلبية إلى Meta Livraison${fail ? ` — فشل ${fail}` : ""}.`);
+      setNotice(`تم إرسال ${ok} طلبية إلى Meta Livraison${fail ? ` — فشل ${fail}${firstFail ? ` (${firstFail})` : ""}` : ""}.`);
       setBulkConfirm(false);
       await load();
       await refreshStats();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "تعذر الإرسال الجماعي.");
+      const msg = err instanceof Error ? err.message : "تعذر الإرسال الجماعي.";
+      setError(msg);
+      setNoticeKind("warn");
+      setNotice(msg);
     } finally {
       setBulkBusy(null);
     }

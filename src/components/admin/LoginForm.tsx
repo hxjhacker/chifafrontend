@@ -41,11 +41,14 @@ export function LoginForm() {
     if (loading) return;
     setError("");
     setLoading(true);
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), 12000);
     try {
       const res = await fetch("/api/admin/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
+        signal: controller.signal,
         body: JSON.stringify({ username: username.trim(), password, remember, rememberMe: remember }),
       });
       if (res.status === 429) {
@@ -68,9 +71,10 @@ export function LoginForm() {
       }
       router.replace("/mydashboard");
       router.refresh();
-    } catch {
-      setError("تعذر الاتصال. حاول مرة أخرى.");
+    } catch (err) {
+      setError(err instanceof DOMException && err.name === "AbortError" ? "انتهت مهلة الاتصال. حاول مرة أخرى." : "تعذر الاتصال. حاول مرة أخرى.");
     } finally {
+      window.clearTimeout(timer);
       setLoading(false);
     }
   }

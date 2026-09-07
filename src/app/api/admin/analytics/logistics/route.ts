@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
   const denied = await requireAdmin(request);
   if (denied instanceof NextResponse) return denied;
   try {
-    const proxied = await proxyAdminGet(request, "/api/admin/analytics/logistics", "application/json");
+    const proxied = await proxyAdminGet(request, "/api/admin/analytics/logistics", "application/json", 4000);
     if (proxied.status === 200) return proxied;
   } catch {
     // FastAPI unavailable — compute from the same Postgres as the dashboard.

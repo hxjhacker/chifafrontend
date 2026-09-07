@@ -23,7 +23,13 @@ export async function GET(request: Request) {
       return NextResponse.json({ detail: "invalid_status" }, { status: 422 });
     }
     console.error("admin_orders_failed", err);
-    return NextResponse.json({ detail: "orders_failed" }, { status: 500 });
+    return NextResponse.json(
+      {
+        detail: "orders_failed",
+        message: err instanceof Error ? err.message.slice(0, 280) : "orders_failed",
+      },
+      { status: 500 },
+    );
   }
 }
 

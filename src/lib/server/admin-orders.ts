@@ -88,24 +88,25 @@ const CORE_UPDATE_COLS = new Set([
 ]);
 
 function stampFragment(cols: Set<string>, param: string) {
+  const status = `${param}::varchar`;
   const parts: string[] = [];
   if (cols.has("confirmed_at")) {
     parts.push(
-      `confirmed_at = CASE WHEN ${param} = 'new' THEN NULL WHEN ${param} IN ('confirmed','shipped','delivered','returned') THEN COALESCE(confirmed_at, now()) ELSE confirmed_at END`,
+      `confirmed_at = CASE WHEN ${status} = 'new' THEN NULL WHEN ${status} IN ('confirmed','shipped','delivered','returned') THEN COALESCE(confirmed_at, now()) ELSE confirmed_at END`,
     );
   }
   if (cols.has("shipped_at")) {
     parts.push(
-      `shipped_at = CASE WHEN ${param} IN ('new','confirmed') THEN NULL WHEN ${param} IN ('shipped','delivered','returned') THEN COALESCE(shipped_at, now()) ELSE shipped_at END`,
+      `shipped_at = CASE WHEN ${status} IN ('new','confirmed') THEN NULL WHEN ${status} IN ('shipped','delivered','returned') THEN COALESCE(shipped_at, now()) ELSE shipped_at END`,
     );
   }
   if (cols.has("delivered_at")) {
     parts.push(
-      `delivered_at = CASE WHEN ${param} IN ('new','confirmed','shipped','returned') THEN NULL WHEN ${param} = 'delivered' THEN COALESCE(delivered_at, now()) ELSE delivered_at END`,
+      `delivered_at = CASE WHEN ${status} IN ('new','confirmed','shipped','returned') THEN NULL WHEN ${status} = 'delivered' THEN COALESCE(delivered_at, now()) ELSE delivered_at END`,
     );
   }
   if (cols.has("cancelled_at")) {
-    parts.push(`cancelled_at = CASE WHEN ${param} = 'cancelled' THEN COALESCE(cancelled_at, now()) ELSE NULL END`);
+    parts.push(`cancelled_at = CASE WHEN ${status} = 'cancelled' THEN COALESCE(cancelled_at, now()) ELSE NULL END`);
   }
   return parts.length ? `, ${parts.join(", ")}` : "";
 }
@@ -375,14 +376,16 @@ function buildUpdate(orderId: string, sets: SetItem[], cols: Set<string>) {
       continue;
     }
     values.push(item.value);
+    const placeholder = item.column === "status" ? `$${values.length}::varchar` : `$${values.length}`;
     if (item.expr === "coalesce") {
-      assignments.push(`${item.column} = COALESCE($${values.length}, ${item.column})`);
+      assignments.push(`${item.column} = COALESCE(${placeholder}, ${item.column})`);
     } else {
-      assignments.push(`${item.column} = $${values.length}`);
+      assignments.push(`${item.column} = ${placeholder}`);
     }
   }
   const statusAssign = assignments.find((part) => part.startsWith("status = "));
-  const statusParam = statusAssign ? statusAssign.slice(statusAssign.indexOf("$")) : "";
+  const statusMatch = statusAssign ? statusAssign.match(/\$(\d+)/) : null;
+  const statusParam = statusMatch ? `$${statusMatch[1]}` : "";
   const stamp = statusParam ? stampFragment(cols, statusParam) : "";
   return {
     values,
@@ -450,17 +453,19 @@ async function applyStatusOnly(
   cols: Set<string>,
 ) {
   if (!ALLOWED.includes(status)) throw new Error("invalid_status");
+  const boundStatus = String(status);
   let saved: OrderRow | undefined;
   try {
-    const withUpdated =
+    const stamp = stampFragment(cols, "$2");
+    const withStamp =
       cols.size === 0 || cols.has("updated_at")
-        ? `UPDATE orders SET status = $2, updated_at = now() WHERE id = $1 RETURNING *`
-        : `UPDATE orders SET status = $2 WHERE id = $1 RETURNING *`;
-    const result = await client.query(withUpdated, [orderId, status]);
+        ? `UPDATE orders SET status = $2::varchar, updated_at = now()${stamp} WHERE id = $1 RETURNING *`
+        : `UPDATE orders SET status = $2::varchar${stamp} WHERE id = $1 RETURNING *`;
+    const result = await client.query(withStamp, [orderId, boundStatus]);
     saved = result.rows[0];
   } catch (err) {
     console.error("admin_status_update_retry", err);
-    const result = await client.query(`UPDATE orders SET status = $2 WHERE id = $1 RETURNING *`, [orderId, status]);
+    const result = await client.query(`UPDATE orders SET status = $2::varchar WHERE id = $1 RETURNING *`, [orderId, boundStatus]);
     saved = result.rows[0];
   }
   if (!saved) return null;
@@ -667,18 +672,18 @@ export async function updateAdminOrder(orderId: string, patch: OrderPatch): Prom
            product_slug = $5,
            tier_qty = $6,
            total_cents = $7,
-           status = $8,
+           status = $8::varchar,
            updated_at = now()
          WHERE id = $1
          RETURNING *`,
-        [orderId, fullName, phone, cityAr, slug, qty, cents, status],
+        [orderId, fullName, phone, cityAr, slug, qty, cents, String(status)],
       );
       saved = core.rows[0];
     } catch (err) {
       console.error("admin_order_core_update_retry", err);
       const fallback = await run(
-        `UPDATE orders SET status = $2, updated_at = now() WHERE id = $1 RETURNING *`,
-        [orderId, status],
+        `UPDATE orders SET status = $2::varchar, updated_at = now() WHERE id = $1 RETURNING *`,
+        [orderId, String(status)],
       );
       saved = fallback.rows[0];
       if (!saved) throw err;
