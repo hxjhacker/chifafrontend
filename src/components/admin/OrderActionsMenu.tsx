@@ -17,6 +17,8 @@ type Props = {
   onView: (order: AdminOrder) => void;
   onDuplicate: (order: AdminOrder) => void;
   onDelete: (order: AdminOrder) => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 };
 
 const MENU_WIDTH = 260;
@@ -33,11 +35,15 @@ export function OrderActionsMenu({
   onView,
   onDuplicate,
   onDelete,
+  open: openProp,
+  onOpenChange,
 }: Props) {
   const btnRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
-  const [open, setOpen] = useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const open = openProp ?? uncontrolledOpen;
+  const setOpen = onOpenChange ?? setUncontrolledOpen;
   const [isMobile, setIsMobile] = useState(
     () => typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches,
   );

@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { Check, Copy, Loader2, Phone } from "lucide-react";
 import { WhatsAppIcon } from "@/components/Chrome";
 import { OrderActionsMenu } from "@/components/admin/OrderActionsMenu";
+import { useLongPress } from "@/hooks/useLongPress";
 import {
   allowedNextStatuses,
   canTransitionStatus,
@@ -68,17 +70,40 @@ function StatusSelect({
   );
 }
 
+function CarrierBadge({ carrier }: { carrier?: string | null }) {
+  const quick = carrier === "quick_livraison";
+  return (
+    <span
+      className={cn(
+        "shrink-0 rounded-full px-1.5 py-px text-[9px] font-black",
+        quick
+          ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+          : "bg-sky-500/15 text-sky-600 dark:text-sky-300",
+      )}
+    >
+      {quick ? "كويك" : "ميتا"}
+    </span>
+  );
+}
+
 function TrackingChip({ order, copied, onCopy }: { order: AdminOrder; copied: boolean; onCopy: () => void }) {
   if (!order.meta_livraison_code) return null;
+  const quick = (order.carrier || "meta_livraison") === "quick_livraison";
   return (
     <button
       type="button"
-      title="نسخ كود Meta Livraison"
+      title="نسخ كود التتبع"
       onClick={onCopy}
-      className="mt-1 inline-flex max-w-[9.5rem] items-center gap-1 rounded-full border border-sky-500/40 bg-sky-500/15 px-2 py-0.5 text-[10px] font-bold text-sky-600 transition hover:bg-sky-500/25 dark:text-sky-300"
+      className={cn(
+        "mt-1 inline-flex max-w-[11.5rem] items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold transition",
+        quick
+          ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/25 dark:text-emerald-300"
+          : "border-sky-500/40 bg-sky-500/15 text-sky-600 hover:bg-sky-500/25 dark:text-sky-300",
+      )}
     >
       {copied ? <Check className="h-3 w-3 shrink-0 text-emeraldCustom" /> : <Copy className="h-3 w-3 shrink-0" />}
       <span className="truncate">{order.meta_livraison_code}</span>
+      <CarrierBadge carrier={order.carrier} />
     </button>
   );
 }
@@ -138,7 +163,7 @@ function PhoneActions({
   );
 }
 
-function Menu({ props }: { props: OrderRowProps }) {
+function Menu({ props, open, onOpenChange }: { props: OrderRowProps; open?: boolean; onOpenChange?: (open: boolean) => void }) {
   return (
     <OrderActionsMenu
       order={props.order}
@@ -150,6 +175,8 @@ function Menu({ props }: { props: OrderRowProps }) {
       onView={props.onView}
       onDuplicate={props.onDuplicate}
       onDelete={props.onDelete}
+      open={open}
+      onOpenChange={onOpenChange}
     />
   );
 }
@@ -204,8 +231,13 @@ export function OrderDesktopRow(props: OrderRowProps) {
 
 export function OrderMobileCard(props: OrderRowProps) {
   const { order, selected, onToggleSelected, copiedId, copiedTrackingId, hideNums, onCopyPhone, onCopyTracking } = props;
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const longPress = useLongPress(() => setSheetOpen(true), { delay: 500 });
   return (
-    <article className="rounded-2xl border border-gold/25 bg-white p-3 shadow-sm dark:bg-brandDark">
+    <article
+      {...longPress}
+      className="select-none rounded-2xl border border-gold/25 bg-white p-3 shadow-sm touch-manipulation [-webkit-touch-callout:none] dark:bg-brandDark"
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-2">
           <input
@@ -251,7 +283,7 @@ export function OrderMobileCard(props: OrderRowProps) {
 
       <div className="mt-3 flex items-center justify-between gap-2 border-t border-gold/15 pt-3">
         <PhoneActions order={order} copied={copiedId === order.order_id} hideNums={hideNums} onCopyPhone={onCopyPhone} />
-        <Menu props={props} />
+        <Menu props={props} open={sheetOpen} onOpenChange={setSheetOpen} />
       </div>
     </article>
   );

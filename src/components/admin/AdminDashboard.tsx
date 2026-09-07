@@ -102,8 +102,14 @@ const SECTION_ITEMS: { key: keyof SectionPrefs; label: string }[] = [
   { key: "observatory", label: "إظهار/إخفاء مرصد المشاهدات والأداء" },
 ];
 
-const NAV_GHOST =
-  "inline-flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border border-slate-200/90 bg-slate-50/80 px-3 text-[13px] font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:bg-white/[0.08] dark:hover:text-white";
+const NAV_BTN =
+  "inline-flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border bg-transparent px-3 text-[13px] font-semibold transition";
+const NAV_TARIFS = `${NAV_BTN} border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10 dark:text-emerald-400`;
+const NAV_WHATSAPP = `${NAV_BTN} border-green-500/30 text-green-600 hover:bg-green-500/10 dark:text-green-400`;
+const NAV_PUSH = `${NAV_BTN} border-amber-500/30 text-amber-600 hover:bg-amber-500/10 dark:text-amber-400`;
+const NAV_PREFS = `${NAV_BTN} border-violet-500/30 text-violet-600 hover:bg-violet-500/10 dark:text-violet-400`;
+const NAV_HIDE = `${NAV_BTN} border-cyan-500/30 text-cyan-600 hover:bg-cyan-500/10 dark:text-cyan-400`;
+const NAV_GHOST = `${NAV_BTN} border-slate-200/90 bg-slate-50/80 text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:bg-white/[0.08] dark:hover:text-white`;
 const NAV_PRIMARY =
   "inline-flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg bg-gold px-4 text-[13px] font-bold text-royal shadow-sm transition hover:bg-gold-600 active:scale-[0.98]";
 const NAV_ICON =
@@ -1003,7 +1009,7 @@ export function AdminDashboard() {
                 type="button"
                 aria-label="دليل الأسعار والمدن"
                 onClick={() => setTarifsOpen(true)}
-                className={NAV_GHOST}
+                className={NAV_TARIFS}
               >
                 <Calculator className="h-4 w-4" />
                 <span className="hidden lg:inline">دليل الأسعار والمدن</span>
@@ -1013,14 +1019,14 @@ export function AdminDashboard() {
                 type="button"
                 aria-label="إضافة سريعة من الواتساب"
                 onClick={() => setQuickOpen(true)}
-                className={NAV_GHOST}
+                className={NAV_WHATSAPP}
               >
                 <WhatsAppIcon className="h-4 w-4" />
                 <span className="hidden lg:inline">إضافة سريعة من الواتساب</span>
                 <span className="lg:hidden">واتساب</span>
               </button>
               <PushToggle
-                className={NAV_GHOST}
+                className={NAV_PUSH}
                 onNotice={(message, kind) => {
                   setNoticeKind(kind || "ok");
                   setNotice(message);
@@ -1032,7 +1038,7 @@ export function AdminDashboard() {
                   aria-label="تخصيص الواجهة"
                   aria-expanded={prefsOpen}
                   onClick={() => setPrefsOpen((v) => !v)}
-                  className={NAV_GHOST}
+                  className={NAV_PREFS}
                 >
                   <SlidersHorizontal className="h-4 w-4" />
                   <span className="hidden xl:inline">تخصيص الواجهة</span>
@@ -1081,7 +1087,7 @@ export function AdminDashboard() {
                 type="button"
                 aria-label={hideAll ? "إظهار كل الأرقام" : "إخفاء الأرقام"}
                 onClick={() => setHideAll((v) => !v)}
-                className={NAV_GHOST}
+                className={NAV_HIDE}
               >
                 {hideAll ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                 <span>{hideAll ? "إظهار الأرقام" : "إخفاء الأرقام"}</span>

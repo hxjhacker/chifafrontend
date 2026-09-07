@@ -108,7 +108,7 @@ export function PushToggle({
       disabled={busy || status === "loading" || status === "unsupported"}
       onClick={() => void toggle()}
       className={cn(
-        "inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200/90 bg-slate-50/80 px-3 text-[13px] font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:bg-white/[0.08] dark:hover:text-white",
+        "inline-flex h-9 items-center gap-2 rounded-lg border px-3 text-[13px] font-semibold transition",
         (busy || status === "unsupported") && "opacity-60",
         className,
       )}
