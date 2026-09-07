@@ -16,6 +16,7 @@ export type LogisticsRegion = {
 export type LogisticsAnalytics = {
   currency: string;
   delivery_fee: number;
+  refusal_fee?: number;
   return_fee: number;
   financial: {
     total_delivered_amount: number;
@@ -24,8 +25,13 @@ export type LogisticsAnalytics = {
     in_transit_count: number;
     returned_count: number;
     cancelled_count: number;
+    delivery_costs?: number;
+    refusal_costs?: number;
+    return_costs?: number;
     estimated_shipping_costs: number;
     net_cash_due: number;
+    mapped_fee_orders?: number;
+    unmapped_fee_orders?: number;
   };
   delivery_rate: number;
   delivery_rate_denominator: number;
@@ -35,8 +41,9 @@ export type LogisticsAnalytics = {
 
 export const EMPTY_LOGISTICS: LogisticsAnalytics = {
   currency: "MAD",
-  delivery_fee: 30,
-  return_fee: 15,
+  delivery_fee: 35,
+  refusal_fee: 10,
+  return_fee: 0,
   financial: {
     total_delivered_amount: 0,
     in_transit_amount: 0,
@@ -44,8 +51,13 @@ export const EMPTY_LOGISTICS: LogisticsAnalytics = {
     in_transit_count: 0,
     returned_count: 0,
     cancelled_count: 0,
+    delivery_costs: 0,
+    refusal_costs: 0,
+    return_costs: 0,
     estimated_shipping_costs: 0,
     net_cash_due: 0,
+    mapped_fee_orders: 0,
+    unmapped_fee_orders: 0,
   },
   delivery_rate: 0,
   delivery_rate_denominator: 0,
@@ -71,12 +83,17 @@ export const RATE_GRAY = "#94A3B8";
 
 export function deliveryFeeFromEnv() {
   const n = Number(process.env.META_LIVRAISON_DELIVERY_FEE);
-  return Number.isFinite(n) && n >= 0 ? n : 30;
+  return Number.isFinite(n) && n >= 0 ? n : 35;
 }
 
 export function returnFeeFromEnv() {
   const n = Number(process.env.META_LIVRAISON_RETURN_FEE);
-  return Number.isFinite(n) && n >= 0 ? n : 15;
+  return Number.isFinite(n) && n >= 0 ? n : 0;
+}
+
+export function refusalFeeFromEnv() {
+  const n = Number(process.env.META_LIVRAISON_REFUSAL_FEE);
+  return Number.isFinite(n) && n >= 0 ? n : 10;
 }
 
 export function trueDeliveryRate(delivered: number, returned: number, cancelled: number) {

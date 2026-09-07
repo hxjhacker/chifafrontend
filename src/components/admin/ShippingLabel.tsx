@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import JsBarcode from "jsbarcode";
 import { QRCodeSVG } from "qrcode.react";
 import { Printer } from "lucide-react";
 import { copyablePhone, detailedAddress, orderLineItems, type AdminOrder } from "@/lib/admin";
 import { destinationHub, labelDate, parcelOrderCode } from "@/lib/label-hub";
+import { buildTarifIndex, findCityTarif, hubCode, loadAdminCityTarifs } from "@/lib/city-tarifs";
 import { digitsOnly } from "@/lib/phone";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 
@@ -56,7 +57,9 @@ export function MetaLivraisonTicket({ order }: { order: AdminOrder }) {
   const tracking = (order.meta_livraison_code || "").trim();
   const code = parcelOrderCode(order.order_id);
   const isCanOpen = canOpenParcel(order);
-  const hubDestination = destinationHub(order.city, order.shipping_city, order.region_id || order.region);
+  const [tarifHub, setTarifHub] = useState("");
+  const fallbackHub = destinationHub(order.city, order.shipping_city, order.region_id || order.region);
+  const hubDestination = tarifHub || fallbackHub || (order.shipping_city || order.city || "DESTINATION").toUpperCase();
   const currentDate = labelDate();
   const phone = formatLabelPhone(copyablePhone(order));
   const ville = (order.shipping_city || order.city || "—").trim() || "—";
@@ -65,6 +68,19 @@ export function MetaLivraisonTicket({ order }: { order: AdminOrder }) {
   const lines = orderLineItems(order);
   const marchendise = lines.map((line) => `${line.label} × ${line.qty}`).join(" + ") || "—";
   const price = Math.round(Number(order.total ?? order.total_price) || 0);
+
+  useEffect(() => {
+    let alive = true;
+    void loadAdminCityTarifs().then((rows) => {
+      if (!alive) return;
+      const hit = findCityTarif(buildTarifIndex(rows), order.shipping_city, order.city);
+      const hub = hubCode(hit?.hub_code || hit?.hub_name);
+      if (hub) setTarifHub(hub);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [order.city, order.shipping_city]);
 
   useEffect(() => {
     const node = barcodeRef.current;

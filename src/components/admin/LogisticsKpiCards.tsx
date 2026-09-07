@@ -75,7 +75,7 @@ export function LogisticsKpiCards({ data, hidden, onToggleNumbers }: Props) {
         <div>
           <h3 className="text-base font-black text-royal dark:text-white">التحصيل والتوصيل</h3>
           <p className="text-[11px] text-royal/60 dark:text-slate-400">
-            تسوية COD بعد خصم رسوم التوصيل ({data.delivery_fee} درهم) والإرجاع ({data.return_fee} درهم)
+            تسوية COD حسب تعريفة كل مدينة: توصيل {data.delivery_fee} / رفض {data.refusal_fee ?? 10} / إرجاع {data.return_fee} درهم عند غياب التسعيرة
           </p>
         </div>
         <button

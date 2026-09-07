@@ -186,6 +186,18 @@ const SCHEMA_ALTERS = [
     created_at timestamptz NOT NULL DEFAULT now()
   )`,
   `CREATE UNIQUE INDEX IF NOT EXISTS ix_push_subscriptions_endpoint ON push_subscriptions (endpoint)`,
+  `CREATE TABLE IF NOT EXISTS city_tarifs (
+    id uuid PRIMARY KEY,
+    meta_city_id varchar(32) NOT NULL,
+    city_name varchar(160) NOT NULL,
+    delivery_fee double precision NOT NULL DEFAULT 35,
+    refusal_fee double precision NOT NULL DEFAULT 10,
+    return_fee double precision NOT NULL DEFAULT 0,
+    hub_name varchar(120),
+    updated_at timestamptz NOT NULL DEFAULT now()
+  )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS ix_city_tarifs_meta_city_id ON city_tarifs (meta_city_id)`,
+  `CREATE INDEX IF NOT EXISTS ix_city_tarifs_city_name ON city_tarifs (city_name)`,
 ];
 
 const PRODUCT_SEED = [
