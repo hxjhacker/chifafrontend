@@ -208,8 +208,8 @@ export function OrderAlertsBell({
         }}
         className={cn(
           variant === "icon"
-            ? "relative inline-flex h-9 w-9 items-center justify-center rounded-lg border text-slate-500 transition hover:bg-slate-100 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300"
-            : "relative inline-flex h-9 items-center gap-2 rounded-lg border px-3 text-[13px] font-semibold transition",
+            ? "relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border text-slate-500 transition hover:bg-slate-100 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:bg-white/[0.08]"
+            : "relative inline-flex h-9 shrink-0 items-center gap-2 rounded-lg border px-3 text-[13px] font-semibold transition",
           alert
             ? "border-orange-500/50 text-orange-600 hover:bg-orange-500/10 dark:text-orange-300"
             : className,
@@ -226,7 +226,10 @@ export function OrderAlertsBell({
       </button>
 
       {open ? (
-        <div className="absolute left-0 top-11 z-[70] w-[min(24rem,calc(100vw-1.5rem))] overflow-hidden rounded-2xl border border-white/10 bg-[#0F1E33] text-white shadow-2xl">
+        <div
+          dir="rtl"
+          className="absolute right-0 top-11 z-[70] w-[min(24rem,calc(100vw-1.5rem))] overflow-hidden rounded-2xl border border-white/10 bg-[#0F1E33] text-white shadow-2xl"
+        >
           <div className="flex items-center justify-between border-b border-white/10 px-3 py-2.5">
             <p className="text-xs font-black">تنبيهات الطلبات</p>
             <button

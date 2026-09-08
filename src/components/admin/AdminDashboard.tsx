@@ -15,7 +15,6 @@ import {
   FileSpreadsheet,
   Loader2,
   LogOut,
-  Menu,
   Package,
   PieChart,
   Plus,
@@ -111,23 +110,21 @@ const SECTION_ITEMS: { key: keyof SectionPrefs; label: string }[] = [
   { key: "observatory", label: "إظهار/إخفاء مرصد المشاهدات والأداء" },
 ];
 
-const NAV_BTN =
-  "inline-flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border bg-transparent px-3 text-[13px] font-semibold transition";
-const NAV_TARIFS = `${NAV_BTN} border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10 dark:text-emerald-400`;
-const NAV_PRODUCTS = `${NAV_BTN} border-violet-500/35 text-violet-600 hover:bg-violet-500/10 dark:text-violet-300`;
-const NAV_WHATSAPP = `${NAV_BTN} border-green-500/30 text-green-600 hover:bg-green-500/10 dark:text-green-400`;
-const NAV_PUSH = `${NAV_BTN} border-amber-500/30 text-amber-600 hover:bg-amber-500/10 dark:text-amber-400`;
-const NAV_PREFS = `${NAV_BTN} cursor-pointer border-violet-500/30 text-violet-600 hover:bg-violet-500/10 dark:text-violet-400`;
-const NAV_HIDE = `${NAV_BTN} border-cyan-500/30 text-cyan-600 hover:bg-cyan-500/10 dark:text-cyan-400`;
-const NAV_GHOST = `${NAV_BTN} border-slate-200/90 bg-slate-50/80 text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:bg-white/[0.08] dark:hover:text-white`;
+const NAV_CHIP =
+  "inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border px-2.5 text-xs font-semibold transition";
+const NAV_TARIFS = `${NAV_CHIP} border-teal-500/30 text-teal-600 hover:bg-teal-500/10 dark:text-teal-400`;
+const NAV_PRODUCTS = `${NAV_CHIP} border-purple-500/30 text-purple-600 hover:bg-purple-500/10 dark:text-purple-400`;
+const NAV_WHATSAPP = `${NAV_CHIP} border-emerald-500/30 px-3 text-[13px] text-emerald-600 hover:bg-emerald-500/10 dark:text-emerald-400`;
+const NAV_PUSH = `${NAV_CHIP} border-orange-500/30 text-orange-600 hover:bg-orange-500/10 dark:text-orange-300`;
+const NAV_PREFS = `${NAV_CHIP} cursor-pointer border-indigo-500/30 text-indigo-600 hover:bg-indigo-500/10 dark:text-indigo-400`;
+const NAV_HIDE = `${NAV_CHIP} border-cyan-500/30 text-cyan-600 hover:bg-cyan-500/10 dark:text-cyan-400`;
+const NAV_GHOST = `${NAV_CHIP} border-slate-200 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800`;
 const NAV_PRIMARY =
-  "inline-flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg bg-gold px-4 text-[13px] font-bold text-royal shadow-sm transition hover:bg-gold-600 active:scale-[0.98]";
-const NAV_QUICK_PRIMARY =
-  "inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg bg-gold px-3 text-[13px] font-bold text-royal shadow-sm ring-2 ring-[#25D366]/70 transition hover:bg-gold-600 active:scale-[0.98]";
+  "inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg bg-amber-500 px-3 text-[13px] font-bold text-slate-950 shadow-sm transition hover:bg-amber-400 active:scale-[0.98]";
 const NAV_ICON =
   "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200/90 bg-slate-50/80 text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:bg-white/[0.08] dark:hover:text-white";
 const NAV_LOGOUT =
-  "inline-flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border border-transparent bg-transparent px-3 text-[13px] font-semibold text-slate-500 transition hover:bg-rose-50 hover:text-rose-600 dark:text-slate-400 dark:hover:bg-rose-500/10 dark:hover:text-rose-300";
+  "inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-transparent bg-transparent px-2 text-[13px] font-semibold text-slate-500 transition hover:bg-rose-50 hover:text-rose-600 dark:text-slate-400 dark:hover:bg-rose-500/10 dark:hover:text-rose-300 sm:px-3";
 
 async function adminFetch(url: string, init: RequestInit = {}, timeoutMs = 12000): Promise<Response> {
   const controller = new AbortController();
@@ -210,9 +207,7 @@ export function AdminDashboard() {
   const [showAllCities, setShowAllCities] = useState(false);
   const [prefs, setPrefs] = useState<SectionPrefs>(DEFAULT_PREFS);
   const [prefsOpen, setPrefsOpen] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
   const selectAllRef = useRef<HTMLInputElement>(null);
 
   useLockBodyScroll(Boolean(deleteTarget) || prefsOpen);
@@ -237,22 +232,11 @@ export function AdminDashboard() {
   }, []);
 
   useEffect(() => {
-    function onDocClick(e: MouseEvent) {
-      const t = e.target as Node;
-      if (menuRef.current && !menuRef.current.contains(t)) setMenuOpen(false);
-    }
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        setPrefsOpen(false);
-        setMenuOpen(false);
-      }
+      if (e.key === "Escape") setPrefsOpen(false);
     }
-    document.addEventListener("mousedown", onDocClick);
     document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDocClick);
-      document.removeEventListener("keydown", onKey);
-    };
+    return () => document.removeEventListener("keydown", onKey);
   }, []);
 
   function persistPrefs(next: SectionPrefs) {
@@ -951,261 +935,120 @@ export function AdminDashboard() {
         </div>
       ) : null}
 
-      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 px-3 py-2.5 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-cardDark/95 md:px-4 md:py-3">
-        <div className="relative mx-auto flex max-w-7xl items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-2.5">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border-2 border-gold bg-royal shadow-sm dark:bg-brandDark md:h-10 md:w-10">
-              <span className="font-cinzel text-lg font-black text-gold md:text-xl">C</span>
-            </div>
-            <div className="hidden min-w-0 md:block">
-              <span className="block font-cinzel text-lg font-black tracking-widest text-royal dark:text-white">CHIFAGLOW</span>
-              <span className="-mt-1 block text-[10px] font-extrabold tracking-wider text-gold-600 dark:text-gold">
-                لوحة إدارة المبيعات {username ? `· ${username}` : ""}
-              </span>
-            </div>
+      <header
+        dir="ltr"
+        className="sticky top-0 z-40 w-full border-b border-slate-200/80 bg-white/95 px-3 py-2.5 shadow-sm backdrop-blur-md dark:border-slate-800/80 dark:bg-[#0d1527]/95 md:px-4"
+      >
+        <div className="mx-auto flex max-w-7xl items-center gap-3 md:gap-4">
+          <div className="relative z-10 flex shrink-0 items-center gap-1.5">
+            <button
+              type="button"
+              aria-label="خروج"
+              onClick={() => void logout()}
+              className={NAV_LOGOUT}
+            >
+              <LogOut className="h-4 w-4" />
+              <span className="hidden sm:inline">خروج</span>
+            </button>
+            <ThemeToggle className={cn(NAV_ICON, "hover:scale-100")} />
           </div>
 
-          <div className="flex shrink-0 items-center gap-2">
-          <OrderAlertsBell
-            className={NAV_PUSH}
-            orders={orders}
-            shippingId={shippingId}
-            onSendCarrier={(row, carrier) => void sendToLivraison(row, carrier)}
-            onShowOverdue={() => {
-              setUndispatchedOnly(true);
-              setStatus("confirmed");
-              setPage(1);
-            }}
-            onNotice={(message, kind) => {
-              setNoticeKind(kind || "ok");
-              setNotice(message);
-            }}
-            onSummary={setAlerts}
-          />
-
-          <div className="flex shrink-0 items-center gap-2 md:hidden">
+          <div className="no-scrollbar relative z-0 flex min-w-0 flex-1 items-center gap-2 overflow-x-auto py-1 md:flex-nowrap">
+            <button type="button" aria-label="إضافة طلب" onClick={() => setModalOpen(true)} className={NAV_PRIMARY}>
+              <Plus className="h-4 w-4" />
+              إضافة طلب
+            </button>
             <button
               type="button"
               aria-label="إضافة سريعة من الواتساب"
-              onClick={() => {
-                setMenuOpen(false);
-                setQuickOpen(true);
-              }}
-              className={NAV_QUICK_PRIMARY}
+              onClick={() => setQuickOpen(true)}
+              className={NAV_WHATSAPP}
             >
-              <WhatsAppIcon className="h-4 w-4 text-[#128C7E]" />
-              <Plus className="h-3.5 w-3.5" />
-              <span>إضافة سريعة</span>
+              <WhatsAppIcon className="h-4 w-4" />
+              إضافة سريعة
             </button>
-            <div className="relative" ref={menuRef}>
-              <button
-                type="button"
-                aria-label={menuOpen ? "إغلاق القائمة" : "قائمة الإجراءات"}
-                aria-expanded={menuOpen}
-                onClick={() => {
-                  setPrefsOpen(false);
-                  setMenuOpen((v) => !v);
-                }}
-                className={NAV_ICON}
-              >
-                {menuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
-              </button>
-              {menuOpen ? (
-                <div
-                  role="menu"
-                  className="absolute left-0 top-11 z-50 max-h-[min(80vh,32rem)] w-[min(20rem,calc(100vw-1.5rem))] overflow-y-auto rounded-2xl border border-white/10 bg-[#0F1E33] p-2 text-white shadow-2xl"
-                >
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      setTarifsOpen(true);
-                    }}
-                    className="inline-flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-right transition hover:bg-white/5"
-                  >
-                    <Calculator className="h-4 w-4 text-slate-300" />
-                    <span className="text-[13px] font-semibold">دليل الأسعار والمدن</span>
-                  </button>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      setProductsOpen(true);
-                    }}
-                    className="inline-flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-right transition hover:bg-white/5"
-                  >
-                    <Package className="h-4 w-4 text-violet-300" />
-                    <span className="text-[13px] font-semibold">إدارة المنتجات</span>
-                  </button>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      setModalOpen(true);
-                    }}
-                    className="inline-flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-right transition hover:bg-white/5"
-                  >
-                    <Plus className="h-4 w-4 text-slate-300" />
-                    <span className="text-[13px] font-semibold">إضافة طلب</span>
-                  </button>
-                  <div className="my-1 border-t border-white/10 px-3 py-2">
-                    <p className="mb-1 inline-flex items-center gap-2 text-[11px] font-semibold text-slate-400">
-                      <SlidersHorizontal className="h-3.5 w-3.5" />
-                      تخصيص الواجهة
-                    </p>
-                    <div className="space-y-0.5">
-                      {SECTION_ITEMS.map((item) => (
-                        <button
-                          key={item.key}
-                          type="button"
-                          role="switch"
-                          aria-checked={prefs[item.key]}
-                          onClick={() => toggleSection(item.key)}
-                          className="flex w-full items-center justify-between gap-3 rounded-xl px-1 py-2 text-right transition hover:bg-white/5"
-                        >
-                          <span className="text-[12px] font-semibold text-white">{item.label}</span>
-                          <IosSwitch checked={prefs[item.key]} />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={() => setHideAll((v) => !v)}
-                    className="inline-flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-right transition hover:bg-white/5"
-                  >
-                    {hideAll ? <Eye className="h-4 w-4 text-slate-300" /> : <EyeOff className="h-4 w-4 text-slate-300" />}
-                    <span className="text-[13px] font-semibold">{hideAll ? "إظهار الأرقام" : "إخفاء الأرقام"}</span>
-                  </button>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      downloadCsv("orders-chifaglow.csv", ordersToCsv(filtered));
-                    }}
-                    className="inline-flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-right transition hover:bg-white/5"
-                  >
-                    <FileSpreadsheet className="h-4 w-4 text-slate-300" />
-                    <span className="text-[13px] font-semibold">تصدير Excel</span>
-                  </button>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={toggleDarkMode}
-                    className="inline-flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-right transition hover:bg-white/5"
-                  >
-                    {darkMode ? <Sun className="h-4 w-4 text-slate-300" /> : <Moon className="h-4 w-4 text-slate-300" />}
-                    <span className="text-[13px] font-semibold">{darkMode ? "الوضع النهاري" : "الوضع الليلي"}</span>
-                  </button>
-                  <div className="mt-1 border-t border-white/10 pt-1">
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => void logout()}
-                      className="inline-flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-right text-rose-300/90 transition hover:bg-rose-500/10 hover:text-rose-200"
-                    >
-                      <LogOut className="h-4 w-4" />
-                      <span className="text-[13px] font-semibold">تسجيل الخروج</span>
-                    </button>
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          </div>
-
-          <div className="hidden min-w-0 shrink items-center gap-2 md:flex">
-            <div className="flex min-w-0 items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              <button
-                type="button"
-                aria-label="دليل الأسعار والمدن"
-                onClick={() => setTarifsOpen(true)}
-                className={NAV_TARIFS}
-              >
-                <Calculator className="h-4 w-4" />
-                <span className="hidden lg:inline">دليل الأسعار والمدن</span>
-                <span className="lg:hidden">الأسعار</span>
-              </button>
-              <button
-                type="button"
-                aria-label="إدارة المنتجات"
-                onClick={() => setProductsOpen(true)}
-                className={NAV_PRODUCTS}
-              >
-                <Package className="h-4 w-4" />
-                <span className="hidden lg:inline">إدارة المنتجات</span>
-                <span className="lg:hidden">المنتجات</span>
-              </button>
-              <button
-                type="button"
-                aria-label="إضافة سريعة من الواتساب"
-                onClick={() => setQuickOpen(true)}
-                className={NAV_WHATSAPP}
-              >
-                <WhatsAppIcon className="h-4 w-4" />
-                <span className="hidden lg:inline">إضافة سريعة من الواتساب</span>
-                <span className="lg:hidden">واتساب</span>
-              </button>
-              <button
-                type="button"
-                aria-label="تخصيص الواجهة"
-                aria-haspopup="dialog"
-                aria-expanded={prefsOpen}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setPrefsOpen(true);
-                }}
-                className={NAV_PREFS}
-              >
-                <SlidersHorizontal className="h-4 w-4" />
-                <span className="hidden xl:inline">تخصيص الواجهة</span>
-                <span className="xl:hidden">تخصيص</span>
-              </button>
-              <button
-                type="button"
-                aria-label={hideAll ? "إظهار كل الأرقام" : "إخفاء الأرقام"}
-                onClick={() => setHideAll((v) => !v)}
-                className={NAV_HIDE}
-              >
-                {hideAll ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                <span>{hideAll ? "إظهار الأرقام" : "إخفاء الأرقام"}</span>
-              </button>
-              <button
-                type="button"
-                aria-label="تصدير Excel"
-                onClick={() => downloadCsv("orders-chifaglow.csv", ordersToCsv(filtered))}
-                className={NAV_GHOST}
-              >
-                <FileSpreadsheet className="h-4 w-4" />
-                <span>تصدير Excel</span>
-              </button>
-            </div>
             <button
               type="button"
-              aria-label="إضافة طلب"
-              onClick={() => setModalOpen(true)}
-              className={NAV_PRIMARY}
+              aria-label="إدارة المنتجات"
+              onClick={() => setProductsOpen(true)}
+              className={NAV_PRODUCTS}
             >
-              <Plus className="h-4 w-4" />
-              <span>إضافة طلب</span>
+              <Package className="h-4 w-4" />
+              المنتجات
             </button>
-            <div className="flex items-center gap-1.5 border-s border-slate-200/90 ps-2 dark:border-white/10">
-              <ThemeToggle className={cn(NAV_ICON, "hover:scale-100")} />
-              <button
-                type="button"
-                aria-label="خروج"
-                onClick={() => void logout()}
-                className={NAV_LOGOUT}
-              >
-                <LogOut className="h-4 w-4" />
-                <span>خروج</span>
-              </button>
-            </div>
+            <button
+              type="button"
+              aria-label={hideAll ? "إظهار كل الأرقام" : "إخفاء الأرقام"}
+              onClick={() => setHideAll((v) => !v)}
+              className={NAV_HIDE}
+            >
+              {hideAll ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+              {hideAll ? "إظهار الأرقام" : "إخفاء الأرقام"}
+            </button>
+            <button
+              type="button"
+              aria-label="تصدير Excel"
+              onClick={() => downloadCsv("orders-chifaglow.csv", ordersToCsv(filtered))}
+              className={NAV_GHOST}
+            >
+              <FileSpreadsheet className="h-3.5 w-3.5" />
+              تصدير Excel
+            </button>
+            <button
+              type="button"
+              aria-label="دليل الأسعار والمدن"
+              onClick={() => setTarifsOpen(true)}
+              className={NAV_TARIFS}
+            >
+              <Calculator className="h-3.5 w-3.5" />
+              دليل الأسعار
+            </button>
+            <button
+              type="button"
+              aria-label="تخصيص الواجهة"
+              aria-haspopup="dialog"
+              aria-expanded={prefsOpen}
+              onClick={(e) => {
+                e.stopPropagation();
+                setPrefsOpen(true);
+              }}
+              className={NAV_PREFS}
+            >
+              <SlidersHorizontal className="h-3.5 w-3.5" />
+              تخصيص
+            </button>
           </div>
+
+          <div className="relative z-10 ml-auto flex shrink-0 items-center gap-3">
+            <OrderAlertsBell
+              variant="icon"
+              className={NAV_PUSH}
+              orders={orders}
+              shippingId={shippingId}
+              onSendCarrier={(row, carrier) => void sendToLivraison(row, carrier)}
+              onShowOverdue={() => {
+                setUndispatchedOnly(true);
+                setStatus("confirmed");
+                setPage(1);
+              }}
+              onNotice={(message, kind) => {
+                setNoticeKind(kind || "ok");
+                setNotice(message);
+              }}
+              onSummary={setAlerts}
+            />
+            <div className="h-7 w-px bg-slate-200 dark:bg-slate-800" />
+            <div className="flex items-center gap-2.5">
+              <div className="hidden text-right sm:flex sm:flex-col">
+                <span className="text-sm font-bold tracking-wide text-royal dark:text-slate-100">CHIFA GLOW</span>
+                <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400/90">
+                  لوحة إدارة المبيعات{username ? ` · ${username}` : ""}
+                </span>
+              </div>
+              <div className="flex h-8 w-8 items-center justify-center rounded-full border border-amber-500/40 bg-amber-500/10 text-sm font-bold text-amber-500">
+                C
+              </div>
+            </div>
           </div>
         </div>
       </header>
