@@ -115,7 +115,6 @@ const NAV_CHIP =
 const NAV_TARIFS = `${NAV_CHIP} border-teal-500/30 text-teal-600 hover:bg-teal-500/10 dark:text-teal-400`;
 const NAV_PRODUCTS = `${NAV_CHIP} border-purple-500/30 text-purple-600 hover:bg-purple-500/10 dark:text-purple-400`;
 const NAV_WHATSAPP = `${NAV_CHIP} border-emerald-500/30 px-3 text-[13px] text-emerald-600 hover:bg-emerald-500/10 dark:text-emerald-400`;
-const NAV_PUSH = `${NAV_CHIP} border-orange-500/30 text-orange-600 hover:bg-orange-500/10 dark:text-orange-300`;
 const NAV_PREFS = `${NAV_CHIP} cursor-pointer border-indigo-500/30 text-indigo-600 hover:bg-indigo-500/10 dark:text-indigo-400`;
 const NAV_HIDE = `${NAV_CHIP} border-cyan-500/30 text-cyan-600 hover:bg-cyan-500/10 dark:text-cyan-400`;
 const NAV_GHOST = `${NAV_CHIP} border-slate-200 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800`;
@@ -937,10 +936,10 @@ export function AdminDashboard() {
 
       <header
         dir="ltr"
-        className="sticky top-0 z-40 w-full border-b border-slate-200/80 bg-white/95 px-3 py-2.5 shadow-sm backdrop-blur-md dark:border-slate-800/80 dark:bg-[#0d1527]/95 md:px-4"
+        className="sticky top-0 z-40 w-full border-b border-slate-200/80 bg-white/95 px-4 py-2 shadow-sm backdrop-blur-md dark:border-slate-800 dark:bg-[#0d1527]/95"
       >
-        <div className="mx-auto flex max-w-7xl items-center gap-3 md:gap-4">
-          <div className="relative z-10 flex shrink-0 items-center gap-1.5">
+        <div className="mx-auto grid w-full max-w-7xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
+          <div className="flex shrink-0 items-center gap-2">
             <button
               type="button"
               aria-label="خروج"
@@ -953,37 +952,10 @@ export function AdminDashboard() {
             <ThemeToggle className={cn(NAV_ICON, "hover:scale-100")} />
           </div>
 
-          <div className="no-scrollbar relative z-0 flex min-w-0 flex-1 items-center gap-2 overflow-x-auto py-1 md:flex-nowrap">
+          <div className="no-scrollbar flex min-w-0 items-center justify-center gap-1.5 overflow-x-auto px-2">
             <button type="button" aria-label="إضافة طلب" onClick={() => setModalOpen(true)} className={NAV_PRIMARY}>
-              <Plus className="h-4 w-4" />
+              <Plus className="h-3.5 w-3.5" />
               إضافة طلب
-            </button>
-            <button
-              type="button"
-              aria-label="إضافة سريعة من الواتساب"
-              onClick={() => setQuickOpen(true)}
-              className={NAV_WHATSAPP}
-            >
-              <WhatsAppIcon className="h-4 w-4" />
-              إضافة سريعة
-            </button>
-            <button
-              type="button"
-              aria-label="إدارة المنتجات"
-              onClick={() => setProductsOpen(true)}
-              className={NAV_PRODUCTS}
-            >
-              <Package className="h-4 w-4" />
-              المنتجات
-            </button>
-            <button
-              type="button"
-              aria-label={hideAll ? "إظهار كل الأرقام" : "إخفاء الأرقام"}
-              onClick={() => setHideAll((v) => !v)}
-              className={NAV_HIDE}
-            >
-              {hideAll ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-              {hideAll ? "إظهار الأرقام" : "إخفاء الأرقام"}
             </button>
             <button
               type="button"
@@ -996,12 +968,12 @@ export function AdminDashboard() {
             </button>
             <button
               type="button"
-              aria-label="دليل الأسعار والمدن"
-              onClick={() => setTarifsOpen(true)}
-              className={NAV_TARIFS}
+              aria-label={hideAll ? "إظهار كل الأرقام" : "إخفاء الأرقام"}
+              onClick={() => setHideAll((v) => !v)}
+              className={NAV_HIDE}
             >
-              <Calculator className="h-3.5 w-3.5" />
-              دليل الأسعار
+              {hideAll ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+              {hideAll ? "إظهار الأرقام" : "إخفاء الأرقام"}
             </button>
             <button
               type="button"
@@ -1015,14 +987,40 @@ export function AdminDashboard() {
               className={NAV_PREFS}
             >
               <SlidersHorizontal className="h-3.5 w-3.5" />
-              تخصيص
+              تخصيص الواجهة
+            </button>
+            <button
+              type="button"
+              aria-label="إضافة سريعة من الواتساب"
+              onClick={() => setQuickOpen(true)}
+              className={NAV_WHATSAPP}
+            >
+              <WhatsAppIcon className="h-3.5 w-3.5" />
+              إضافة سريعة من الواتساب
+            </button>
+            <button
+              type="button"
+              aria-label="إدارة المنتجات"
+              onClick={() => setProductsOpen(true)}
+              className={NAV_PRODUCTS}
+            >
+              <Package className="h-3.5 w-3.5" />
+              إدارة المنتجات
+            </button>
+            <button
+              type="button"
+              aria-label="دليل الأسعار والمدن"
+              onClick={() => setTarifsOpen(true)}
+              className={NAV_TARIFS}
+            >
+              <Calculator className="h-3.5 w-3.5" />
+              دليل الأسعار والمدن
             </button>
           </div>
 
-          <div className="relative z-10 ml-auto flex shrink-0 items-center gap-3">
+          <div className="relative z-20 flex shrink-0 items-center gap-3">
             <OrderAlertsBell
-              variant="icon"
-              className={NAV_PUSH}
+              variant="toolbar"
               orders={orders}
               shippingId={shippingId}
               onSendCarrier={(row, carrier) => void sendToLivraison(row, carrier)}
@@ -1037,15 +1035,15 @@ export function AdminDashboard() {
               }}
               onSummary={setAlerts}
             />
-            <div className="h-7 w-px bg-slate-200 dark:bg-slate-800" />
-            <div className="flex items-center gap-2.5">
-              <div className="hidden text-right sm:flex sm:flex-col">
-                <span className="text-sm font-bold tracking-wide text-royal dark:text-slate-100">CHIFA GLOW</span>
+            <div className="h-6 w-px shrink-0 bg-slate-200 dark:bg-slate-700" />
+            <div className="flex shrink-0 items-center gap-2">
+              <div className="hidden flex-col text-right sm:flex">
+                <span className="text-sm font-black tracking-wider text-royal dark:text-white">CHIFA GLOW</span>
                 <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400/90">
                   لوحة إدارة المبيعات{username ? ` · ${username}` : ""}
                 </span>
               </div>
-              <div className="flex h-8 w-8 items-center justify-center rounded-full border border-amber-500/40 bg-amber-500/10 text-sm font-bold text-amber-500">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-amber-500/60 bg-amber-500/15 text-sm font-bold text-amber-500">
                 C
               </div>
             </div>
