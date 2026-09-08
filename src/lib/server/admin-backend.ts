@@ -106,3 +106,31 @@ export async function proxyAdminGet(req: NextRequest, path: string, accept: stri
     if (timer) clearTimeout(timer);
   }
 }
+
+export async function proxyAdminRequest(req: NextRequest, path: string, method: "PATCH" | "DELETE" | "PUT" | "POST") {
+  const targetUrl = `${adminBackendBase()}${path}`;
+  const body = method === "DELETE" ? undefined : (await req.text()).trim() || "{}";
+  const backendRes = await fetch(targetUrl, {
+    method,
+    cache: "no-store",
+    headers: {
+      Accept: "application/json",
+      ...(method === "DELETE" ? {} : { "Content-Type": "application/json" }),
+      ...adminAuthHeaders(req),
+    },
+    ...(body ? { body } : {}),
+  });
+  const rawText = await backendRes.text();
+  let data: unknown;
+  try {
+    data = JSON.parse(rawText);
+  } catch {
+    data = { raw: rawText };
+  }
+  const payload =
+    data && typeof data === "object" && !Array.isArray(data) ? (data as Record<string, unknown>) : { backend_response: data };
+  return NextResponse.json(
+    { ...payload, proxied_status: backendRes.status, target_url: targetUrl },
+    { status: backendRes.status },
+  );
+}

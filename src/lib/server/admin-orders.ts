@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { AdminOrder, AdminStats, AdminStatus, DeliveryWindow } from "@/lib/admin";
 import { assertStatusTransition, displayStatus, hasCompleteConfirmDetails, packLabel } from "@/lib/admin";
+import { resolveProductSlug } from "@/lib/server/admin-products";
 import { ensureSchema, getPool } from "./db";
 
 type OrderRow = {
@@ -557,7 +558,7 @@ export async function updateAdminOrder(orderId: string, patch: OrderPatch): Prom
       shippingCity = next && isOfficialMetaCity(next) ? next : next || null;
     }
     if (patch.product_slug !== undefined) {
-      slug = ["quran", "kids", "music", "educative", "taalim"].includes(patch.product_slug) ? patch.product_slug : slug;
+      slug = await resolveProductSlug(patch.product_slug);
     }
     if (patch.tier_qty !== undefined) {
       const nextQty = Math.round(Number(patch.tier_qty));
@@ -804,7 +805,7 @@ export async function createAdminOrder(input: {
   const qty = Math.min(20, Math.max(1, Math.round(Number(input.tier_qty) || 1)));
   const cents = Math.round(Number(input.total_mad) * 100);
   if (!Number.isFinite(cents) || cents < 100) throw new Error("invalid_price");
-  const slug = ["quran", "kids", "music", "educative", "taalim"].includes(input.product_slug) ? input.product_slug : "quran";
+  const slug = await resolveProductSlug(input.product_slug);
   const national = e164.startsWith("+212") && e164.length === 13 ? `0${e164.slice(4)}` : e164;
   const orderId = randomUUID();
   const eventId = `admin-${orderId}`;

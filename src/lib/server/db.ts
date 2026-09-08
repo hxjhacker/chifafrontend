@@ -30,15 +30,18 @@ const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS products (
   id uuid PRIMARY KEY,
   slug varchar(64) NOT NULL UNIQUE,
+  code varchar(64) NOT NULL UNIQUE,
   name_ar varchar(160) NOT NULL,
   name_en varchar(160) NOT NULL,
   tagline_ar varchar(240) NOT NULL DEFAULT '',
   description_ar text NOT NULL DEFAULT '',
   accent varchar(32) NOT NULL DEFAULT 'gold',
+  default_price_cents integer NOT NULL DEFAULT 0,
   is_active boolean NOT NULL DEFAULT true,
   created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE UNIQUE INDEX IF NOT EXISTS ix_products_slug ON products (slug);
+CREATE UNIQUE INDEX IF NOT EXISTS ix_products_code ON products (code);
 
 CREATE TABLE IF NOT EXISTS orders (
   id uuid PRIMARY KEY,
@@ -205,6 +208,12 @@ const SCHEMA_ALTERS = [
   `CREATE INDEX IF NOT EXISTS ix_city_tarifs_city_name ON city_tarifs (city_name)`,
   `ALTER TABLE city_tarifs ADD COLUMN IF NOT EXISTS quick_district_id integer`,
   `CREATE INDEX IF NOT EXISTS ix_city_tarifs_quick_district_id ON city_tarifs (quick_district_id)`,
+  `ALTER TABLE products ADD COLUMN IF NOT EXISTS code varchar(64)`,
+  `ALTER TABLE products ADD COLUMN IF NOT EXISTS default_price_cents integer DEFAULT 0 NOT NULL`,
+  `UPDATE products SET code = UPPER(slug) WHERE code IS NULL OR BTRIM(code) = ''`,
+  `UPDATE products SET default_price_cents = 19900 WHERE slug IN ('quran', 'music', 'educative', 'taalim') AND (default_price_cents IS NULL OR default_price_cents = 0)`,
+  `UPDATE products SET default_price_cents = 14900 WHERE slug = 'kids' AND (default_price_cents IS NULL OR default_price_cents = 0)`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS ix_products_code ON products (code)`,
 ];
 
 const PRODUCT_SEED = [
@@ -250,7 +259,7 @@ const PRODUCT_SEED = [
   },
 ] as const;
 
-const SCHEMA_ALTER_VERSION = 9;
+const SCHEMA_ALTER_VERSION = 10;
 let appliedAlterVersion = 0;
 
 export async function ensureSchema() {
@@ -259,25 +268,36 @@ export async function ensureSchema() {
       const client = await getPool().connect();
       try {
         await client.query(SCHEMA_SQL);
+        for (const sql of SCHEMA_ALTERS) {
+          try {
+            await client.query(sql);
+          } catch (err) {
+            console.error("schema_alter_skipped", sql, err);
+          }
+        }
         for (const product of PRODUCT_SEED) {
           await client.query(
-            `INSERT INTO products (id, slug, name_ar, name_en, tagline_ar, description_ar, accent, is_active, created_at)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, true, now())
+            `INSERT INTO products (id, slug, code, name_ar, name_en, tagline_ar, description_ar, accent, default_price_cents, is_active, created_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, true, now())
              ON CONFLICT (slug) DO UPDATE SET
                name_ar = EXCLUDED.name_ar,
                name_en = EXCLUDED.name_en,
                tagline_ar = EXCLUDED.tagline_ar,
                description_ar = EXCLUDED.description_ar,
                accent = EXCLUDED.accent,
+               code = COALESCE(NULLIF(products.code, ''), EXCLUDED.code),
+               default_price_cents = CASE WHEN products.default_price_cents IS NULL OR products.default_price_cents = 0 THEN EXCLUDED.default_price_cents ELSE products.default_price_cents END,
                is_active = true`,
             [
               crypto.randomUUID(),
               product.slug,
+              product.slug.toUpperCase(),
               product.name_ar,
               product.name_en,
               product.tagline_ar,
               product.description_ar,
               product.accent,
+              product.slug === "kids" ? 14900 : 19900,
             ],
           );
         }

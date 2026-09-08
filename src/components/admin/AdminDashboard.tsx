@@ -16,6 +16,7 @@ import {
   Loader2,
   LogOut,
   Menu,
+  Package,
   PieChart,
   Plus,
   Search,
@@ -29,6 +30,7 @@ import {
 import { ThemeToggle, WhatsAppIcon } from "@/components/Chrome";
 import SplashScreen from "@/components/SplashScreen";
 import { AddOrderModal } from "@/components/admin/AddOrderModal";
+import { AddProductModal } from "@/components/admin/AddProductModal";
 import { AdminDoughnut } from "@/components/admin/AdminDoughnut";
 import { BulkActionBar } from "@/components/admin/BulkActionBar";
 import { CityTarifsModal } from "@/components/admin/CityTarifsModal";
@@ -111,6 +113,7 @@ const SECTION_ITEMS: { key: keyof SectionPrefs; label: string }[] = [
 const NAV_BTN =
   "inline-flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border bg-transparent px-3 text-[13px] font-semibold transition";
 const NAV_TARIFS = `${NAV_BTN} border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10 dark:text-emerald-400`;
+const NAV_PRODUCTS = `${NAV_BTN} border-violet-500/35 text-violet-600 hover:bg-violet-500/10 dark:text-violet-300`;
 const NAV_WHATSAPP = `${NAV_BTN} border-green-500/30 text-green-600 hover:bg-green-500/10 dark:text-green-400`;
 const NAV_PUSH = `${NAV_BTN} border-amber-500/30 text-amber-600 hover:bg-amber-500/10 dark:text-amber-400`;
 const NAV_PREFS = `${NAV_BTN} cursor-pointer border-violet-500/30 text-violet-600 hover:bg-violet-500/10 dark:text-violet-400`;
@@ -178,6 +181,7 @@ export function AdminDashboard() {
   const [error, setError] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [tarifsOpen, setTarifsOpen] = useState(false);
+  const [productsOpen, setProductsOpen] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
   const [completing, setCompleting] = useState<AdminOrder | null>(null);
   const [viewingId, setViewingId] = useState<string | null>(null);
@@ -801,6 +805,14 @@ export function AdminDashboard() {
         }}
       />
       <CityTarifsModal open={tarifsOpen} onClose={() => setTarifsOpen(false)} />
+      <AddProductModal
+        open={productsOpen}
+        onClose={() => setProductsOpen(false)}
+        onNotice={(message, kind) => {
+          setNoticeKind(kind || "ok");
+          setNotice(message);
+        }}
+      />
       {prefsOpen ? (
         <div
           className="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto bg-black/60 p-3 backdrop-blur-sm sm:p-4"
@@ -997,6 +1009,18 @@ export function AdminDashboard() {
                     role="menuitem"
                     onClick={() => {
                       setMenuOpen(false);
+                      setProductsOpen(true);
+                    }}
+                    className="inline-flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-right transition hover:bg-white/5"
+                  >
+                    <Package className="h-4 w-4 text-violet-300" />
+                    <span className="text-[13px] font-semibold">إدارة المنتجات</span>
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setMenuOpen(false);
                       setModalOpen(true);
                     }}
                     className="inline-flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-right transition hover:bg-white/5"
@@ -1089,6 +1113,16 @@ export function AdminDashboard() {
                 <Calculator className="h-4 w-4" />
                 <span className="hidden lg:inline">دليل الأسعار والمدن</span>
                 <span className="lg:hidden">الأسعار</span>
+              </button>
+              <button
+                type="button"
+                aria-label="إدارة المنتجات"
+                onClick={() => setProductsOpen(true)}
+                className={NAV_PRODUCTS}
+              >
+                <Package className="h-4 w-4" />
+                <span className="hidden lg:inline">إدارة المنتجات</span>
+                <span className="lg:hidden">المنتجات</span>
               </button>
               <button
                 type="button"

@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { MessageCircle, Sparkles, X } from "lucide-react";
 import { regionIdForCity } from "@/lib/admin-geo";
+import { fetchAdminProducts, productOptionLabel, type AdminProduct } from "@/lib/admin-products";
 import type { AdminOrder } from "@/lib/admin";
 import { parseWhatsAppOrderText, WHATSAPP_ORDER_PLACEHOLDER } from "@/lib/whatsapp-order";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
@@ -19,6 +20,8 @@ export function QuickWhatsAppOrderModal({ open, onClose, onCreated, onWarning }:
   const [raw, setRaw] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [products, setProducts] = useState<AdminProduct[]>([]);
+  const [productSlug, setProductSlug] = useState("");
   useLockBodyScroll(open);
 
   useEffect(() => {
@@ -26,12 +29,17 @@ export function QuickWhatsAppOrderModal({ open, onClose, onCreated, onWarning }:
     setRaw("");
     setError("");
     setSaving(false);
+    setProductSlug("");
+    void fetchAdminProducts()
+      .then((rows) => setProducts(rows.filter((p) => p.is_active)))
+      .catch(() => setProducts([]));
   }, [open]);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (saving) return;
     const parsed = parseWhatsAppOrderText(raw);
+    const chosenSlug = productSlug || parsed.productSlug;
     if (parsed.missing.includes("name") || parsed.missing.includes("phone")) {
       const message = parsed.missing.includes("name") && parsed.missing.includes("phone")
         ? "الاسم ورقم الهاتف مطلوبان. الصق النص بالترتيب الصحيح."
@@ -43,6 +51,8 @@ export function QuickWhatsAppOrderModal({ open, onClose, onCreated, onWarning }:
       return;
     }
     if (parsed.missing.length) {
+      const missing = productSlug ? parsed.missing.filter((key) => key !== "product") : parsed.missing;
+      if (missing.length) {
       const labels: Record<(typeof parsed.missing)[number], string> = {
         name: "الاسم",
         city: "المدينة",
@@ -51,10 +61,11 @@ export function QuickWhatsAppOrderModal({ open, onClose, onCreated, onWarning }:
         price: "الثمن",
         product: "المنتج (1 أو 2 أو 3)",
       };
-      const message = `الحقول الناقصة: ${parsed.missing.map((key) => labels[key]).join("، ")}`;
+      const message = `الحقول الناقصة: ${missing.map((key) => labels[key]).join("، ")}`;
       setError(message);
       onWarning(message);
       return;
+      }
     }
 
     setError("");
@@ -70,7 +81,7 @@ export function QuickWhatsAppOrderModal({ open, onClose, onCreated, onWarning }:
           address: parsed.address,
           phone: parsed.phone,
           total_mad: parsed.price,
-          product_slug: parsed.productSlug,
+          product_slug: chosenSlug,
           tier_qty: parsed.qty,
           status: "new",
           region_id: regionIdForCity(parsed.city),
@@ -144,9 +155,26 @@ export function QuickWhatsAppOrderModal({ open, onClose, onCreated, onWarning }:
             <li>3. العنوان بالتفصيل</li>
             <li>4. رقم الهاتف</li>
             <li>5. الثمن</li>
-            <li>6. المنتج: 1 قرآن · 2 أطفال · 3 موسيقى</li>
+            <li>6. المنتج: 1 قرآن · 2 أطفال · 3 موسيقى — أو اختر من القائمة</li>
             <li>7. الكمية (اختياري — الافتراضي 1)</li>
           </ol>
+
+          {products.length ? (
+            <label className="block text-xs font-bold text-royal/80 dark:text-slate-200">
+              المنتج (يمكن تجاوز سطر الواتساب)
+              <select
+                value={productSlug || parseWhatsAppOrderText(raw).productSlug}
+                onChange={(e) => setProductSlug(e.target.value)}
+                className="mt-1.5 w-full rounded-xl border border-gold/20 bg-cream px-3 py-2.5 font-bold text-royal transition focus:border-gold focus:outline-none dark:bg-brandDark dark:text-white"
+              >
+                {products.map((p) => (
+                  <option key={p.id} value={p.slug}>
+                    {productOptionLabel(p)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
 
           {error ? (
             <p className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">

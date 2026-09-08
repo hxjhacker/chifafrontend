@@ -6,12 +6,62 @@ import { MetaCityCombobox } from "@/components/admin/MetaCityCombobox";
 import { isOfficialMetaCity } from "@/lib/meta-livraison-cities";
 import { matchOfficialMetaCity } from "@/lib/match-meta-city";
 import { MANUAL_PRODUCTS, regionIdForCity } from "@/lib/admin-geo";
+import { fetchAdminProducts, productOptionLabel, type AdminProduct } from "@/lib/admin-products";
 import { allowedNextStatuses, canTransitionStatus, copyablePhone, needsConfirmModal, type AdminOrder, type AdminStatus } from "@/lib/admin";
 import { digitsOnly, isTenDigitMaPhone } from "@/lib/phone";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import { cn } from "@/lib/cn";
 
-type ProductId = (typeof MANUAL_PRODUCTS)[number]["id"] | string;
+type CatalogProduct = {
+  id: string;
+  label: string;
+  slug: string;
+  price: number;
+  qty: number;
+  code: string;
+};
+
+const BUNDLE_PRODUCT: CatalogProduct = {
+  id: "bundle",
+  label: "عرض خاص (2 مفاتيح USB) — BUNDLE",
+  slug: "quran",
+  price: 299,
+  qty: 2,
+  code: "BUNDLE",
+};
+
+function fallbackCatalog(): CatalogProduct[] {
+  return MANUAL_PRODUCTS.map((p) => ({
+    id: p.id,
+    label: p.label,
+    slug: p.slug,
+    price: p.price,
+    qty: p.qty,
+    code: p.slug.toUpperCase(),
+  }));
+}
+
+function catalogFromApi(products: AdminProduct[], keepSlug?: string): CatalogProduct[] {
+  const items = products
+    .filter((p) => p.is_active || p.slug === keepSlug || p.code === keepSlug)
+    .map((p) => ({
+      id: p.slug || p.id,
+      label: productOptionLabel(p),
+      slug: p.slug,
+      price: p.default_price || 0,
+      qty: 1,
+      code: p.code,
+    }));
+  if (!items.some((p) => p.id === "bundle")) items.push(BUNDLE_PRODUCT);
+  return items.length ? items : fallbackCatalog();
+}
+
+function productFromOrder(order: AdminOrder | null | undefined, catalog: CatalogProduct[]) {
+  const list = catalog.length ? catalog : fallbackCatalog();
+  if (!order) return list[0];
+  if (order.tier_qty >= 2) return list.find((p) => p.id === "bundle") || list[0];
+  return list.find((p) => p.slug === order.product_slug || p.code === order.product_slug || p.id === order.product_slug) || list[0];
+}
 
 type Props = {
   open: boolean;
@@ -30,12 +80,6 @@ const ALL_STATUSES: { id: AdminStatus; label: string }[] = [
   { id: "cancelled", label: "🔴 ملغاة (Cancelled)" },
 ];
 
-function productFromOrder(order: AdminOrder | null | undefined) {
-  if (!order) return MANUAL_PRODUCTS[0];
-  if (order.tier_qty >= 2) return MANUAL_PRODUCTS.find((p) => p.id === "bundle") || MANUAL_PRODUCTS[0];
-  return MANUAL_PRODUCTS.find((p) => p.slug === order.product_slug) || MANUAL_PRODUCTS[0];
-}
-
 function nationalTenDigits(raw: string) {
   let digits = digitsOnly(raw);
   if (digits.startsWith("00212")) digits = digits.slice(2);
@@ -48,7 +92,8 @@ export function AddOrderModal({ open, editing, onClose, onCreated, onUpdated }: 
   const [phone, setPhone] = useState("");
   const [city, setCity] = useState("");
   const [shippingCity, setShippingCity] = useState("");
-  const [productId, setProductId] = useState<ProductId>("quran");
+  const [productId, setProductId] = useState("quran");
+  const [catalog, setCatalog] = useState<CatalogProduct[]>(fallbackCatalog);
   const [price, setPrice] = useState(199);
   const [status, setStatus] = useState<AdminStatus>("confirmed");
   const [saving, setSaving] = useState(false);
@@ -57,7 +102,7 @@ export function AddOrderModal({ open, editing, onClose, onCreated, onUpdated }: 
   useLockBodyScroll(open);
 
   const isEdit = Boolean(editing);
-  const product = MANUAL_PRODUCTS.find((p) => p.id === productId) || productFromOrder(editing);
+  const product = catalog.find((p) => p.id === productId) || productFromOrder(editing, catalog);
   const phoneDigits = digitsOnly(phone);
   const phoneLengthError = phoneTouched && phoneDigits.length !== 10;
   const phoneError = phoneLengthError
@@ -70,8 +115,26 @@ export function AddOrderModal({ open, editing, onClose, onCreated, onUpdated }: 
     if (!open) return;
     setError("");
     setPhoneTouched(false);
+    let cancelled = false;
+    void fetchAdminProducts()
+      .then((products) => {
+        if (cancelled) return;
+        const next = catalogFromApi(products, editing?.product_slug);
+        setCatalog(next);
+        if (editing) {
+          const matched = productFromOrder(editing, next);
+          setProductId(matched.id);
+          setPrice(Math.round(editing.total));
+        } else {
+          setProductId(next[0]?.id || "quran");
+          setPrice(next[0]?.price || 199);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setCatalog(fallbackCatalog());
+      });
     if (editing) {
-      const matched = productFromOrder(editing);
+      const matched = productFromOrder(editing, catalog);
       setName(editing.full_name);
       setPhone(nationalTenDigits(copyablePhone(editing)));
       setCity(editing.city);
@@ -89,12 +152,15 @@ export function AddOrderModal({ open, editing, onClose, onCreated, onUpdated }: 
       setPrice(199);
       setStatus("confirmed");
     }
+    return () => {
+      cancelled = true;
+    };
   }, [open, editing]);
 
-  function changeProduct(id: ProductId) {
-    const next = MANUAL_PRODUCTS.find((p) => p.id === id) || MANUAL_PRODUCTS[0];
+  function changeProduct(id: string) {
+    const next = catalog.find((p) => p.id === id) || catalog[0];
     setProductId(next.id);
-    setPrice(next.price);
+    if (next.price > 0) setPrice(next.price);
   }
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
@@ -278,7 +344,7 @@ export function AddOrderModal({ open, editing, onClose, onCreated, onUpdated }: 
                 onChange={(e) => changeProduct(e.target.value)}
                 className="w-full rounded-xl border border-gold/20 bg-cream px-3 py-2.5 font-bold text-royal transition focus:border-gold focus:outline-none dark:bg-brandDark dark:text-white"
               >
-                {MANUAL_PRODUCTS.map((p) => (
+                {catalog.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.label}
                   </option>
