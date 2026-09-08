@@ -15,6 +15,7 @@ import {
   FileSpreadsheet,
   Loader2,
   LogOut,
+  Menu,
   Package,
   PieChart,
   Plus,
@@ -206,10 +207,11 @@ export function AdminDashboard() {
   const [showAllCities, setShowAllCities] = useState(false);
   const [prefs, setPrefs] = useState<SectionPrefs>(DEFAULT_PREFS);
   const [prefsOpen, setPrefsOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const selectAllRef = useRef<HTMLInputElement>(null);
 
-  useLockBodyScroll(Boolean(deleteTarget) || prefsOpen);
+  useLockBodyScroll(Boolean(deleteTarget) || prefsOpen || menuOpen);
 
   const closeTimeline = useCallback(() => setViewingId(null), []);
   const closePrint = useCallback(() => setPrintingId(null), []);
@@ -232,7 +234,9 @@ export function AdminDashboard() {
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setPrefsOpen(false);
+      if (e.key !== "Escape") return;
+      setPrefsOpen(false);
+      setMenuOpen(false);
     }
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
@@ -779,6 +783,24 @@ export function AdminDashboard() {
     setPage(1);
   }, [q, status, perPage]);
 
+  const alertBellShared = {
+    orders,
+    shippingId,
+    onSendCarrier: (row: AdminOrder, carrier: AdminCarrier) => {
+      void sendToLivraison(row, carrier);
+    },
+    onShowOverdue: () => {
+      setUndispatchedOnly(true);
+      setStatus("confirmed");
+      setPage(1);
+    },
+    onNotice: (message: string, kind?: "ok" | "warn") => {
+      setNoticeKind(kind || "ok");
+      setNotice(message);
+    },
+    onSummary: setAlerts,
+  };
+
   return (
     <>
     <SplashScreen isLoading={loading} />
@@ -936,9 +958,48 @@ export function AdminDashboard() {
 
       <header
         dir="ltr"
-        className="sticky top-0 z-40 w-full border-b border-slate-200/80 bg-white/95 px-4 py-2 shadow-sm backdrop-blur-md dark:border-slate-800 dark:bg-[#0d1527]/95"
+        className="sticky top-0 z-40 w-full border-b border-slate-200/80 bg-white/95 px-3 py-2 shadow-sm backdrop-blur-md dark:border-slate-800 dark:bg-[#0d1527]/95 md:px-4"
       >
-        <div className="mx-auto grid w-full max-w-7xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
+        <div dir="rtl" className="mx-auto flex w-full max-w-7xl items-center justify-between gap-2 md:hidden">
+          <div className="flex min-w-0 items-center gap-2">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-amber-500/50 bg-amber-500/10 text-sm font-bold text-amber-500">
+              C
+            </div>
+            <span className="truncate text-sm font-bold text-royal dark:text-white">CHIFA GLOW</span>
+          </div>
+
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              aria-label="إضافة سريعة"
+              title="إضافة سريعة"
+              onClick={() => setQuickOpen(true)}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-emerald-500/40 bg-emerald-500/20 text-emerald-500 transition hover:bg-emerald-500/30"
+            >
+              <WhatsAppIcon className="h-4 w-4" />
+            </button>
+            <OrderAlertsBell
+              variant="icon"
+              poll={false}
+              panel="sheet"
+              className="border-amber-500/40 bg-amber-500/20 text-amber-600 hover:bg-amber-500/30 dark:border-amber-500/40 dark:bg-amber-500/20 dark:text-amber-300 dark:hover:bg-amber-500/30"
+              {...alertBellShared}
+            />
+            <button
+              type="button"
+              aria-label="القائمة"
+              title="القائمة"
+              aria-expanded={menuOpen}
+              aria-controls="mobile-admin-menu"
+              onClick={() => setMenuOpen((v) => !v)}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-300 bg-slate-100 text-slate-600 transition hover:text-royal dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-300 dark:hover:text-white"
+            >
+              <Menu className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        <div className="mx-auto hidden w-full max-w-7xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 md:grid">
           <div className="flex shrink-0 items-center gap-2">
             <button
               type="button"
@@ -1019,22 +1080,7 @@ export function AdminDashboard() {
           </div>
 
           <div className="relative z-20 flex shrink-0 items-center gap-3">
-            <OrderAlertsBell
-              variant="toolbar"
-              orders={orders}
-              shippingId={shippingId}
-              onSendCarrier={(row, carrier) => void sendToLivraison(row, carrier)}
-              onShowOverdue={() => {
-                setUndispatchedOnly(true);
-                setStatus("confirmed");
-                setPage(1);
-              }}
-              onNotice={(message, kind) => {
-                setNoticeKind(kind || "ok");
-                setNotice(message);
-              }}
-              onSummary={setAlerts}
-            />
+            <OrderAlertsBell variant="toolbar" {...alertBellShared} />
             <div className="h-6 w-px shrink-0 bg-slate-200 dark:bg-slate-700" />
             <div className="flex shrink-0 items-center gap-2">
               <div className="hidden flex-col text-right sm:flex">
@@ -1050,6 +1096,125 @@ export function AdminDashboard() {
           </div>
         </div>
       </header>
+
+      {menuOpen ? (
+        <div className="fixed inset-0 z-[70] flex justify-end md:hidden" dir="ltr" role="presentation">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            aria-label="إغلاق القائمة"
+            onClick={() => setMenuOpen(false)}
+          />
+          <div
+            id="mobile-admin-menu"
+            dir="rtl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="mobile-menu-title"
+            className="relative z-10 flex h-full w-64 flex-col gap-2 border-l border-slate-800 bg-[#0d1527] p-4 shadow-2xl"
+          >
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <span id="mobile-menu-title" className="text-sm font-bold text-white">
+                القائمة السريعة
+              </span>
+              <button
+                type="button"
+                onClick={() => setMenuOpen(false)}
+                className="p-1 text-slate-400 hover:text-white"
+                aria-label="إغلاق"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setModalOpen(true);
+                setMenuOpen(false);
+              }}
+              className="flex w-full items-center justify-between rounded-lg bg-amber-500 p-2.5 text-right text-xs font-bold text-slate-950"
+            >
+              <span>إضافة طلب</span>
+              <Plus className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setProductsOpen(true);
+                setMenuOpen(false);
+              }}
+              className="flex w-full items-center justify-between rounded-lg border border-purple-500/30 p-2.5 text-right text-xs text-purple-300"
+            >
+              <span>إدارة المنتجات</span>
+              <Package className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setPrefsOpen(true);
+                setMenuOpen(false);
+              }}
+              className="flex w-full items-center justify-between rounded-lg border border-indigo-500/30 p-2.5 text-right text-xs text-indigo-300"
+            >
+              <span>تخصيص الواجهة</span>
+              <SlidersHorizontal className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setHideAll((v) => !v);
+                setMenuOpen(false);
+              }}
+              className="flex w-full items-center justify-between rounded-lg border border-cyan-500/30 p-2.5 text-right text-xs text-cyan-300"
+            >
+              <span>{hideAll ? "إظهار الأرقام" : "إخفاء الأرقام"}</span>
+              {hideAll ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setTarifsOpen(true);
+                setMenuOpen(false);
+              }}
+              className="flex w-full items-center justify-between rounded-lg border border-teal-500/30 p-2.5 text-right text-xs text-teal-300"
+            >
+              <span>دليل الأسعار والمدن</span>
+              <Calculator className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                downloadCsv("orders-chifaglow.csv", ordersToCsv(filtered));
+                setMenuOpen(false);
+              }}
+              className="flex w-full items-center justify-between rounded-lg border border-slate-700 p-2.5 text-right text-xs text-slate-300"
+            >
+              <span>تصدير Excel</span>
+              <FileSpreadsheet className="h-4 w-4" />
+            </button>
+
+            <div className="mt-auto flex items-center justify-between border-t border-slate-800 pt-3">
+              <button
+                type="button"
+                onClick={() => void logout()}
+                className="inline-flex items-center gap-1.5 text-xs text-red-400"
+              >
+                <LogOut className="h-4 w-4" />
+                تسجيل الخروج
+              </button>
+              <button
+                type="button"
+                onClick={toggleDarkMode}
+                className="p-2 text-slate-400 hover:text-white"
+                aria-label="تبديل الوضع"
+              >
+                {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <main className={cn("mx-auto w-full max-w-7xl flex-grow space-y-6 px-4 py-8", selectedIds.length ? "pb-28" : "")}>
         {error ? (

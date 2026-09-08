@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Bell, BellOff, Clock3, Truck, Volume2, X } from "lucide-react";
+import { Bell, Clock3, Truck, Volume2, X } from "lucide-react";
 import { PushToggle } from "@/components/admin/PushToggle";
 import { IosSwitch } from "@/components/admin/IosSwitch";
 import { ADMIN_CARRIERS, hasTracking, type AdminCarrier, type AdminOrder } from "@/lib/admin";
@@ -25,6 +25,8 @@ type Tab = "new" | "overdue";
 type Props = {
   className?: string;
   variant?: "toolbar" | "icon";
+  poll?: boolean;
+  panel?: "dropdown" | "sheet";
   orders: AdminOrder[];
   shippingId: string | null;
   onSendCarrier: (order: AdminOrder, carrier: AdminCarrier) => void;
@@ -82,6 +84,8 @@ function asOrder(item: UndispatchedItem, orders: AdminOrder[]): AdminOrder | nul
 export function OrderAlertsBell({
   className,
   variant = "toolbar",
+  poll = true,
+  panel = "dropdown",
   orders,
   shippingId,
   onSendCarrier,
@@ -132,9 +136,10 @@ export function OrderAlertsBell({
   useEffect(() => {
     setSoundOn(readStorage(SOUND_KEY) === "1");
     void refresh(false);
+    if (!poll) return;
     const timer = window.setInterval(() => void refresh(true), POLL_MS);
     return () => window.clearInterval(timer);
-  }, [refresh]);
+  }, [refresh, poll]);
 
   const prevShipping = useRef(shippingId);
   useEffect(() => {
@@ -211,15 +216,15 @@ export function OrderAlertsBell({
             ? "relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border text-slate-500 transition hover:bg-slate-100 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:bg-white/[0.08]"
             : "relative inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-amber-500/40 bg-amber-500/10 px-2.5 text-xs font-medium text-amber-700 transition hover:bg-amber-500/20 dark:text-amber-300",
           variant === "icon" && alert && "border-orange-500/50 text-orange-600 dark:text-orange-300",
+          className,
         )}
       >
         {variant === "icon" ? (
           <>
-            {alert ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
+            <Bell className="h-4 w-4" />
             {alert ? (
-              <span className="absolute -top-1 -left-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-black text-white">
-                <span className="absolute inset-0 animate-ping rounded-full bg-rose-500/70" />
-                <span className="relative">{total > 99 ? "99+" : total}</span>
+              <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 animate-pulse items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white">
+                {total > 99 ? "99+" : total}
               </span>
             ) : null}
           </>
@@ -234,7 +239,12 @@ export function OrderAlertsBell({
       {open ? (
         <div
           dir="rtl"
-          className="absolute right-0 top-full z-[70] mt-2 w-80 overflow-hidden rounded-xl border border-slate-800 bg-[#111a2e] text-white shadow-2xl"
+          className={cn(
+            "z-[70] overflow-hidden rounded-xl border border-slate-800 bg-[#111a2e] text-white shadow-2xl",
+            panel === "sheet"
+              ? "fixed inset-x-2 top-14 max-h-[min(28rem,calc(100dvh-4.5rem))]"
+              : "absolute right-0 top-full mt-2 w-80",
+          )}
         >
           <div className="flex items-center justify-between border-b border-white/10 px-3 py-2.5">
             <p className="text-xs font-black">تنبيهات الطلبات</p>
