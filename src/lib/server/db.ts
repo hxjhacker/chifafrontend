@@ -94,6 +94,9 @@ CREATE TABLE IF NOT EXISTS orders (
 CREATE INDEX IF NOT EXISTS ix_orders_phone ON orders (phone);
 CREATE INDEX IF NOT EXISTS ix_orders_status ON orders (status);
 CREATE INDEX IF NOT EXISTS ix_orders_carrier ON orders (carrier);
+CREATE INDEX IF NOT EXISTS ix_orders_created_at ON orders (created_at);
+CREATE INDEX IF NOT EXISTS ix_orders_confirmed_at ON orders (confirmed_at);
+CREATE INDEX IF NOT EXISTS ix_orders_meta_livraison_code ON orders (meta_livraison_code);
 CREATE UNIQUE INDEX IF NOT EXISTS ix_orders_event_id ON orders (event_id);
 
 CREATE TABLE IF NOT EXISTS order_items (
@@ -214,6 +217,11 @@ const SCHEMA_ALTERS = [
   `UPDATE products SET default_price_cents = 19900 WHERE slug IN ('quran', 'music', 'educative', 'taalim') AND (default_price_cents IS NULL OR default_price_cents = 0)`,
   `UPDATE products SET default_price_cents = 14900 WHERE slug = 'kids' AND (default_price_cents IS NULL OR default_price_cents = 0)`,
   `CREATE UNIQUE INDEX IF NOT EXISTS ix_products_code ON products (code)`,
+  `CREATE INDEX IF NOT EXISTS ix_orders_created_at ON orders (created_at)`,
+  `CREATE INDEX IF NOT EXISTS ix_orders_confirmed_at ON orders (confirmed_at)`,
+  `CREATE INDEX IF NOT EXISTS ix_orders_meta_livraison_code ON orders (meta_livraison_code)`,
+  `CREATE INDEX IF NOT EXISTS ix_orders_undispatched_status_created ON orders (status, created_at DESC) WHERE COALESCE(BTRIM(meta_livraison_code), '') = ''`,
+  `CREATE INDEX IF NOT EXISTS ix_orders_undispatched_confirmed ON orders (confirmed_at) WHERE COALESCE(BTRIM(meta_livraison_code), '') = ''`,
 ];
 
 const PRODUCT_SEED = [
@@ -259,7 +267,7 @@ const PRODUCT_SEED = [
   },
 ] as const;
 
-const SCHEMA_ALTER_VERSION = 10;
+const SCHEMA_ALTER_VERSION = 11;
 let appliedAlterVersion = 0;
 
 export async function ensureSchema() {

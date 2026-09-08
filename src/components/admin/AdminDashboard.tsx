@@ -38,10 +38,10 @@ import { CompleteDetailsModal } from "@/components/admin/CompleteDetailsModal";
 import { IosSwitch } from "@/components/admin/IosSwitch";
 import { LogisticsKpiCards } from "@/components/admin/LogisticsKpiCards";
 import { MoroccoMap } from "@/components/admin/MoroccoMap";
+import { OrderAlertsBell, OverdueOrdersBanner } from "@/components/admin/OrderAlertsBell";
 import { OrderDesktopRow, OrderMobileCard } from "@/components/admin/OrderRow";
 import { OrderTimelineModal } from "@/components/admin/OrderTimelineModal";
 import { QuickWhatsAppOrderModal } from "@/components/admin/QuickWhatsAppOrderModal";
-import { PushToggle } from "@/components/admin/PushToggle";
 import { ViewsObservatory } from "@/components/admin/ViewsObservatory";
 import {
   ADMIN_STATUSES,
@@ -63,6 +63,7 @@ import {
   type AdminStatus,
 } from "@/lib/admin";
 import { CITY_CHART_COLORS } from "@/lib/admin-geo";
+import { EMPTY_UNDISPATCHED, type UndispatchedSummary } from "@/lib/order-alerts";
 import { EMPTY_LOGISTICS, type LogisticsAnalytics } from "@/lib/logistics";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import { cn } from "@/lib/cn";
@@ -195,6 +196,8 @@ export function AdminDashboard() {
   const [bulkBusy, setBulkBusy] = useState<"dispatch" | "labels" | "manifest" | null>(null);
   const [bulkConfirm, setBulkConfirm] = useState(false);
   const [dispatchCarrier, setDispatchCarrier] = useState<AdminCarrier>("meta_livraison");
+  const [undispatchedOnly, setUndispatchedOnly] = useState(false);
+  const [alerts, setAlerts] = useState<UndispatchedSummary>(EMPTY_UNDISPATCHED);
   const [syncingTracking, setSyncingTracking] = useState(false);
   const [notice, setNotice] = useState("");
   const [noticeKind, setNoticeKind] = useState<"ok" | "warn">("ok");
@@ -730,9 +733,11 @@ export function AdminDashboard() {
       const hay = `${order.full_name} ${order.phone} ${order.phone_national} ${order.city} ${order.pack_label} ${order.order_id}`.toLowerCase();
       const matchesSearch = !needle || hay.includes(needle);
       const matchesStatus = status === "all" || order.status === status;
-      return matchesSearch && matchesStatus;
+      const matchesUndispatched =
+        !undispatchedOnly || (!hasTracking(order) && (order.status === "confirmed" || order.status === "new"));
+      return matchesSearch && matchesStatus && matchesUndispatched;
     });
-  }, [orders, q, status]);
+  }, [orders, q, status, undispatchedOnly]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
   const currentPage = Math.min(page, totalPages);
@@ -960,6 +965,24 @@ export function AdminDashboard() {
             </div>
           </div>
 
+          <div className="flex shrink-0 items-center gap-2">
+          <OrderAlertsBell
+            className={NAV_PUSH}
+            orders={orders}
+            shippingId={shippingId}
+            onSendCarrier={(row, carrier) => void sendToLivraison(row, carrier)}
+            onShowOverdue={() => {
+              setUndispatchedOnly(true);
+              setStatus("confirmed");
+              setPage(1);
+            }}
+            onNotice={(message, kind) => {
+              setNoticeKind(kind || "ok");
+              setNotice(message);
+            }}
+            onSummary={setAlerts}
+          />
+
           <div className="flex shrink-0 items-center gap-2 md:hidden">
             <button
               type="button"
@@ -1028,13 +1051,6 @@ export function AdminDashboard() {
                     <Plus className="h-4 w-4 text-slate-300" />
                     <span className="text-[13px] font-semibold">إضافة طلب</span>
                   </button>
-                  <PushToggle
-                    variant="menu"
-                    onNotice={(message, kind) => {
-                      setNoticeKind(kind || "ok");
-                      setNotice(message);
-                    }}
-                  />
                   <div className="my-1 border-t border-white/10 px-3 py-2">
                     <p className="mb-1 inline-flex items-center gap-2 text-[11px] font-semibold text-slate-400">
                       <SlidersHorizontal className="h-3.5 w-3.5" />
@@ -1134,13 +1150,6 @@ export function AdminDashboard() {
                 <span className="hidden lg:inline">إضافة سريعة من الواتساب</span>
                 <span className="lg:hidden">واتساب</span>
               </button>
-              <PushToggle
-                className={NAV_PUSH}
-                onNotice={(message, kind) => {
-                  setNoticeKind(kind || "ok");
-                  setNotice(message);
-                }}
-              />
               <button
                 type="button"
                 aria-label="تخصيص الواجهة"
@@ -1196,6 +1205,7 @@ export function AdminDashboard() {
                 <span>خروج</span>
               </button>
             </div>
+          </div>
           </div>
         </div>
       </header>
@@ -1355,6 +1365,14 @@ export function AdminDashboard() {
 
         {prefs.orders ? (
         <>
+        <OverdueOrdersBanner
+          count={alerts.overdue_orders_count}
+          onShow={() => {
+            setUndispatchedOnly(true);
+            setStatus("confirmed");
+            setPage(1);
+          }}
+        />
         <div className="flex flex-col items-center justify-between gap-3 rounded-2xl border border-gold/20 bg-white p-4 shadow-luxury dark:bg-cardDark md:flex-row">
           <div className="relative w-full md:w-80">
             <Search className="absolute right-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-royal/40 dark:text-slate-500" />
@@ -1378,9 +1396,22 @@ export function AdminDashboard() {
                 <option value={50}>50</option>
               </select>
             </div>
+            {undispatchedOnly ? (
+              <button
+                type="button"
+                onClick={() => setUndispatchedOnly(false)}
+                className="inline-flex items-center gap-1 rounded-xl border border-orange-400/40 bg-orange-50 px-3 py-2 text-xs font-bold text-orange-700 dark:bg-orange-500/10 dark:text-orange-200"
+              >
+                غير المرسلة فقط
+                <X className="h-3 w-3" />
+              </button>
+            ) : null}
             <select
               value={status}
-              onChange={(e) => setStatus(e.target.value)}
+              onChange={(e) => {
+                setUndispatchedOnly(false);
+                setStatus(e.target.value);
+              }}
               className="rounded-xl border border-gold/20 bg-cream px-3 py-2 text-xs font-bold text-royal focus:border-gold focus:outline-none dark:bg-brandDark dark:text-white"
             >
               <option value="all">كل الحالات</option>
