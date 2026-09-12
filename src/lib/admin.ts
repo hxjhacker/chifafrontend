@@ -60,6 +60,10 @@ export type AdminOrder = {
   meta_livraison_ticket_url?: string | null;
   carrier?: AdminCarrier;
   tracking_number?: string | null;
+  code_envoi?: string | null;
+  product_code?: string | null;
+  carrier_status?: string | null;
+  dispatched_at?: string | null;
   can_open?: boolean | null;
 };
 
@@ -152,8 +156,24 @@ export function displayStatus(raw: string): AdminStatus {
 export const LABEL_PRINT_HINT =
   "يجب إرسال الطلبية إلى Meta Livraison أولاً للحصول على رقم التتبع قبل الطباعة.";
 
-export function hasTracking(order: { meta_livraison_code?: string | null }): boolean {
-  return Boolean((order.meta_livraison_code || "").trim());
+export function hasTracking(order: { meta_livraison_code?: string | null; tracking_number?: string | null }): boolean {
+  return Boolean((order.meta_livraison_code || order.tracking_number || "").trim());
+}
+
+export function carrierTrackingUrl(order: {
+  carrier?: string | null;
+  meta_livraison_code?: string | null;
+  tracking_number?: string | null;
+  meta_livraison_ticket_url?: string | null;
+}): string | null {
+  const ticket = String(order.meta_livraison_ticket_url || "").trim();
+  if (ticket) return ticket;
+  const code = String(order.meta_livraison_code || order.tracking_number || "").trim();
+  if (!code) return null;
+  if ((order.carrier || "meta_livraison") === "quick_livraison") {
+    return `https://clients.quicklivraison.ma/tracking/${encodeURIComponent(code)}`;
+  }
+  return null;
 }
 
 export function allowedNextStatuses(current: AdminStatus): AdminStatus[] {

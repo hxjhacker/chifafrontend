@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Copy, Loader2, Phone } from "lucide-react";
+import { Check, Copy, ExternalLink, Loader2, Phone, Printer } from "lucide-react";
 import { WhatsAppIcon } from "@/components/Chrome";
 import { OrderActionsMenu } from "@/components/admin/OrderActionsMenu";
 import { useLongPress } from "@/hooks/useLongPress";
@@ -14,6 +14,7 @@ import {
   statusMeta,
   telHref,
   waHref,
+  carrierTrackingUrl,
   type AdminCarrier,
   type AdminOrder,
   type AdminStatus,
@@ -37,6 +38,7 @@ export type OrderRowProps = {
   onCopyTracking: () => void;
   onStatusSelect: (next: AdminStatus, el: HTMLSelectElement) => void;
   onSendCarrier: (order: AdminOrder, carrier: AdminCarrier) => void;
+  onSendQuickStock?: (order: AdminOrder) => void;
   onPrint: (order: AdminOrder) => void;
   onEdit: (order: AdminOrder) => void;
   onView: (order: AdminOrder) => void;
@@ -86,25 +88,59 @@ function CarrierBadge({ carrier }: { carrier?: string | null }) {
   );
 }
 
-function TrackingChip({ order, copied, onCopy }: { order: AdminOrder; copied: boolean; onCopy: () => void }) {
+function TrackingChip({
+  order,
+  copied,
+  onCopy,
+  onPrint,
+}: {
+  order: AdminOrder;
+  copied: boolean;
+  onCopy: () => void;
+  onPrint?: (order: AdminOrder) => void;
+}) {
   if (!order.meta_livraison_code) return null;
   const quick = (order.carrier || "meta_livraison") === "quick_livraison";
+  const trackUrl = carrierTrackingUrl(order);
   return (
-    <button
-      type="button"
-      title="نسخ كود التتبع"
-      onClick={onCopy}
-      className={cn(
-        "mt-1 inline-flex max-w-[11.5rem] items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold transition",
-        quick
-          ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/25 dark:text-emerald-300"
-          : "border-sky-500/40 bg-sky-500/15 text-sky-600 hover:bg-sky-500/25 dark:text-sky-300",
-      )}
-    >
-      {copied ? <Check className="h-3 w-3 shrink-0 text-emeraldCustom" /> : <Copy className="h-3 w-3 shrink-0" />}
-      <span className="truncate">{order.meta_livraison_code}</span>
-      <CarrierBadge carrier={order.carrier} />
-    </button>
+    <div className="mt-1 flex max-w-[14rem] flex-wrap items-center gap-1">
+      <button
+        type="button"
+        title="نسخ كود التتبع"
+        onClick={onCopy}
+        className={cn(
+          "inline-flex max-w-[11.5rem] items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold transition",
+          quick
+            ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/25 dark:text-emerald-300"
+            : "border-sky-500/40 bg-sky-500/15 text-sky-600 hover:bg-sky-500/25 dark:text-sky-300",
+        )}
+      >
+        {copied ? <Check className="h-3 w-3 shrink-0 text-emeraldCustom" /> : <Copy className="h-3 w-3 shrink-0" />}
+        <span className="truncate">{order.meta_livraison_code}</span>
+        <CarrierBadge carrier={order.carrier} />
+      </button>
+      {onPrint ? (
+        <button
+          type="button"
+          title="طباعة البوليصة الحرارية A6"
+          onClick={() => onPrint(order)}
+          className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-teal-500/40 bg-teal-500/10 text-teal-600 hover:bg-teal-500/20 dark:text-teal-300"
+        >
+          <Printer className="h-3 w-3" />
+        </button>
+      ) : null}
+      {trackUrl ? (
+        <a
+          href={trackUrl}
+          target="_blank"
+          rel="noreferrer"
+          title="تتبع Quick"
+          className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-emerald-500/40 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 dark:text-emerald-300"
+        >
+          <ExternalLink className="h-3 w-3" />
+        </a>
+      ) : null}
+    </div>
   );
 }
 
@@ -170,6 +206,7 @@ function Menu({ props, open, onOpenChange }: { props: OrderRowProps; open?: bool
       shipping={props.shipping}
       duplicating={props.duplicating}
       onSendCarrier={props.onSendCarrier}
+      onSendQuickStock={props.onSendQuickStock}
       onPrint={props.onPrint}
       onEdit={props.onEdit}
       onView={props.onView}
@@ -199,7 +236,12 @@ export function OrderDesktopRow(props: OrderRowProps) {
       </td>
       <td className="p-3.5 font-mono text-[11px] text-royal/60 dark:text-slate-400" title={order.order_id}>
         <div>{shortOrderRef(order.order_id)}</div>
-        <TrackingChip order={order} copied={copiedTrackingId === order.order_id} onCopy={onCopyTracking} />
+        <TrackingChip
+          order={order}
+          copied={copiedTrackingId === order.order_id}
+          onCopy={onCopyTracking}
+          onPrint={props.onPrint}
+        />
       </td>
       <td className="p-3.5 font-bold">{order.full_name}</td>
       <td className="p-3.5">
@@ -250,7 +292,12 @@ export function OrderMobileCard(props: OrderRowProps) {
           <div className="min-w-0">
             <p className="font-mono text-[11px] font-bold text-royal/70 dark:text-slate-300">{shortOrderRef(order.order_id)}</p>
             <p className="mt-0.5 text-xs font-black leading-5 text-royal dark:text-white">{order.pack_label}</p>
-            <TrackingChip order={order} copied={copiedTrackingId === order.order_id} onCopy={onCopyTracking} />
+            <TrackingChip
+              order={order}
+              copied={copiedTrackingId === order.order_id}
+              onCopy={onCopyTracking}
+              onPrint={props.onPrint}
+            />
           </div>
         </div>
         <StatusSelect

@@ -542,6 +542,90 @@ export function AdminDashboard() {
     }
   }
 
+  async function sendQuickStock(order: AdminOrder) {
+    if (shippingId) return;
+    if (order.meta_livraison_code) {
+      setNoticeKind("ok");
+      setNotice(`الطلب مرسل مسبقاً إلى ${carrierLabel(order.carrier)}: ${order.meta_livraison_code}`);
+      return;
+    }
+    if (order.status === "cancelled" || order.status === "returned") {
+      setError(order.status === "returned" ? "لا يمكن شحن طلبية مرتجعة." : "لا يمكن شحن طلبية ملغاة.");
+      return;
+    }
+    if (!hasCompleteConfirmDetails(order)) {
+      setCompleting(order);
+      setError("كمّل عنوان التوصيل قبل إرسال الطرد.");
+      return;
+    }
+    setShippingId(order.order_id);
+    setError("");
+    try {
+      const res = await fetch(`/api/admin/orders/${order.order_id}/dispatch-quick-stock`, {
+        method: "POST",
+        credentials: "include",
+        cache: "no-store",
+        headers: { Accept: "application/json", "Content-Type": "application/json" },
+        body: "{}",
+      });
+      const raw = (await res.json().catch(() => ({}))) as Record<string, unknown> & {
+        detail?: string | Record<string, unknown>;
+        success?: boolean;
+        message?: string;
+        error?: string;
+        meta_livraison_code?: string | null;
+        tracking_number?: string | null;
+        code_envoi?: string | null;
+      };
+      const body = raw as AdminOrder & typeof raw;
+      if (!res.ok || body.success === false) {
+        const map: Record<string, string> = {
+          quick_livraison_not_configured: "أضف مفتاح Quick Livraison في الخادم أولاً.",
+          quick_district_not_mapped: "هذه المدينة غير مربوطة بـ Quick Livraison. زامن قائمة المدن أولاً.",
+          product_sku_missing: "أضف كود المنتج (SKU) في إدارة المنتجات قبل الإرسال من الستوك.",
+          confirmation_details_required: "كمّل معلومات التوصيل قبل الشحن.",
+          cannot_ship_cancelled: "لا يمكن شحن طلبية ملغاة.",
+          order_not_found: "الطلبية غير موجودة.",
+          not_authenticated: "جلسة الأدمن غير صالحة. أعد تسجيل الدخول.",
+          quick_stock_no_tracking: "Quick Livraison لم تُرجع كود التتبع.",
+        };
+        throw new Error(
+          body.message ||
+            body.error ||
+            (typeof body.detail === "object" && body.detail
+              ? JSON.stringify(body.detail)
+              : map[String(body.detail || "")] || String(body.detail || "")) ||
+            "تعذر تسجيل الطلب في ستوك Quick.",
+        );
+      }
+      const tracking = String(body.meta_livraison_code || body.code_envoi || body.tracking_number || "").trim();
+      setOrders((list) =>
+        list.map((row) =>
+          row.order_id === order.order_id
+            ? {
+                ...row,
+                ...body,
+                carrier: "quick_livraison",
+                meta_livraison_code: tracking || row.meta_livraison_code,
+                tracking_number: tracking || row.tracking_number,
+                status: tracking ? "shipped" : row.status,
+                proxied_status: undefined,
+                target_url: undefined,
+                success: undefined,
+              }
+            : row,
+        ),
+      );
+      setNoticeKind("ok");
+      setNotice(tracking ? `تم تسجيل الطلب بنجاح في ستوك Quick — ${tracking}` : "تم تسجيل الطلب بنجاح في ستوك Quick");
+      await refreshStats();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "تعذر تسجيل الطلب في ستوك Quick.");
+    } finally {
+      setShippingId(null);
+    }
+  }
+
   function toggleSelected(orderId: string, on: boolean) {
     setSelectedIds((prev) => {
       if (on) return prev.includes(orderId) ? prev : [...prev, orderId];
@@ -764,6 +848,7 @@ export function AdminDashboard() {
       onCopyTracking: () => void copyTracking(order),
       onStatusSelect: (next: AdminStatus, el: HTMLSelectElement) => onStatusSelect(order, next, el),
       onSendCarrier: (row: AdminOrder, carrier: AdminCarrier) => void sendToLivraison(row, carrier),
+      onSendQuickStock: (row: AdminOrder) => void sendQuickStock(row),
       onPrint: printShipping,
       onEdit: setCompleting,
       onView: (row: AdminOrder) => setViewingId(row.order_id),

@@ -187,6 +187,8 @@ function serialize(row: OrderRow): AdminOrder {
     meta_livraison_ticket_url: row.meta_livraison_ticket_url || null,
     carrier: (row.carrier === "quick_livraison" || row.carrier === "force_log" ? row.carrier : "meta_livraison"),
     tracking_number: row.meta_livraison_code || null,
+    code_envoi: row.meta_livraison_code || null,
+    product_code: String(row.product_slug || "").toUpperCase() || null,
   };
 }
 

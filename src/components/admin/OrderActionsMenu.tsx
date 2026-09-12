@@ -2,16 +2,18 @@
 
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { CheckCircle2, Eye, Loader2, MoreVertical, Pencil, Printer, Repeat2, Trash2, Truck } from "lucide-react";
+import { CheckCircle2, Eye, Loader2, MoreVertical, Pencil, Printer, Repeat2, Trash2, Truck, Warehouse } from "lucide-react";
 import { ADMIN_CARRIERS, shortOrderRef, hasTracking, LABEL_PRINT_HINT, type AdminCarrier, type AdminOrder } from "@/lib/admin";
 import { cn } from "@/lib/cn";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
+import { DispatchQuickStockModal } from "@/components/admin/DispatchQuickStockModal";
 
 type Props = {
   order: AdminOrder;
   shipping: boolean;
   duplicating: boolean;
   onSendCarrier: (order: AdminOrder, carrier: AdminCarrier) => void;
+  onSendQuickStock?: (order: AdminOrder) => void;
   onPrint: (order: AdminOrder) => void;
   onEdit: (order: AdminOrder) => void;
   onView: (order: AdminOrder) => void;
@@ -30,6 +32,7 @@ export function OrderActionsMenu({
   shipping,
   duplicating,
   onSendCarrier,
+  onSendQuickStock,
   onPrint,
   onEdit,
   onView,
@@ -44,6 +47,7 @@ export function OrderActionsMenu({
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const open = openProp ?? uncontrolledOpen;
   const setOpen = onOpenChange ?? setUncontrolledOpen;
+  const [stockOpen, setStockOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(
     () => typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches,
   );
@@ -59,7 +63,7 @@ export function OrderActionsMenu({
     return () => mq.removeEventListener("change", apply);
   }, []);
 
-  useLockBodyScroll(open && isMobile);
+  useLockBodyScroll((open && isMobile) || stockOpen);
 
   function placeMenu() {
     const btn = btnRef.current;
@@ -115,6 +119,10 @@ export function OrderActionsMenu({
     };
   }, [open, isMobile]);
 
+  useEffect(() => {
+    if (sent && !shipping) setStockOpen(false);
+  }, [sent, shipping]);
+
   const trigger = (
     <button
       ref={btnRef}
@@ -134,8 +142,34 @@ export function OrderActionsMenu({
     </button>
   );
 
-  if (!open || typeof document === "undefined") {
-    return <div className="relative">{trigger}</div>;
+  function openStock() {
+    close();
+    setStockOpen(true);
+  }
+
+  const stockButtonDisabled = sent || shipping || order.status === "cancelled" || order.status === "returned";
+
+  const stockModal = (
+    <DispatchQuickStockModal
+      order={order}
+      open={stockOpen}
+      shipping={shipping}
+      onClose={() => {
+        if (!shipping) setStockOpen(false);
+      }}
+      onConfirm={() => {
+        onSendQuickStock?.(order);
+      }}
+    />
+  );
+
+  if (!open) {
+    return (
+      <div className="relative">
+        {trigger}
+        {stockModal}
+      </div>
+    );
   }
 
   if (isMobile) {
@@ -188,6 +222,26 @@ export function OrderActionsMenu({
                   )}
                 </button>
               ))}
+              <button
+                type="button"
+                disabled={stockButtonDisabled}
+                onClick={openStock}
+                className={cn(CARD, "border-emerald-500/40 bg-emerald-950/30 text-emerald-300 hover:bg-emerald-900/40")}
+              >
+                <span className="min-w-0 flex-1 text-right">
+                  {sent && (order.carrier || "") === "quick_livraison" ? "تم الإرسال من ستوك Quick" : "إرسال من ستوك Quick"}
+                  <span className="mt-0.5 block truncate font-mono text-[10px] font-bold text-emerald-200/80">
+                    SKU {order.product_code || order.product_slug} · ×{order.tier_qty}
+                  </span>
+                </span>
+                {shipping ? (
+                  <Loader2 className="h-5 w-5 shrink-0 animate-spin" />
+                ) : sent && (order.carrier || "") === "quick_livraison" ? (
+                  <CheckCircle2 className="h-5 w-5 shrink-0" />
+                ) : (
+                  <Warehouse className="h-5 w-5 shrink-0" />
+                )}
+              </button>
               <button
                 type="button"
                 disabled={!canPrint}
@@ -250,6 +304,7 @@ export function OrderActionsMenu({
           </div>,
           document.body,
         )}
+        {stockModal}
       </div>
     );
   }
@@ -292,6 +347,21 @@ export function OrderActionsMenu({
               </span>
             </MenuItem>
           ))}
+          <MenuItem disabled={stockButtonDisabled} onSelect={openStock}>
+            {shipping ? (
+              <Loader2 className="h-4 w-4 shrink-0 animate-spin text-emerald-500" />
+            ) : sent && (order.carrier || "") === "quick_livraison" ? (
+              <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
+            ) : (
+              <Warehouse className="h-4 w-4 shrink-0 text-emerald-500" />
+            )}
+            <span className="min-w-0 flex-1 text-left">
+              إرسال من ستوك Quick
+              <span className="mt-0.5 block truncate font-mono text-[10px] font-bold text-emerald-600 dark:text-emerald-300">
+                SKU {order.product_code || order.product_slug} · ×{order.tier_qty}
+              </span>
+            </span>
+          </MenuItem>
           <MenuItem
             disabled={!canPrint}
             title={canPrint ? "طباعة التذكرة / الملصق" : LABEL_PRINT_HINT}
@@ -334,6 +404,7 @@ export function OrderActionsMenu({
         </div>,
         document.body,
       )}
+      {stockModal}
     </div>
   );
 }
