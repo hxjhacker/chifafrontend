@@ -582,7 +582,8 @@ export function AdminDashboard() {
         const map: Record<string, string> = {
           quick_livraison_not_configured: "أضف مفتاح Quick Livraison في الخادم أولاً.",
           quick_district_not_mapped: "هذه المدينة غير مربوطة بـ Quick Livraison. زامن قائمة المدن أولاً.",
-          product_sku_missing: "أضف كود المنتج (SKU) في إدارة المنتجات قبل الإرسال من الستوك.",
+          quick_product_id_missing: "أضف معرف المنتج في كويك من إدارة المنتجات قبل الإرسال من المخزون.",
+          product_sku_missing: "أضف كود المنتج (SKU) في إدارة المنتجات قبل الإرسال من المخزون.",
           confirmation_details_required: "كمّل معلومات التوصيل قبل الشحن.",
           cannot_ship_cancelled: "لا يمكن شحن طلبية ملغاة.",
           order_not_found: "الطلبية غير موجودة.",
@@ -595,7 +596,7 @@ export function AdminDashboard() {
             (typeof body.detail === "object" && body.detail
               ? JSON.stringify(body.detail)
               : map[String(body.detail || "")] || String(body.detail || "")) ||
-            "تعذر تسجيل الطلب في ستوك Quick.",
+            "تعذر تسجيل الطلب في مخزون Quick.",
         );
       }
       const tracking = String(body.meta_livraison_code || body.code_envoi || body.tracking_number || "").trim();
@@ -617,10 +618,10 @@ export function AdminDashboard() {
         ),
       );
       setNoticeKind("ok");
-      setNotice(tracking ? `تم تسجيل الطلب بنجاح في ستوك Quick — ${tracking}` : "تم تسجيل الطلب بنجاح في ستوك Quick");
+      setNotice(tracking ? `تم تسجيل الطلب بنجاح في مخزون Quick — ${tracking}` : "تم تسجيل الطلب بنجاح في مخزون Quick");
       await refreshStats();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "تعذر تسجيل الطلب في ستوك Quick.");
+      setError(err instanceof Error ? err.message : "تعذر تسجيل الطلب في مخزون Quick.");
     } finally {
       setShippingId(null);
     }

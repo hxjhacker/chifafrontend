@@ -217,6 +217,8 @@ const SCHEMA_ALTERS = [
   `UPDATE products SET default_price_cents = 19900 WHERE slug IN ('quran', 'music', 'educative', 'taalim') AND (default_price_cents IS NULL OR default_price_cents = 0)`,
   `UPDATE products SET default_price_cents = 14900 WHERE slug = 'kids' AND (default_price_cents IS NULL OR default_price_cents = 0)`,
   `CREATE UNIQUE INDEX IF NOT EXISTS ix_products_code ON products (code)`,
+  `ALTER TABLE products ADD COLUMN IF NOT EXISTS quick_product_id integer`,
+  `CREATE INDEX IF NOT EXISTS ix_products_quick_product_id ON products (quick_product_id)`,
   `CREATE INDEX IF NOT EXISTS ix_orders_created_at ON orders (created_at)`,
   `CREATE INDEX IF NOT EXISTS ix_orders_confirmed_at ON orders (confirmed_at)`,
   `CREATE INDEX IF NOT EXISTS ix_orders_meta_livraison_code ON orders (meta_livraison_code)`,

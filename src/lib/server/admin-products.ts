@@ -8,6 +8,7 @@ export type ProductRow = {
   name_ar: string;
   name_en: string;
   default_price_cents: number;
+  quick_product_id: number | null;
   is_active: boolean;
   created_at: string | Date | null;
 };
@@ -31,8 +32,16 @@ function autoCode(name: string) {
   return `PRD-${randomUUID().replace(/-/g, "").slice(0, 5).toUpperCase()}`;
 }
 
+function parseQuickProductId(raw: unknown) {
+  if (raw === undefined || raw === null || raw === "") return null;
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value < 1) throw new Error("invalid_quick_product_id");
+  return Math.trunc(value);
+}
+
 function dump(row: ProductRow) {
   const cents = Number(row.default_price_cents) || 0;
+  const quickId = Number(row.quick_product_id);
   return {
     id: String(row.id),
     name: row.name_ar,
@@ -42,6 +51,7 @@ function dump(row: ProductRow) {
     slug: row.slug,
     default_price: Math.round(cents) / 100,
     default_price_cents: cents,
+    quick_product_id: Number.isFinite(quickId) && quickId >= 1 ? Math.trunc(quickId) : null,
     is_active: Boolean(row.is_active),
     created_at: row.created_at instanceof Date ? row.created_at.toISOString() : row.created_at,
   };
@@ -73,14 +83,20 @@ export function dumpProduct(row: ProductRow) {
 export async function listAdminProducts() {
   await ensureSchema();
   const result = await getPool().query<ProductRow>(
-    `SELECT id, slug, code, name_ar, name_en, default_price_cents, is_active, created_at
+    `SELECT id, slug, code, name_ar, name_en, default_price_cents, quick_product_id, is_active, created_at
      FROM products
      ORDER BY is_active DESC, created_at DESC`,
   );
   return { products: result.rows.map(dump) };
 }
 
-export async function createAdminProduct(input: { name: string; code?: string; default_price?: number; is_active?: boolean }) {
+export async function createAdminProduct(input: {
+  name: string;
+  code?: string;
+  default_price?: number;
+  quick_product_id?: number | string | null;
+  is_active?: boolean;
+}) {
   const name = String(input.name || "").trim();
   if (name.length < 2) throw new Error("invalid_name");
   await ensureSchema();
@@ -88,23 +104,24 @@ export async function createAdminProduct(input: { name: string; code?: string; d
   const code = await uniqueValue("code", wanted);
   const slug = await uniqueValue("slug", code.toLowerCase().replace(/-/g, "_"));
   const cents = Math.max(0, Math.round(Number(input.default_price || 0) * 100));
+  const quickId = parseQuickProductId(input.quick_product_id);
   const id = randomUUID();
   const result = await getPool().query<ProductRow>(
-    `INSERT INTO products (id, slug, code, name_ar, name_en, tagline_ar, description_ar, accent, default_price_cents, is_active, created_at)
-     VALUES ($1, $2, $3, $4, $4, '', '', 'gold', $5, $6, now())
-     RETURNING id, slug, code, name_ar, name_en, default_price_cents, is_active, created_at`,
-    [id, slug, code, name, cents, input.is_active !== false],
+    `INSERT INTO products (id, slug, code, name_ar, name_en, tagline_ar, description_ar, accent, default_price_cents, quick_product_id, is_active, created_at)
+     VALUES ($1, $2, $3, $4, $4, '', '', 'gold', $5, $6, $7, now())
+     RETURNING id, slug, code, name_ar, name_en, default_price_cents, quick_product_id, is_active, created_at`,
+    [id, slug, code, name, cents, quickId, input.is_active !== false],
   );
   return dump(result.rows[0]);
 }
 
 export async function patchAdminProduct(
   productId: string,
-  input: { name?: string; code?: string; default_price?: number; is_active?: boolean },
+  input: { name?: string; code?: string; default_price?: number; quick_product_id?: number | string | null; is_active?: boolean },
 ) {
   await ensureSchema();
   const current = await getPool().query<ProductRow>(
-    `SELECT id, slug, code, name_ar, name_en, default_price_cents, is_active, created_at FROM products WHERE id::text = $1 LIMIT 1`,
+    `SELECT id, slug, code, name_ar, name_en, default_price_cents, quick_product_id, is_active, created_at FROM products WHERE id::text = $1 LIMIT 1`,
     [productId],
   );
   if (!current.rowCount) throw new Error("product_not_found");
@@ -113,6 +130,8 @@ export async function patchAdminProduct(
   let code = row.code;
   let slug = row.slug;
   let cents = Number(row.default_price_cents) || 0;
+  const storedQuick = Number(row.quick_product_id);
+  let quickId = Number.isFinite(storedQuick) && storedQuick >= 1 ? Math.trunc(storedQuick) : null;
   let active = Boolean(row.is_active);
   if (input.name != null) {
     name = String(input.name).trim();
@@ -128,14 +147,17 @@ export async function patchAdminProduct(
   if (input.default_price != null) {
     cents = Math.max(0, Math.round(Number(input.default_price) * 100));
   }
+  if (input.quick_product_id !== undefined) {
+    quickId = parseQuickProductId(input.quick_product_id);
+  }
   if (input.is_active != null) active = Boolean(input.is_active);
   const result = await getPool().query<ProductRow>(
     `UPDATE products
      SET name_ar = $2, name_en = CASE WHEN name_en = name_ar OR name_en IS NULL OR name_en = '' THEN $2 ELSE name_en END,
-         code = $3, slug = $4, default_price_cents = $5, is_active = $6
+         code = $3, slug = $4, default_price_cents = $5, quick_product_id = $6, is_active = $7
      WHERE id = $1
-     RETURNING id, slug, code, name_ar, name_en, default_price_cents, is_active, created_at`,
-    [row.id, name, code, slug, cents, active],
+     RETURNING id, slug, code, name_ar, name_en, default_price_cents, quick_product_id, is_active, created_at`,
+    [row.id, name, code, slug, cents, quickId, active],
   );
   return dump(result.rows[0]);
 }

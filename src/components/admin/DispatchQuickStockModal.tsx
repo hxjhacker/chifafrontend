@@ -13,8 +13,8 @@ type Props = {
 
 export function DispatchQuickStockModal({ order, open, shipping, onClose, onConfirm }: Props) {
   if (!open) return null;
-  const sku = String(order.product_code || order.product_slug || "").trim().toUpperCase() || "—";
   const qty = Math.max(1, Number(order.tier_qty) || 1);
+  const quickId = order.quick_product_id ? String(order.quick_product_id) : "—";
 
   return (
     <div className="fixed inset-0 z-[95] flex items-center justify-center p-3" role="presentation">
@@ -34,12 +34,12 @@ export function DispatchQuickStockModal({ order, open, shipping, onClose, onConf
             </div>
             <div>
               <p id="quick-stock-title" className="text-sm font-black">
-                إرسال من ستوك Quick
+                إرسال من مخزون Quick
               </p>
               <p className="text-[11px] font-semibold text-slate-400">Expédition depuis le stock Quick</p>
             </div>
           </div>
-          <button type="button" onClick={onClose} className="p-1 text-slate-400 hover:text-white" aria-label="إغلاق">
+          <button type="button" onClick={onClose} className="p-1 text-slate-400 hover:text-white" aria-label="إغلاق" disabled={shipping}>
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -53,8 +53,8 @@ export function DispatchQuickStockModal({ order, open, shipping, onClose, onConf
             </span>
           </div>
           <div className="flex items-center justify-between gap-3">
-            <span className="text-slate-400">SKU</span>
-            <span className="font-mono font-black text-emerald-300">{sku}</span>
+            <span className="text-slate-400">معرف المنتج في كويك</span>
+            <span className="font-mono font-black text-emerald-300">{quickId}</span>
           </div>
           <div className="flex items-center justify-between gap-3">
             <span className="text-slate-400">الكمية</span>
@@ -66,6 +66,12 @@ export function DispatchQuickStockModal({ order, open, shipping, onClose, onConf
           </div>
         </div>
 
+        {!order.quick_product_id ? (
+          <p className="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[11px] font-bold text-amber-200">
+            أضف معرف المنتج في كويك من إدارة المنتجات قبل الإرسال من المخزون.
+          </p>
+        ) : null}
+
         <div className="mt-4 flex items-center gap-2">
           <button
             type="button"
@@ -74,7 +80,7 @@ export function DispatchQuickStockModal({ order, open, shipping, onClose, onConf
             className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-500 py-2.5 text-xs font-black text-slate-950 transition hover:bg-emerald-400 disabled:opacity-60"
           >
             {shipping ? <Loader2 className="h-4 w-4 animate-spin" /> : <Warehouse className="h-4 w-4" />}
-            {shipping ? "جاري الإرسال لـ Quick..." : "تأكيد الإرسال من الستوك"}
+            {shipping ? "جاري الإرسال لـ Quick..." : "إرسال من مخزون Quick"}
           </button>
           <button
             type="button"

@@ -4,6 +4,7 @@ export type AdminProduct = {
   code: string;
   slug: string;
   default_price: number;
+  quick_product_id?: number | null;
   is_active: boolean;
 };
 
@@ -48,12 +49,14 @@ function parseProduct(row: unknown): AdminProduct | null {
   if (!name && !code) return null;
   const cents = Number(item.default_price_cents);
   const mad = Number(item.default_price);
+  const quickRaw = Number(item.quick_product_id);
   return {
     id: String(item.id || slug || code),
     name: name || code,
     code,
     slug: slug || code.toLowerCase(),
     default_price: Number.isFinite(mad) ? mad : Number.isFinite(cents) ? cents / 100 : 0,
+    quick_product_id: Number.isFinite(quickRaw) && quickRaw >= 1 ? Math.trunc(quickRaw) : null,
     is_active: item.is_active !== false,
   };
 }

@@ -56,6 +56,12 @@ export function OrderActionsMenu({
   const canPrint = hasTracking(order);
 
   useEffect(() => {
+    if (stockOpen && !shipping && order.meta_livraison_code) {
+      setStockOpen(false);
+    }
+  }, [stockOpen, shipping, order.meta_livraison_code]);
+
+  useEffect(() => {
     const mq = window.matchMedia("(max-width: 767px)");
     const apply = () => setIsMobile(mq.matches);
     apply();
@@ -229,9 +235,9 @@ export function OrderActionsMenu({
                 className={cn(CARD, "border-emerald-500/40 bg-emerald-950/30 text-emerald-300 hover:bg-emerald-900/40")}
               >
                 <span className="min-w-0 flex-1 text-right">
-                  {sent && (order.carrier || "") === "quick_livraison" ? "تم الإرسال من ستوك Quick" : "إرسال من ستوك Quick"}
+                  {sent && (order.carrier || "") === "quick_livraison" ? "تم الإرسال من مخزون Quick" : "إرسال من مخزون Quick"}
                   <span className="mt-0.5 block truncate font-mono text-[10px] font-bold text-emerald-200/80">
-                    SKU {order.product_code || order.product_slug} · ×{order.tier_qty}
+                    Quick #{order.quick_product_id || "—"} · ×{order.tier_qty}
                   </span>
                 </span>
                 {shipping ? (
@@ -356,9 +362,9 @@ export function OrderActionsMenu({
               <Warehouse className="h-4 w-4 shrink-0 text-emerald-500" />
             )}
             <span className="min-w-0 flex-1 text-left">
-              إرسال من ستوك Quick
+              إرسال من مخزون Quick
               <span className="mt-0.5 block truncate font-mono text-[10px] font-bold text-emerald-600 dark:text-emerald-300">
-                SKU {order.product_code || order.product_slug} · ×{order.tier_qty}
+                Quick #{order.quick_product_id || "—"} · ×{order.tier_qty}
               </span>
             </span>
           </MenuItem>

@@ -37,18 +37,20 @@ export async function POST(request: NextRequest) {
       name?: string;
       code?: string;
       default_price?: number;
+      quick_product_id?: number | string | null;
       is_active?: boolean;
     };
     const product = await createAdminProduct({
       name: body.name || "",
       code: body.code,
       default_price: body.default_price,
+      quick_product_id: body.quick_product_id,
       is_active: body.is_active,
     });
     return NextResponse.json(product, { status: 201 });
   } catch (err) {
     const message = err instanceof Error ? err.message : "create_failed";
-    const status = ["invalid_name", "invalid_price"].includes(message) ? 422 : 500;
+    const status = ["invalid_name", "invalid_price", "invalid_quick_product_id"].includes(message) ? 422 : 500;
     return NextResponse.json({ detail: message }, { status });
   }
 }

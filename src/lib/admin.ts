@@ -62,6 +62,7 @@ export type AdminOrder = {
   tracking_number?: string | null;
   code_envoi?: string | null;
   product_code?: string | null;
+  quick_product_id?: number | null;
   carrier_status?: string | null;
   dispatched_at?: string | null;
   can_open?: boolean | null;

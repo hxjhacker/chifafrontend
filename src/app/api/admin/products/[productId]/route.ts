@@ -23,13 +23,14 @@ export async function PATCH(request: NextRequest, ctx: Ctx) {
       name?: string;
       code?: string;
       default_price?: number;
+      quick_product_id?: number | string | null;
       is_active?: boolean;
     };
     const product = await patchAdminProduct(productId, body);
     return NextResponse.json(product);
   } catch (err) {
     const message = err instanceof Error ? err.message : "update_failed";
-    const status = message === "product_not_found" ? 404 : ["invalid_name", "invalid_price"].includes(message) ? 422 : 500;
+    const status = message === "product_not_found" ? 404 : ["invalid_name", "invalid_price", "invalid_quick_product_id"].includes(message) ? 422 : 500;
     return NextResponse.json({ detail: message }, { status });
   }
 }
