@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { useRouter } from "next/navigation";
 import {
   Calculator,
   CheckCircle2,
@@ -29,7 +28,7 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { ThemeToggle, WhatsAppIcon } from "@/components/Chrome";
+import { DASHBOARD_LOGIN, DASHBOARD_HOME, goAdmin } from "@/lib/admin-paths";
 import SplashScreen from "@/components/SplashScreen";
 import { AddOrderModal } from "@/components/admin/AddOrderModal";
 import { AddProductModal } from "@/components/admin/AddProductModal";
@@ -172,7 +171,6 @@ function readPrefs(): SectionPrefs {
 }
 
 export function AdminDashboard() {
-  const router = useRouter();
   const [stats, setStats] = useState<AdminStats>(EMPTY_STATS);
   const [logistics, setLogistics] = useState<LogisticsAnalytics>(EMPTY_LOGISTICS);
   const [orders, setOrders] = useState<AdminOrder[]>([]);
@@ -274,7 +272,7 @@ export function AdminDashboard() {
     try {
       const meRes = await adminFetch("/api/admin/me", {}, 8000);
       if (meRes.status === 401) {
-        router.replace("/mydashboard/login");
+        goAdmin(DASHBOARD_LOGIN);
         return;
       }
       if (meRes.ok) {
@@ -284,7 +282,7 @@ export function AdminDashboard() {
 
       const ordersRes = await adminFetch("/api/admin/orders?limit=2000", {}, 20000);
       if (ordersRes.status === 401) {
-        router.replace("/mydashboard/login");
+        goAdmin(DASHBOARD_LOGIN);
         return;
       }
       if (ordersRes.ok) {
@@ -321,7 +319,7 @@ export function AdminDashboard() {
         /* stats/logistics must never freeze the dashboard */
       }
     })();
-  }, [router]);
+  }, []);
 
   useEffect(() => {
     void load();
@@ -342,8 +340,7 @@ export function AdminDashboard() {
 
   async function logout() {
     await fetch("/api/admin/logout", { method: "POST", credentials: "include" });
-    router.replace("/mydashboard/login");
-    router.refresh();
+    goAdmin(DASHBOARD_LOGIN);
   }
 
   function onStatusSelect(order: AdminOrder, next: AdminStatus, selectEl: HTMLSelectElement) {
@@ -1143,7 +1140,7 @@ export function AdminDashboard() {
                 <Calculator className="h-4 w-4" />
                 المدن
               </button>
-              <Link href="/mydashboard/pricing-comparison" aria-label="مقارنة أسعار Quick" className={NAV_COMPARE}>
+              <Link href={`${DASHBOARD_HOME}/pricing-comparison`} aria-label="مقارنة أسعار Quick" className={NAV_COMPARE}>
                 <Scale className="h-4 w-4" />
                 مقارنة الأسعار
               </Link>
@@ -1289,7 +1286,7 @@ export function AdminDashboard() {
               <Calculator className="h-4 w-4" />
             </button>
             <Link
-              href="/mydashboard/pricing-comparison"
+              href={`${DASHBOARD_HOME}/pricing-comparison`}
               onClick={() => setMenuOpen(false)}
               className="flex w-full items-center justify-between rounded-lg border border-emerald-500/30 p-2.5 text-right text-xs text-emerald-300"
             >

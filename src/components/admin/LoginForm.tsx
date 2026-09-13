@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, MouseEvent, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { DASHBOARD_HOME, goAdmin } from "@/lib/admin-paths";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowLeft, CircleAlert, Eye, EyeOff, Loader2, Lock, User } from "lucide-react";
 import { ThemeToggle } from "@/components/Chrome";
@@ -10,7 +10,6 @@ import { cn } from "@/lib/cn";
 const REMEMBER_KEY = "cg_admin_remember_user";
 
 export function LoginForm() {
-  const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(false);
@@ -74,8 +73,7 @@ export function LoginForm() {
       } catch {
         /* ignore */
       }
-      router.replace("/mydashboard");
-      router.refresh();
+      goAdmin(DASHBOARD_HOME);
     } catch (err) {
       setError(err instanceof DOMException && err.name === "AbortError" ? "انتهت مهلة الاتصال. حاول مرة أخرى." : "تعذر الاتصال. حاول مرة أخرى.");
     } finally {

@@ -3,6 +3,7 @@ import Script from "next/script";
 import { Cairo, Cinzel, Tajawal } from "next/font/google";
 import { StoreShell } from "@/components/StoreShell";
 import { FB_PIXEL_ID } from "@/lib/pixels";
+import { HISTORY_GUARD_SCRIPT } from "@/lib/admin-paths";
 import { THEME_INIT_SCRIPT } from "@/lib/theme";
 import "./globals.css";
 
@@ -36,6 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="ar" dir="rtl" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: HISTORY_GUARD_SCRIPT }} />
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         {FB_PIXEL_ID ? (
           <Script id="meta-pixel" strategy="beforeInteractive">{`

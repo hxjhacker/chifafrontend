@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Loader2, Pencil, RefreshCw, Save, Search, X } from "lucide-react";
+import { DASHBOARD_HOME } from "@/lib/admin-paths";
 
 type PricingCity = {
   id: string;
@@ -173,7 +174,7 @@ export function PricingComparisonPage() {
               تحديث المدن
             </button>
             <Link
-              href="/mydashboard"
+              href={DASHBOARD_HOME}
               className="inline-flex h-10 items-center gap-2 rounded-xl border px-3.5 text-sm font-semibold text-slate-200"
               style={{ borderColor: "#1e2d4a", background: "#0b1324" }}
             >
