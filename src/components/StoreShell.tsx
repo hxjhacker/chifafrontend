@@ -10,7 +10,7 @@ import { PixelLoader } from "./PixelLoader";
 
 function ShellInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  if (pathname?.startsWith("/mydashboard")) {
+  if (pathname?.startsWith("/mydashboard") || pathname?.startsWith("/admin")) {
     return (
       <>
         <ThemeSync />
@@ -18,7 +18,19 @@ function ShellInner({ children }: { children: React.ReactNode }) {
       </>
     );
   }
-  const raisedFloats = pathname === "/product" || pathname.startsWith("/products/");
+  const raisedFloats =
+    pathname === "/product" || pathname === "/usb-taalim" || pathname.startsWith("/products/");
+  if (pathname === "/usb-taalim") {
+    return (
+      <>
+        <ThemeSync />
+        <PixelLoader />
+        {children}
+        <WhatsAppFloat raised />
+        <BackToTop raised />
+      </>
+    );
+  }
   return (
     <>
       <ThemeSync />

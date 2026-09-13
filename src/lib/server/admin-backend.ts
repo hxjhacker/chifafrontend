@@ -4,7 +4,11 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export function adminBackendBase() {
-  return (process.env.INTERNAL_API_URL || process.env.API_URL || "http://chifaglow_backend:8000").replace(/\/$/, "");
+  const explicit = (process.env.INTERNAL_API_URL || process.env.API_URL || "").trim();
+  if (explicit) return explicit.replace(/\/$/, "");
+  const publicApi = (process.env.NEXT_PUBLIC_API_URL || "").trim();
+  if (process.env.NODE_ENV !== "production" && publicApi) return publicApi.replace(/\/$/, "");
+  return "http://chifaglow_backend:8000";
 }
 
 export function adminAuthHeaders(req: NextRequest): HeadersInit {

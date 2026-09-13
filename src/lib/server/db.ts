@@ -224,6 +224,24 @@ const SCHEMA_ALTERS = [
   `ALTER TABLE products ADD COLUMN IF NOT EXISTS stock_quantity integer DEFAULT 0 NOT NULL`,
   `CREATE INDEX IF NOT EXISTS ix_products_category ON products (category)`,
   `CREATE INDEX IF NOT EXISTS ix_products_is_quick_stock ON products (is_quick_stock)`,
+  `CREATE TABLE IF NOT EXISTS delivery_cities (
+    id uuid PRIMARY KEY,
+    city_key varchar(180) NOT NULL,
+    city_name varchar(160) NOT NULL,
+    city_name_ar varchar(160) NOT NULL DEFAULT '',
+    search_blob varchar(400) NOT NULL DEFAULT '',
+    delivery_delay varchar(40),
+    quick_delivery_price double precision NOT NULL DEFAULT 0,
+    quick_retour_price double precision NOT NULL DEFAULT 0,
+    quick_refus_price double precision NOT NULL DEFAULT 0,
+    competitor_name varchar(80) NOT NULL DEFAULT 'ناقل بديل',
+    competitor_delivery_price double precision,
+    competitor_retour_price double precision NOT NULL DEFAULT 15,
+    updated_at timestamptz NOT NULL DEFAULT now()
+  )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS ix_delivery_cities_city_key ON delivery_cities (city_key)`,
+  `CREATE INDEX IF NOT EXISTS ix_delivery_cities_city_name ON delivery_cities (city_name)`,
+  `CREATE INDEX IF NOT EXISTS ix_delivery_cities_search_blob ON delivery_cities (search_blob)`,
   `CREATE INDEX IF NOT EXISTS ix_orders_created_at ON orders (created_at)`,
   `CREATE INDEX IF NOT EXISTS ix_orders_confirmed_at ON orders (confirmed_at)`,
   `CREATE INDEX IF NOT EXISTS ix_orders_meta_livraison_code ON orders (meta_livraison_code)`,
@@ -322,7 +340,7 @@ const PRODUCT_SEED = [
 
 const ACTIVE_PRODUCT_SLUGS = PRODUCT_SEED.map((product) => product.slug);
 
-const SCHEMA_ALTER_VERSION = 12;
+const SCHEMA_ALTER_VERSION = 13;
 let appliedAlterVersion = 0;
 
 export async function ensureSchema() {

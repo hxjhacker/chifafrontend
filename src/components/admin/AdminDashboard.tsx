@@ -25,8 +25,10 @@ import {
   Trash2,
   Moon,
   RefreshCw,
+  Scale,
   X,
 } from "lucide-react";
+import Link from "next/link";
 import { ThemeToggle, WhatsAppIcon } from "@/components/Chrome";
 import SplashScreen from "@/components/SplashScreen";
 import { AddOrderModal } from "@/components/admin/AddOrderModal";
@@ -115,6 +117,7 @@ const DASHBOARD_SHELL = "mx-auto w-full max-w-[1720px] px-4 sm:px-6 lg:px-8";
 const NAV_CHIP =
   "relative z-10 inline-flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border px-3.5 py-2 text-sm font-semibold transition";
 const NAV_TARIFS = `${NAV_CHIP} border-teal-500/30 text-teal-600 hover:bg-teal-500/10 dark:text-teal-400`;
+const NAV_COMPARE = `${NAV_CHIP} border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10 dark:text-emerald-400`;
 const NAV_PRODUCTS = `${NAV_CHIP} border-purple-500/30 text-purple-600 hover:bg-purple-500/10 dark:text-purple-400`;
 const NAV_WHATSAPP = `${NAV_CHIP} border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10 dark:text-emerald-400`;
 const NAV_PREFS = `${NAV_CHIP} cursor-pointer border-indigo-500/30 text-indigo-600 hover:bg-indigo-500/10 dark:text-indigo-400`;
@@ -1140,6 +1143,10 @@ export function AdminDashboard() {
                 <Calculator className="h-4 w-4" />
                 المدن
               </button>
+              <Link href="/mydashboard/pricing-comparison" aria-label="مقارنة أسعار Quick" className={NAV_COMPARE}>
+                <Scale className="h-4 w-4" />
+                مقارنة الأسعار
+              </Link>
               <button type="button" aria-label="إضافة طلب" onClick={() => setModalOpen(true)} className={NAV_PRIMARY}>
                 <Plus className="h-4 w-4" />
                 إضافة طلب
@@ -1281,6 +1288,14 @@ export function AdminDashboard() {
               <span>دليل الأسعار والمدن</span>
               <Calculator className="h-4 w-4" />
             </button>
+            <Link
+              href="/mydashboard/pricing-comparison"
+              onClick={() => setMenuOpen(false)}
+              className="flex w-full items-center justify-between rounded-lg border border-emerald-500/30 p-2.5 text-right text-xs text-emerald-300"
+            >
+              <span>مقارنة أسعار Quick</span>
+              <Scale className="h-4 w-4" />
+            </Link>
             <button
               type="button"
               onClick={() => {
