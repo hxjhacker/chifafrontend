@@ -7,9 +7,19 @@ import { sendPurchaseCapi } from "./capi";
 import { ensureSchema, getPool } from "./db";
 import { notifyNewOrder } from "./push";
 
-const PRODUCT_SLUGS = new Set(["quran", "kids", "music", "educative"]);
+const PRODUCT_SLUGS = new Set([
+  "quran",
+  "taalim",
+  "music",
+  "zit_alfasokh",
+  "alkhatm_alrijali",
+  "almisk_alabyad",
+  "kids",
+  "educative",
+]);
 const TIER_CENTS: Record<number, number> = { 1: 19900, 2: 27900, 3: 34900 };
 const EDUCATIVE_TIER_CENTS: Record<number, number> = { 1: 14900, 2: 24900, 3: 32900 };
+const TAALIM_TIER_CENTS: Record<number, number> = { 1: 19900, 2: 29900, 3: 37900 };
 const CROSS_SELL_CENTS = 19900;
 const UPSELL_CENTS = 9900;
 
@@ -59,17 +69,24 @@ export class OrderError extends Error {
   }
 }
 
+function canonicalProductSlug(slug: string) {
+  if (slug === "kids" || slug === "educative") return "taalim";
+  return slug;
+}
+
 function centsToMad(cents: number) {
   return Math.round(cents) / 100;
 }
 
 function tierTable(slug: string) {
-  return slug === "educative" ? EDUCATIVE_TIER_CENTS : TIER_CENTS;
+  if (slug === "educative") return EDUCATIVE_TIER_CENTS;
+  if (slug === "taalim") return TAALIM_TIER_CENTS;
+  return TIER_CENTS;
 }
 
 function serialize(order: OrderRow, items: ItemRow[]): OrderResponse {
   const bought = new Set([order.product_slug, order.cross_sell_slug].filter(Boolean));
-  const candidates = ["quran", "kids", "music"].filter((slug) => !bought.has(slug));
+  const candidates = ["quran", "taalim", "music"].filter((slug) => !bought.has(slug));
   return {
     order_id: order.id,
     status: order.status,
@@ -116,9 +133,13 @@ async function pushSheets(order: OrderRow, items: ItemRow[]) {
   const url = (process.env.GOOGLE_SHEETS_WEBHOOK_URL || "").trim();
   if (!url) return;
   const names: Record<string, string> = {
-    quran: "USB القرآن الكريم",
+    quran: "USB القرآن",
+    taalim: "USB التعليمي",
+    music: "USB الموسيقى",
+    zit_alfasokh: "زيت الفسوخ",
+    alkhatm_alrijali: "الخاتم الرجالي",
+    almisk_alabyad: "المسك الأبيض",
     kids: "USB تعليم الأطفال",
-    music: "USB الأغاني والموسيقى",
     educative: "الفلاشة التعليمية الذكية للأطفال",
   };
   try {
@@ -171,12 +192,14 @@ export async function createOrder(
   if (customerCityRaw.length < 2) throw new OrderError(422, "invalid_city");
 
   const qty = Number(payload.tier_qty);
+  const productSlug = canonicalProductSlug(payload.product_slug);
   const table = tierTable(payload.product_slug);
   if (!(qty in table)) throw new OrderError(422, "invalid_tier");
   if (!PRODUCT_SLUGS.has(payload.product_slug)) throw new OrderError(422, "invalid_product");
 
+  const crossSlug = payload.cross_sell_slug ? canonicalProductSlug(payload.cross_sell_slug) : "";
   if (payload.cross_sell_slug) {
-    if (payload.cross_sell_slug === payload.product_slug || !PRODUCT_SLUGS.has(payload.cross_sell_slug)) {
+    if (crossSlug === productSlug || !PRODUCT_SLUGS.has(payload.cross_sell_slug)) {
       throw new OrderError(422, "invalid_cross_sell");
     }
   }
@@ -185,7 +208,7 @@ export async function createOrder(
   if (eventId.length < 8) throw new OrderError(422, "invalid_event_id");
 
   const tierCents = table[qty];
-  const crossCents = payload.cross_sell_slug ? CROSS_SELL_CENTS : 0;
+  const crossCents = crossSlug ? CROSS_SELL_CENTS : 0;
   const subtotal = tierCents + crossCents;
   const address = (payload.address || "").trim() || null;
 
@@ -217,10 +240,10 @@ export async function createOrder(
         toNational(e164),
         customerCityRaw,
         address,
-        payload.product_slug,
+        productSlug,
         qty,
         tierCents,
-        payload.cross_sell_slug || null,
+        crossSlug || null,
         crossCents,
         subtotal,
         eventId,
@@ -237,13 +260,13 @@ export async function createOrder(
     await client.query(
       `INSERT INTO order_items (id, order_id, product_slug, role, quantity, unit_price_cents, line_total_cents)
        VALUES ($1,$2,$3,'primary',$4,$5,$6)`,
-      [randomUUID(), orderId, payload.product_slug, qty, Math.floor(tierCents / qty), tierCents],
+      [randomUUID(), orderId, productSlug, qty, Math.floor(tierCents / qty), tierCents],
     );
-    if (payload.cross_sell_slug) {
+    if (crossSlug) {
       await client.query(
         `INSERT INTO order_items (id, order_id, product_slug, role, quantity, unit_price_cents, line_total_cents)
          VALUES ($1,$2,$3,'cross_sell',1,$4,$4)`,
-        [randomUUID(), orderId, payload.cross_sell_slug, CROSS_SELL_CENTS],
+        [randomUUID(), orderId, crossSlug, CROSS_SELL_CENTS],
       );
     }
 

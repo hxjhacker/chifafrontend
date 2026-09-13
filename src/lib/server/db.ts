@@ -219,6 +219,11 @@ const SCHEMA_ALTERS = [
   `CREATE UNIQUE INDEX IF NOT EXISTS ix_products_code ON products (code)`,
   `ALTER TABLE products ADD COLUMN IF NOT EXISTS quick_product_id integer`,
   `CREATE INDEX IF NOT EXISTS ix_products_quick_product_id ON products (quick_product_id)`,
+  `ALTER TABLE products ADD COLUMN IF NOT EXISTS category varchar(32) DEFAULT 'standard' NOT NULL`,
+  `ALTER TABLE products ADD COLUMN IF NOT EXISTS is_quick_stock boolean DEFAULT false NOT NULL`,
+  `ALTER TABLE products ADD COLUMN IF NOT EXISTS stock_quantity integer DEFAULT 0 NOT NULL`,
+  `CREATE INDEX IF NOT EXISTS ix_products_category ON products (category)`,
+  `CREATE INDEX IF NOT EXISTS ix_products_is_quick_stock ON products (is_quick_stock)`,
   `CREATE INDEX IF NOT EXISTS ix_orders_created_at ON orders (created_at)`,
   `CREATE INDEX IF NOT EXISTS ix_orders_confirmed_at ON orders (confirmed_at)`,
   `CREATE INDEX IF NOT EXISTS ix_orders_meta_livraison_code ON orders (meta_livraison_code)`,
@@ -231,47 +236,93 @@ const SCHEMA_ALTERS = [
 const PRODUCT_SEED = [
   {
     slug: "quran",
-    name_ar: "USB القرآن الكريم",
-    name_en: "Holy Quran USB",
-    tagline_ar: "القرآن كامل بجودة عالية… يتسمع في الدار والسيارة.",
-    description_ar: "مكتبة قرآنية فاخرة على USB جاهز للتشغيل.",
+    code: "USB_QURAN",
+    name_ar: "USB القرآن",
+    name_en: "USB quran",
+    tagline_ar: "مصحف كامل بجودة عالية للدار والسيارة.",
+    description_ar: "USB القرآن الكريم — تنفيذ محلي، ليس من مخزون Quick.",
     accent: "gold",
-  },
-  {
-    slug: "kids",
-    name_ar: "USB تعليم الأطفال",
-    name_en: "Children Learning USB",
-    tagline_ar: "محتوى تربوي جاهز… ولادك يتعلمو وأنت مرتاح.",
-    description_ar: "تجميعة تعليمية للأطفال بلا إعلانات وبلا نت.",
-    accent: "emerald",
-  },
-  {
-    slug: "music",
-    name_ar: "USB الأغاني والموسيقى",
-    name_en: "Music & Songs USB",
-    tagline_ar: "موسيقى جاهزة، بلا نت وبلا تقطيعة.",
-    description_ar: "مكتبة أغاني مرتبة للسيارة والمحل.",
-    accent: "bronze",
-  },
-  {
-    slug: "educative",
-    name_ar: "الفلاشة التعليمية الذكية للأطفال",
-    name_en: "Smart Educational USB for Kids",
-    tagline_ar: "100% بدون إنترنت — رفيق التفوق المدرسي.",
-    description_ar: "فلاشة تربوية جاهزة للتلفاز والحاسوب.",
-    accent: "emerald",
+    category: "standard",
+    is_quick_stock: false,
+    quick_product_id: null as number | null,
+    stock_quantity: 999,
+    default_price_cents: 19900,
   },
   {
     slug: "taalim",
-    name_ar: "فلاشة Taalim Kids التعليمية",
-    name_en: "Taalim Kids Educational USB",
-    tagline_ar: "حوّل التلفاز إلى مدرسة ذكية لطفلك.",
-    description_ar: "مكتبة تعليمية بدون إنترنت للتلفاز والحاسوب.",
+    code: "USB_TAALIMI",
+    name_ar: "USB التعليمي",
+    name_en: "USB taalimi",
+    tagline_ar: "محتوى تربوي جاهز بدون نت.",
+    description_ar: "USB تعليمي — تنفيذ محلي، ليس من مخزون Quick.",
     accent: "emerald",
+    category: "standard",
+    is_quick_stock: false,
+    quick_product_id: null as number | null,
+    stock_quantity: 999,
+    default_price_cents: 19900,
+  },
+  {
+    slug: "music",
+    code: "USB_MOSIQII",
+    name_ar: "USB الموسيقى",
+    name_en: "USB mosi9ii",
+    tagline_ar: "موسيقى جاهزة بلا نت وبلا تقطيعة.",
+    description_ar: "USB موسيقى — تنفيذ محلي، ليس من مخزون Quick.",
+    accent: "bronze",
+    category: "standard",
+    is_quick_stock: false,
+    quick_product_id: null as number | null,
+    stock_quantity: 999,
+    default_price_cents: 19900,
+  },
+  {
+    slug: "zit_alfasokh",
+    code: "zital2/7513",
+    name_ar: "زيت الفسوخ",
+    name_en: "zit alfasokh",
+    tagline_ar: "مخزون Quick Livraison — خصم تلقائي.",
+    description_ar: "زيت الفسوخ من مخزون Quick. المرجع zital2/7513.",
+    accent: "gold",
+    category: "quick_stock",
+    is_quick_stock: true,
+    quick_product_id: 5775,
+    stock_quantity: 2,
+    default_price_cents: 24900,
+  },
+  {
+    slug: "alkhatm_alrijali",
+    code: "KH01/7513",
+    name_ar: "الخاتم الرجالي",
+    name_en: "alkhatm alrijali",
+    tagline_ar: "مخزون Quick Livraison — خصم تلقائي.",
+    description_ar: "الخاتم الرجالي من مخزون Quick. المرجع KH01/7513.",
+    accent: "gold",
+    category: "quick_stock",
+    is_quick_stock: true,
+    quick_product_id: 6005,
+    stock_quantity: 79,
+    default_price_cents: 29900,
+  },
+  {
+    slug: "almisk_alabyad",
+    code: "MSK_01/7513",
+    name_ar: "المسك الأبيض",
+    name_en: "almisk alabyad",
+    tagline_ar: "مخزون Quick Livraison — خصم تلقائي.",
+    description_ar: "المسك الأبيض من مخزون Quick. المرجع MSK_01/7513.",
+    accent: "gold",
+    category: "quick_stock",
+    is_quick_stock: true,
+    quick_product_id: 6107,
+    stock_quantity: 22,
+    default_price_cents: 19900,
   },
 ] as const;
 
-const SCHEMA_ALTER_VERSION = 11;
+const ACTIVE_PRODUCT_SLUGS = PRODUCT_SEED.map((product) => product.slug);
+
+const SCHEMA_ALTER_VERSION = 12;
 let appliedAlterVersion = 0;
 
 export async function ensureSchema() {
@@ -289,30 +340,48 @@ export async function ensureSchema() {
         }
         for (const product of PRODUCT_SEED) {
           await client.query(
-            `INSERT INTO products (id, slug, code, name_ar, name_en, tagline_ar, description_ar, accent, default_price_cents, is_active, created_at)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, true, now())
+            `INSERT INTO products (
+               id, slug, code, name_ar, name_en, tagline_ar, description_ar, accent,
+               default_price_cents, quick_product_id, category, is_quick_stock, stock_quantity, is_active, created_at
+             )
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, true, now())
              ON CONFLICT (slug) DO UPDATE SET
                name_ar = EXCLUDED.name_ar,
                name_en = EXCLUDED.name_en,
                tagline_ar = EXCLUDED.tagline_ar,
                description_ar = EXCLUDED.description_ar,
                accent = EXCLUDED.accent,
-               code = COALESCE(NULLIF(products.code, ''), EXCLUDED.code),
-               default_price_cents = CASE WHEN products.default_price_cents IS NULL OR products.default_price_cents = 0 THEN EXCLUDED.default_price_cents ELSE products.default_price_cents END,
+               code = EXCLUDED.code,
+               default_price_cents = EXCLUDED.default_price_cents,
+               quick_product_id = EXCLUDED.quick_product_id,
+               category = EXCLUDED.category,
+               is_quick_stock = EXCLUDED.is_quick_stock,
+               stock_quantity = CASE
+                 WHEN EXCLUDED.is_quick_stock AND products.stock_quantity > 0 THEN products.stock_quantity
+                 ELSE EXCLUDED.stock_quantity
+               END,
                is_active = true`,
             [
               crypto.randomUUID(),
               product.slug,
-              product.slug.toUpperCase(),
+              product.code,
               product.name_ar,
               product.name_en,
               product.tagline_ar,
               product.description_ar,
               product.accent,
-              product.slug === "kids" ? 14900 : 19900,
+              product.default_price_cents,
+              product.quick_product_id,
+              product.category,
+              product.is_quick_stock,
+              product.stock_quantity,
             ],
           );
         }
+        await client.query(
+          `UPDATE products SET is_active = false WHERE NOT (slug = ANY($1::varchar[]))`,
+          [ACTIVE_PRODUCT_SLUGS],
+        );
       } finally {
         client.release();
       }

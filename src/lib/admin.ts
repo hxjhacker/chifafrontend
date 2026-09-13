@@ -13,7 +13,14 @@ export function carrierLabel(carrier?: string | null) {
   return hit?.label || "Meta Livraison";
 }
 
-/** Verified Quick warehouse SKU KH01/7513 */
+/** Verified Quick warehouse SKUs */
+export const QUICK_STOCK_PRODUCTS = {
+  zit_alfasokh: { id: 5775, code: "zital2/7513" },
+  alkhatm_alrijali: { id: 6005, code: "KH01/7513" },
+  almisk_alabyad: { id: 6107, code: "MSK_01/7513" },
+} as const;
+
+/** @deprecated Use order.quick_product_id from the catalog instead of this KH01 fallback. */
 export const QUICK_STOCK_KH01_PRODUCT_ID = 6005;
 
 export type DeliveryWindow = "anytime" | "morning" | "afternoon" | "weekend";
@@ -66,6 +73,8 @@ export type AdminOrder = {
   code_envoi?: string | null;
   product_code?: string | null;
   quick_product_id?: number | null;
+  is_quick_stock?: boolean | null;
+  stock_quantity?: number | null;
   carrier_status?: string | null;
   dispatched_at?: string | null;
   can_open?: boolean | null;
@@ -129,11 +138,14 @@ export const ADMIN_STATUSES: {
 ];
 
 export const PACK_NAMES: Record<string, string> = {
-  quran: "USB القرآن الكريم",
+  quran: "USB القرآن",
+  taalim: "USB التعليمي",
+  music: "USB الموسيقى",
+  zit_alfasokh: "زيت الفسوخ",
+  alkhatm_alrijali: "الخاتم الرجالي",
+  almisk_alabyad: "المسك الأبيض",
   kids: "USB تعليم الأطفال",
-  music: "USB الأغاني والموسيقى",
   educative: "الفلاشة التعليمية الذكية",
-  taalim: "فلاشة Taalim Kids",
   extra: "مفتاح إضافي بسعر العرض",
 };
 

@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { CheckCircle2, Eye, Loader2, MoreVertical, Pencil, Printer, Repeat2, Trash2, Truck, Warehouse } from "lucide-react";
-import { ADMIN_CARRIERS, shortOrderRef, hasTracking, LABEL_PRINT_HINT, QUICK_STOCK_KH01_PRODUCT_ID, type AdminCarrier, type AdminOrder } from "@/lib/admin";
+import { ADMIN_CARRIERS, shortOrderRef, hasTracking, LABEL_PRINT_HINT, type AdminCarrier, type AdminOrder } from "@/lib/admin";
 import { cn } from "@/lib/cn";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import { DispatchQuickStockModal } from "@/components/admin/DispatchQuickStockModal";
@@ -54,6 +54,7 @@ export function OrderActionsMenu({
   const [pos, setPos] = useState({ top: 0, left: 0 });
   const sent = Boolean(order.meta_livraison_code);
   const canPrint = hasTracking(order);
+  const canQuickStock = Boolean(order.is_quick_stock && order.quick_product_id);
 
   useEffect(() => {
     if (stockOpen && !shipping && order.meta_livraison_code) {
@@ -153,7 +154,7 @@ export function OrderActionsMenu({
     setStockOpen(true);
   }
 
-  const stockButtonDisabled = sent || shipping || order.status === "cancelled" || order.status === "returned";
+  const stockButtonDisabled = !canQuickStock || sent || shipping || order.status === "cancelled" || order.status === "returned";
 
   const stockModal = (
     <DispatchQuickStockModal
@@ -228,6 +229,7 @@ export function OrderActionsMenu({
                   )}
                 </button>
               ))}
+              {canQuickStock ? (
               <button
                 type="button"
                 disabled={stockButtonDisabled}
@@ -235,9 +237,9 @@ export function OrderActionsMenu({
                 className={cn(CARD, "border-emerald-500/40 bg-emerald-950/30 text-emerald-300 hover:bg-emerald-900/40")}
               >
                 <span className="min-w-0 flex-1 text-right">
-                  {sent && (order.carrier || "") === "quick_livraison" ? "تم الإرسال من مخزون Quick (KH01)" : "إرسال من مخزون Quick (KH01)"}
+                  {sent && (order.carrier || "") === "quick_livraison" ? "تم الإرسال من مخزون Quick" : "إرسال من مخزون Quick"}
                   <span className="mt-0.5 block truncate font-mono text-[10px] font-bold text-emerald-200/80">
-                    KH01 #{order.quick_product_id || QUICK_STOCK_KH01_PRODUCT_ID} · ×{order.tier_qty}
+                    {order.product_code || order.product_slug} #{order.quick_product_id} · ×{order.tier_qty}
                   </span>
                 </span>
                 {shipping ? (
@@ -248,6 +250,7 @@ export function OrderActionsMenu({
                   <Warehouse className="h-5 w-5 shrink-0" />
                 )}
               </button>
+              ) : null}
               <button
                 type="button"
                 disabled={!canPrint}
@@ -353,6 +356,7 @@ export function OrderActionsMenu({
               </span>
             </MenuItem>
           ))}
+          {canQuickStock ? (
           <MenuItem disabled={stockButtonDisabled} onSelect={openStock}>
             {shipping ? (
               <Loader2 className="h-4 w-4 shrink-0 animate-spin text-emerald-500" />
@@ -362,12 +366,13 @@ export function OrderActionsMenu({
               <Warehouse className="h-4 w-4 shrink-0 text-emerald-500" />
             )}
             <span className="min-w-0 flex-1 text-left">
-              إرسال من مخزون Quick (KH01)
+              إرسال من مخزون Quick
               <span className="mt-0.5 block truncate font-mono text-[10px] font-bold text-emerald-600 dark:text-emerald-300">
-                KH01 #{order.quick_product_id || QUICK_STOCK_KH01_PRODUCT_ID} · ×{order.tier_qty}
+                {order.product_code || order.product_slug} #{order.quick_product_id} · ×{order.tier_qty}
               </span>
             </span>
           </MenuItem>
+          ) : null}
           <MenuItem
             disabled={!canPrint}
             title={canPrint ? "طباعة التذكرة / الملصق" : LABEL_PRINT_HINT}

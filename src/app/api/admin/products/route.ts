@@ -38,6 +38,9 @@ export async function POST(request: NextRequest) {
       code?: string;
       default_price?: number;
       quick_product_id?: number | string | null;
+      category?: string | null;
+      is_quick_stock?: boolean;
+      stock_quantity?: number;
       is_active?: boolean;
     };
     const product = await createAdminProduct({
@@ -45,12 +48,15 @@ export async function POST(request: NextRequest) {
       code: body.code,
       default_price: body.default_price,
       quick_product_id: body.quick_product_id,
+      category: body.category,
+      is_quick_stock: body.is_quick_stock,
+      stock_quantity: body.stock_quantity,
       is_active: body.is_active,
     });
     return NextResponse.json(product, { status: 201 });
   } catch (err) {
     const message = err instanceof Error ? err.message : "create_failed";
-    const status = ["invalid_name", "invalid_price", "invalid_quick_product_id"].includes(message) ? 422 : 500;
+    const status = ["invalid_name", "invalid_price", "invalid_quick_product_id", "invalid_stock"].includes(message) ? 422 : 500;
     return NextResponse.json({ detail: message }, { status });
   }
 }

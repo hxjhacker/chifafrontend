@@ -19,17 +19,19 @@ type Props = {
 };
 
 const PRIMARY_PRODUCTS = [
-  { slug: "quran", label: "USB القرآن الكريم كامل (199 درهم)", price: 199 },
-  { slug: "educative", label: "الفلاشة التعليمية الذكية (149 درهم)", price: 149 },
-  { slug: "kids", label: "USB تعليم الأطفال (149 درهم)", price: 149 },
-  { slug: "music", label: "USB الموسيقى والأغاني (199 درهم)", price: 199 },
+  { slug: "quran", label: "USB القرآن (199 درهم)", price: 199 },
+  { slug: "taalim", label: "USB التعليمي (199 درهم)", price: 199 },
+  { slug: "music", label: "USB الموسيقى (199 درهم)", price: 199 },
+  { slug: "zit_alfasokh", label: "زيت الفسوخ (249 درهم)", price: 249 },
+  { slug: "alkhatm_alrijali", label: "الخاتم الرجالي (299 درهم)", price: 299 },
+  { slug: "almisk_alabyad", label: "المسك الأبيض (199 درهم)", price: 199 },
 ] as const;
 
 const SECONDARY_PRODUCTS = [
   { slug: "extra", label: "مفتاح إضافي بسعر العرض (+100 درهم)", price: 100 },
-  { slug: "educative", label: "الفلاشة التعليمية الذكية (+149 درهم)", price: 149 },
-  { slug: "quran", label: "USB القرآن الكريم كامل (+199 درهم)", price: 199 },
-  { slug: "music", label: "USB الموسيقى والأغاني (+199 درهم)", price: 199 },
+  { slug: "quran", label: "USB القرآن (+199 درهم)", price: 199 },
+  { slug: "taalim", label: "USB التعليمي (+199 درهم)", price: 199 },
+  { slug: "music", label: "USB الموسيقى (+199 درهم)", price: 199 },
 ] as const;
 
 const fieldClass =

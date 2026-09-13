@@ -21,6 +21,7 @@ const detailMap: Record<string, string> = {
   invalid_name: "اسم المنتج قصير جداً.",
   invalid_price: "السعر غير صالح.",
   invalid_quick_product_id: "معرف المنتج في كويك يجب أن يكون رقماً موجباً.",
+  invalid_stock: "كمية المخزون غير صالحة.",
   product_not_found: "المنتج غير موجود.",
 };
 
@@ -29,6 +30,8 @@ export function AddProductModal({ open, onClose, onNotice, onChanged }: Props) {
   const [code, setCode] = useState("");
   const [price, setPrice] = useState("");
   const [quickProductId, setQuickProductId] = useState("");
+  const [stockQty, setStockQty] = useState("");
+  const [quickStock, setQuickStock] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [rows, setRows] = useState<AdminProduct[]>([]);
   const [loading, setLoading] = useState(false);
@@ -38,16 +41,18 @@ export function AddProductModal({ open, onClose, onNotice, onChanged }: Props) {
 
   const title = editingId ? "تعديل المنتج" : "إضافة منتج";
 
-  const sorted = useMemo(
-    () => [...rows].sort((a, b) => Number(b.is_active) - Number(a.is_active) || a.name.localeCompare(b.name, "ar")),
-    [rows],
-  );
+  const sorted = useMemo(() => {
+    const rank = (p: AdminProduct) => (!p.is_active ? 2 : p.is_quick_stock ? 1 : 0);
+    return [...rows].sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name, "ar"));
+  }, [rows]);
 
   function resetForm() {
     setName("");
     setCode("");
     setPrice("");
     setQuickProductId("");
+    setStockQty("");
+    setQuickStock(false);
     setEditingId(null);
     setError("");
   }
@@ -87,6 +92,8 @@ export function AddProductModal({ open, onClose, onNotice, onChanged }: Props) {
     setCode(product.code);
     setPrice(product.default_price ? String(product.default_price) : "");
     setQuickProductId(product.quick_product_id ? String(product.quick_product_id) : "");
+    setStockQty(product.stock_quantity != null ? String(product.stock_quantity) : "");
+    setQuickStock(Boolean(product.is_quick_stock));
     setError("");
   }
 
@@ -110,6 +117,9 @@ export function AddProductModal({ open, onClose, onNotice, onChanged }: Props) {
         code: code.trim(),
         default_price: price === "" ? 0 : Number(price),
         quick_product_id: quickTrimmed === "" ? null : Number(quickTrimmed),
+        is_quick_stock: quickStock || Boolean(quickTrimmed),
+        category: quickStock || quickTrimmed ? "quick_stock" : "standard",
+        stock_quantity: stockQty === "" ? undefined : Number(stockQty),
       };
       const res = await fetch(editingId ? `/api/admin/products/${editingId}` : "/api/admin/products", {
         method: editingId ? "PATCH" : "POST",
@@ -214,7 +224,7 @@ export function AddProductModal({ open, onClose, onNotice, onChanged }: Props) {
             <div className="flex gap-2">
               <input
                 value={code}
-                onChange={(e) => setCode(e.target.value.toUpperCase())}
+                onChange={(e) => setCode(e.target.value)}
                 dir="ltr"
                 placeholder="FLASH_EDU_01"
                 className="min-w-0 flex-1 rounded-xl border border-gold/20 bg-cream px-3.5 py-2.5 text-left font-mono text-royal placeholder-royal/30 transition focus:border-amber-400 focus:outline-none dark:bg-brandDark dark:text-white"
@@ -258,6 +268,30 @@ export function AddProductModal({ open, onClose, onNotice, onChanged }: Props) {
               className="w-full rounded-xl border border-gold/20 bg-cream px-3.5 py-2.5 text-left font-mono text-royal placeholder-royal/30 transition focus:border-emerald-400 focus:outline-none dark:bg-brandDark dark:text-white"
             />
             <p className="mt-1 text-[11px] text-royal/50 dark:text-slate-500">اختياري — رقم المنتج داخل مخزون Quick Livraison</p>
+          </div>
+
+          <label className="flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-3 py-2 font-bold text-royal/80 dark:text-slate-200">
+            <input
+              type="checkbox"
+              checked={quickStock || Boolean(quickProductId.trim())}
+              onChange={(e) => setQuickStock(e.target.checked)}
+              className="h-4 w-4 accent-emerald-500"
+            />
+            مخزون Quick — خصم تلقائي عند الإرسال
+          </label>
+
+          <div>
+            <label className="mb-1 block font-bold text-royal/80 dark:text-slate-200">الكمية في المخزون</label>
+            <input
+              type="number"
+              min={0}
+              step={1}
+              dir="ltr"
+              value={stockQty}
+              onChange={(e) => setStockQty(e.target.value)}
+              placeholder="0"
+              className="w-full rounded-xl border border-gold/20 bg-cream px-3.5 py-2.5 text-left font-mono text-royal placeholder-royal/30 transition focus:border-emerald-400 focus:outline-none dark:bg-brandDark dark:text-white"
+            />
           </div>
 
           {error ? (
@@ -319,11 +353,23 @@ export function AddProductModal({ open, onClose, onNotice, onChanged }: Props) {
                   <span className="mt-0.5 inline-flex rounded-md bg-amber-500/15 px-1.5 py-0.5 font-mono text-[10px] font-bold tracking-wide text-amber-700 dark:text-amber-300">
                     {product.code}
                   </span>
+                  {product.is_quick_stock ? (
+                    <span className="mr-1 mt-0.5 inline-flex rounded-md bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-emerald-700 dark:text-emerald-300">
+                      Quick stock
+                    </span>
+                  ) : (
+                    <span className="mr-1 mt-0.5 inline-flex rounded-md bg-slate-500/15 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-slate-600 dark:text-slate-300">
+                      محلي
+                    </span>
+                  )}
                   {product.quick_product_id ? (
                     <span className="mr-1 mt-0.5 inline-flex rounded-md bg-emerald-500/15 px-1.5 py-0.5 font-mono text-[10px] font-bold tracking-wide text-emerald-700 dark:text-emerald-300">
-                      Quick #{product.quick_product_id}
+                      #{product.quick_product_id}
                     </span>
                   ) : null}
+                  <span className="mr-1 mt-0.5 inline-flex rounded-md bg-gold/15 px-1.5 py-0.5 font-mono text-[10px] font-bold text-royal/70 dark:text-slate-300">
+                    qty {product.stock_quantity ?? 0}
+                  </span>
                 </div>
                 <div className="flex shrink-0 items-center gap-1">
                   {!product.is_active ? (

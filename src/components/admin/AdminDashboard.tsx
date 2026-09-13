@@ -57,7 +57,6 @@ import {
   needsConfirmModal,
   ordersToCsv,
   pct,
-  QUICK_STOCK_KH01_PRODUCT_ID,
   type AdminCarrier,
   type AdminOrder,
   type AdminStats,
@@ -563,6 +562,10 @@ export function AdminDashboard() {
       setError("كمّل عنوان التوصيل قبل إرسال الطرد.");
       return;
     }
+    if (!order.is_quick_stock || !order.quick_product_id) {
+      setError("هذا المنتج ليس من مخزون Quick. استخدم شحن الناقل العادي، أو أضف معرف Quick من إدارة المنتجات.");
+      return;
+    }
     setShippingId(order.order_id);
     setError("");
     try {
@@ -572,7 +575,7 @@ export function AdminDashboard() {
         cache: "no-store",
         headers: { Accept: "application/json", "Content-Type": "application/json" },
         body: JSON.stringify({
-          product_id: QUICK_STOCK_KH01_PRODUCT_ID,
+          product_id: order.quick_product_id,
           quantity: Math.max(1, Number(order.tier_qty) || 1),
         }),
       });
@@ -591,6 +594,7 @@ export function AdminDashboard() {
           quick_livraison_not_configured: "أضف مفتاح Quick Livraison في الخادم أولاً.",
           quick_district_not_mapped: "هذه المدينة غير مربوطة بـ Quick Livraison. زامن قائمة المدن أولاً.",
           quick_product_id_missing: "أضف معرف المنتج في كويك من إدارة المنتجات قبل الإرسال من المخزون.",
+          not_quick_stock: "هذا المنتج ليس من مخزون Quick.",
           product_sku_missing: "أضف كود المنتج (SKU) في إدارة المنتجات قبل الإرسال من المخزون.",
           confirmation_details_required: "كمّل معلومات التوصيل قبل الشحن.",
           cannot_ship_cancelled: "لا يمكن شحن طلبية ملغاة.",

@@ -41,6 +41,15 @@ type OrderRow = {
   carrier?: string | null;
 };
 
+const CATALOG_BY_SLUG: Record<string, { code: string; quick_product_id: number | null; is_quick_stock: boolean }> = {
+  quran: { code: "USB_QURAN", quick_product_id: null, is_quick_stock: false },
+  taalim: { code: "USB_TAALIMI", quick_product_id: null, is_quick_stock: false },
+  music: { code: "USB_MOSIQII", quick_product_id: null, is_quick_stock: false },
+  zit_alfasokh: { code: "zital2/7513", quick_product_id: 5775, is_quick_stock: true },
+  alkhatm_alrijali: { code: "KH01/7513", quick_product_id: 6005, is_quick_stock: true },
+  almisk_alabyad: { code: "MSK_01/7513", quick_product_id: 6107, is_quick_stock: true },
+};
+
 const ALLOWED: AdminStatus[] = ["new", "confirmed", "shipped", "delivered", "returned", "cancelled"];
 const WINDOWS: DeliveryWindow[] = ["anytime", "morning", "afternoon", "weekend"];
 const ORDER_COLS = `id, full_name, phone, phone_national, city, address, quartier, street, building, landmark,
@@ -137,6 +146,8 @@ function serialize(row: OrderRow): AdminOrder {
   const updated = iso(row.updated_at) || created;
   const pastConfirmed = status === "confirmed" || status === "shipped" || status === "delivered" || status === "returned";
   const pastShipped = status === "shipped" || status === "delivered" || status === "returned";
+  const slug = row.product_slug || "quran";
+  const catalog = CATALOG_BY_SLUG[slug];
   return {
     order_id: String(row.id),
     created_at: created,
@@ -188,7 +199,9 @@ function serialize(row: OrderRow): AdminOrder {
     carrier: (row.carrier === "quick_livraison" || row.carrier === "force_log" ? row.carrier : "meta_livraison"),
     tracking_number: row.meta_livraison_code || null,
     code_envoi: row.meta_livraison_code || null,
-    product_code: String(row.product_slug || "").toUpperCase() || null,
+    product_code: catalog?.code || String(slug).toUpperCase() || null,
+    quick_product_id: catalog?.quick_product_id ?? null,
+    is_quick_stock: Boolean(catalog?.is_quick_stock),
   };
 }
 
@@ -605,7 +618,7 @@ export async function updateAdminOrder(orderId: string, patch: OrderPatch): Prom
       }
     }
     if (patch.cross_sell_slug !== undefined) {
-      const allowedCross = ["quran", "kids", "music", "educative", "taalim", "extra"];
+      const allowedCross = ["quran", "taalim", "music", "zit_alfasokh", "alkhatm_alrijali", "almisk_alabyad", "extra", "kids", "educative"];
       if (!patch.cross_sell_slug) {
         crossSlug = null;
         crossCents = 0;
@@ -813,7 +826,7 @@ export async function createAdminOrder(input: {
   const eventId = `admin-${orderId}`;
   const address = String(input.address || "").trim() || null;
   const courierNotes = String(input.courier_notes || "").trim() || null;
-  const allowedCross = ["quran", "kids", "music", "educative", "taalim", "extra"];
+  const allowedCross = ["quran", "taalim", "music", "zit_alfasokh", "alkhatm_alrijali", "almisk_alabyad", "extra", "kids", "educative"];
   const crossSlug = input.cross_sell_slug && allowedCross.includes(input.cross_sell_slug) ? input.cross_sell_slug : null;
   const bundleEnabled = Boolean(input.bundle_enabled && crossSlug);
   const secondaryQty = Math.min(20, Math.max(1, Math.round(Number(input.secondary_qty) || 1)));
