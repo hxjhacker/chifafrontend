@@ -39,7 +39,7 @@ export function BulkActionBar({
   return (
     <>
       <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[70] flex justify-center p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-        <div className="pointer-events-auto flex w-full max-w-5xl flex-wrap items-center justify-between gap-2 rounded-2xl border border-gold/30 bg-royal px-3 py-2.5 text-cream shadow-2xl dark:bg-[#070F1B]">
+        <div className="pointer-events-auto flex w-full max-w-[1720px] flex-wrap items-center justify-between gap-2 rounded-2xl border border-gold/30 bg-royal px-4 py-2.5 text-cream shadow-2xl dark:bg-[#070F1B] sm:px-6">
           <p className="px-1 text-sm font-black text-gold">تم تحديد {count} طلبية</p>
           <div className="flex flex-wrap items-center gap-1.5">
             <button

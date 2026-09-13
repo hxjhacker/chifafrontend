@@ -112,20 +112,24 @@ const SECTION_ITEMS: { key: keyof SectionPrefs; label: string }[] = [
   { key: "observatory", label: "إظهار/إخفاء مرصد المشاهدات والأداء" },
 ];
 
+const DASHBOARD_SHELL = "mx-auto w-full max-w-[1720px] px-4 sm:px-6 lg:px-8";
 const NAV_CHIP =
-  "inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border px-2.5 text-xs font-semibold transition";
+  "relative z-10 inline-flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border px-3.5 py-2 text-sm font-semibold transition";
 const NAV_TARIFS = `${NAV_CHIP} border-teal-500/30 text-teal-600 hover:bg-teal-500/10 dark:text-teal-400`;
 const NAV_PRODUCTS = `${NAV_CHIP} border-purple-500/30 text-purple-600 hover:bg-purple-500/10 dark:text-purple-400`;
-const NAV_WHATSAPP = `${NAV_CHIP} border-emerald-500/30 px-3 text-[13px] text-emerald-600 hover:bg-emerald-500/10 dark:text-emerald-400`;
+const NAV_WHATSAPP = `${NAV_CHIP} border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10 dark:text-emerald-400`;
 const NAV_PREFS = `${NAV_CHIP} cursor-pointer border-indigo-500/30 text-indigo-600 hover:bg-indigo-500/10 dark:text-indigo-400`;
 const NAV_HIDE = `${NAV_CHIP} border-cyan-500/30 text-cyan-600 hover:bg-cyan-500/10 dark:text-cyan-400`;
 const NAV_GHOST = `${NAV_CHIP} border-slate-200 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800`;
 const NAV_PRIMARY =
-  "inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg bg-amber-500 px-3 text-[13px] font-bold text-slate-950 shadow-sm transition hover:bg-amber-400 active:scale-[0.98]";
+  "relative z-10 inline-flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl bg-amber-500 px-4 py-2 text-sm font-bold text-slate-950 shadow-sm transition hover:bg-amber-400 active:scale-[0.98]";
 const NAV_ICON =
-  "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200/90 bg-slate-50/80 text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:bg-white/[0.08] dark:hover:text-white";
+  "relative z-10 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200/90 bg-slate-50/80 text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:bg-white/[0.08] dark:hover:text-white";
 const NAV_LOGOUT =
-  "inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-transparent bg-transparent px-2 text-[13px] font-semibold text-slate-500 transition hover:bg-rose-50 hover:text-rose-600 dark:text-slate-400 dark:hover:bg-rose-500/10 dark:hover:text-rose-300 sm:px-3";
+  "relative z-10 inline-flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border border-transparent px-3.5 py-2 text-sm font-semibold text-slate-500 transition hover:bg-rose-50 hover:text-rose-600 dark:text-slate-400 dark:hover:bg-rose-500/10 dark:hover:text-rose-300";
+const NAV_DIVIDER = "hidden h-6 w-px shrink-0 bg-slate-200 dark:bg-slate-700 lg:block";
+const FILTER_CONTROL =
+  "h-11 shrink-0 rounded-xl border border-gold/30 bg-cream px-3.5 text-sm font-semibold text-royal shadow-sm transition focus:border-gold focus:outline-none dark:border-white/15 dark:bg-brandDark dark:text-white";
 
 async function adminFetch(url: string, init: RequestInit = {}, timeoutMs = 12000): Promise<Response> {
   const controller = new AbortController();
@@ -1048,23 +1052,23 @@ export function AdminDashboard() {
 
       <header
         dir="ltr"
-        className="sticky top-0 z-40 w-full border-b border-slate-200/80 bg-white/95 px-3 py-2 shadow-sm backdrop-blur-md dark:border-slate-800 dark:bg-[#0d1527]/95 md:px-4"
+        className="sticky top-0 z-40 w-full overflow-visible border-b border-slate-200/80 bg-white/95 py-2.5 shadow-sm backdrop-blur-md dark:border-slate-800 dark:bg-[#0d1527]/95"
       >
-        <div dir="rtl" className="mx-auto flex w-full max-w-7xl items-center justify-between gap-2 md:hidden">
+        <div dir="rtl" className={cn(DASHBOARD_SHELL, "flex items-center justify-between gap-2 md:hidden")}>
           <div className="flex min-w-0 items-center gap-2">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-amber-500/50 bg-amber-500/10 text-sm font-bold text-amber-500">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-amber-500/50 bg-amber-500/10 text-sm font-bold text-amber-500">
               C
             </div>
             <span className="truncate text-sm font-bold text-royal dark:text-white">CHIFA GLOW</span>
           </div>
 
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="relative z-30 flex shrink-0 items-center gap-2">
             <button
               type="button"
-              aria-label="إضافة سريعة"
-              title="إضافة سريعة"
+              aria-label="إضافة سريعة واتساب"
+              title="إضافة سريعة واتساب"
               onClick={() => setQuickOpen(true)}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-emerald-500/40 bg-emerald-500/20 text-emerald-500 transition hover:bg-emerald-500/30"
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-emerald-500/40 bg-emerald-500/20 text-emerald-500 transition hover:bg-emerald-500/30"
             >
               <WhatsAppIcon className="h-4 w-4" />
             </button>
@@ -1072,7 +1076,7 @@ export function AdminDashboard() {
               variant="icon"
               poll={false}
               panel="sheet"
-              className="border-amber-500/40 bg-amber-500/20 text-amber-600 hover:bg-amber-500/30 dark:border-amber-500/40 dark:bg-amber-500/20 dark:text-amber-300 dark:hover:bg-amber-500/30"
+              className="h-10 w-10 border-amber-500/40 bg-amber-500/20 text-amber-600 hover:bg-amber-500/30 dark:border-amber-500/40 dark:bg-amber-500/20 dark:text-amber-300 dark:hover:bg-amber-500/30"
               {...alertBellShared}
             />
             <button
@@ -1082,106 +1086,107 @@ export function AdminDashboard() {
               aria-expanded={menuOpen}
               aria-controls="mobile-admin-menu"
               onClick={() => setMenuOpen((v) => !v)}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-300 bg-slate-100 text-slate-600 transition hover:text-royal dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-300 dark:hover:text-white"
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-300 bg-slate-100 text-slate-600 transition hover:text-royal dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-300 dark:hover:text-white"
             >
               <Menu className="h-4 w-4" />
             </button>
           </div>
         </div>
 
-        <div className="mx-auto hidden w-full max-w-7xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 md:grid">
+        <div dir="rtl" className={cn(DASHBOARD_SHELL, "hidden md:flex md:flex-wrap md:items-center md:gap-3")}>
           <div className="flex shrink-0 items-center gap-2">
-            <button
-              type="button"
-              aria-label="خروج"
-              onClick={() => void logout()}
-              className={NAV_LOGOUT}
-            >
-              <LogOut className="h-4 w-4" />
-              <span className="hidden sm:inline">خروج</span>
-            </button>
-            <ThemeToggle className={cn(NAV_ICON, "hover:scale-100")} />
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-amber-500/60 bg-amber-500/15 text-sm font-bold text-amber-500">
+              C
+            </div>
+            <div className="hidden flex-col text-right sm:flex">
+              <span className="text-sm font-black tracking-wider text-royal dark:text-white">CHIFA GLOW</span>
+              <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400/90">
+                لوحة إدارة المبيعات{username ? ` · ${username}` : ""}
+              </span>
+            </div>
           </div>
 
-          <div className="no-scrollbar flex min-w-0 items-center justify-center gap-1.5 overflow-x-auto px-2">
-            <button type="button" aria-label="إضافة طلب" onClick={() => setModalOpen(true)} className={NAV_PRIMARY}>
-              <Plus className="h-3.5 w-3.5" />
-              إضافة طلب
-            </button>
-            <button
-              type="button"
-              aria-label="تصدير Excel"
-              onClick={() => downloadCsv("orders-chifaglow.csv", ordersToCsv(filtered))}
-              className={NAV_GHOST}
-            >
-              <FileSpreadsheet className="h-3.5 w-3.5" />
-              تصدير Excel
-            </button>
-            <button
-              type="button"
-              aria-label={hideAll ? "إظهار كل الأرقام" : "إخفاء الأرقام"}
-              onClick={() => setHideAll((v) => !v)}
-              className={NAV_HIDE}
-            >
-              {hideAll ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-              {hideAll ? "إظهار الأرقام" : "إخفاء الأرقام"}
-            </button>
-            <button
-              type="button"
-              aria-label="تخصيص الواجهة"
-              aria-haspopup="dialog"
-              aria-expanded={prefsOpen}
-              onClick={(e) => {
-                e.stopPropagation();
-                setPrefsOpen(true);
-              }}
-              className={NAV_PREFS}
-            >
-              <SlidersHorizontal className="h-3.5 w-3.5" />
-              تخصيص الواجهة
-            </button>
-            <button
-              type="button"
-              aria-label="إضافة سريعة من الواتساب"
-              onClick={() => setQuickOpen(true)}
-              className={NAV_WHATSAPP}
-            >
-              <WhatsAppIcon className="h-3.5 w-3.5" />
-              إضافة سريعة من الواتساب
-            </button>
-            <button
-              type="button"
-              aria-label="إدارة المنتجات"
-              onClick={() => setProductsOpen(true)}
-              className={NAV_PRODUCTS}
-            >
-              <Package className="h-3.5 w-3.5" />
-              إدارة المنتجات
-            </button>
-            <button
-              type="button"
-              aria-label="دليل الأسعار والمدن"
-              onClick={() => setTarifsOpen(true)}
-              className={NAV_TARIFS}
-            >
-              <Calculator className="h-3.5 w-3.5" />
-              دليل الأسعار والمدن
-            </button>
-          </div>
+          <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2.5 sm:gap-3">
+            <div className="relative z-30 flex flex-wrap items-center gap-2.5">
+              <OrderAlertsBell variant="toolbar" {...alertBellShared} />
+              <button
+                type="button"
+                aria-label="إضافة سريعة واتساب"
+                onClick={() => setQuickOpen(true)}
+                className={NAV_WHATSAPP}
+              >
+                <WhatsAppIcon className="h-4 w-4" />
+                إضافة سريعة واتساب
+              </button>
+              <button
+                type="button"
+                aria-label="إدارة المنتجات"
+                onClick={() => setProductsOpen(true)}
+                className={NAV_PRODUCTS}
+              >
+                <Package className="h-4 w-4" />
+                إدارة المنتجات
+              </button>
+              <button
+                type="button"
+                aria-label="دليل الأسعار والمدن"
+                onClick={() => setTarifsOpen(true)}
+                className={NAV_TARIFS}
+              >
+                <Calculator className="h-4 w-4" />
+                المدن
+              </button>
+              <button type="button" aria-label="إضافة طلب" onClick={() => setModalOpen(true)} className={NAV_PRIMARY}>
+                <Plus className="h-4 w-4" />
+                إضافة طلب
+              </button>
+            </div>
 
-          <div className="relative z-20 flex shrink-0 items-center gap-3">
-            <OrderAlertsBell variant="toolbar" {...alertBellShared} />
-            <div className="h-6 w-px shrink-0 bg-slate-200 dark:bg-slate-700" />
-            <div className="flex shrink-0 items-center gap-2">
-              <div className="hidden flex-col text-right sm:flex">
-                <span className="text-sm font-black tracking-wider text-royal dark:text-white">CHIFA GLOW</span>
-                <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400/90">
-                  لوحة إدارة المبيعات{username ? ` · ${username}` : ""}
-                </span>
-              </div>
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-amber-500/60 bg-amber-500/15 text-sm font-bold text-amber-500">
-                C
-              </div>
+            <span className={NAV_DIVIDER} aria-hidden />
+
+            <div className="relative z-20 flex flex-wrap items-center gap-2.5">
+              <button
+                type="button"
+                aria-label="تخصيص الواجهة"
+                aria-haspopup="dialog"
+                aria-expanded={prefsOpen}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setPrefsOpen(true);
+                }}
+                className={NAV_PREFS}
+              >
+                <SlidersHorizontal className="h-4 w-4" />
+                تخصيص الواجهة
+              </button>
+              <button
+                type="button"
+                aria-label={hideAll ? "إظهار كل الأرقام" : "إخفاء الأرقام"}
+                onClick={() => setHideAll((v) => !v)}
+                className={NAV_HIDE}
+              >
+                {hideAll ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                {hideAll ? "إظهار الأرقام" : "إخفاء الأرقام"}
+              </button>
+              <button
+                type="button"
+                aria-label="تصدير Excel"
+                onClick={() => downloadCsv("orders-chifaglow.csv", ordersToCsv(filtered))}
+                className={NAV_GHOST}
+              >
+                <FileSpreadsheet className="h-4 w-4" />
+                تصدير Excel
+              </button>
+            </div>
+
+            <span className={NAV_DIVIDER} aria-hidden />
+
+            <div className="relative z-10 flex shrink-0 items-center gap-2">
+              <ThemeToggle className={cn(NAV_ICON, "hover:scale-100")} />
+              <button type="button" aria-label="تسجيل الخروج" onClick={() => void logout()} className={NAV_LOGOUT}>
+                <LogOut className="h-4 w-4" />
+                <span>تسجيل الخروج</span>
+              </button>
             </div>
           </div>
         </div>
@@ -1306,7 +1311,7 @@ export function AdminDashboard() {
         </div>
       ) : null}
 
-      <main className={cn("mx-auto w-full max-w-7xl flex-grow space-y-6 px-4 py-8", selectedIds.length ? "pb-28" : "")}>
+      <main className={cn(DASHBOARD_SHELL, "flex-grow space-y-6 py-6", selectedIds.length ? "pb-28" : "")}>
         {error ? (
           <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-bold text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200">
             {error}
@@ -1469,23 +1474,23 @@ export function AdminDashboard() {
             setPage(1);
           }}
         />
-        <div className="flex flex-col items-center justify-between gap-3 rounded-2xl border border-gold/20 bg-white p-4 shadow-luxury dark:bg-cardDark md:flex-row">
-          <div className="relative w-full md:w-80">
-            <Search className="absolute right-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-royal/40 dark:text-slate-500" />
+        <div className="flex flex-col gap-3 rounded-2xl border border-gold/20 bg-white p-4 shadow-luxury dark:bg-cardDark lg:flex-row lg:items-center">
+          <div className="relative min-w-[280px] flex-1">
+            <Search className="absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-royal/40 dark:text-slate-500" />
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="بحث بالاسم أو الهاتف أو المدينة..."
-              className="w-full rounded-xl border border-gold/20 bg-cream py-2.5 pl-4 pr-9 text-xs text-royal placeholder-royal/40 transition focus:border-gold focus:outline-none dark:bg-brandDark dark:text-white dark:placeholder-slate-500"
+              className="h-11 w-full rounded-xl border border-gold/30 bg-cream py-2.5 pl-4 pr-10 text-sm font-medium text-royal placeholder-royal/40 shadow-sm transition focus:border-gold focus:outline-none dark:border-white/15 dark:bg-brandDark dark:text-white dark:placeholder-slate-500"
             />
           </div>
-          <div className="flex w-full flex-wrap items-center justify-between gap-3 md:w-auto md:justify-end">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-royal/70 dark:text-slate-300">
+          <div className="flex w-full flex-wrap items-center gap-2.5 lg:w-auto lg:justify-end">
+            <div className="flex items-center gap-1.5 text-sm font-bold text-royal/70 dark:text-slate-300">
               <span>عرض:</span>
               <select
                 value={perPage}
                 onChange={(e) => setPerPage(Number(e.target.value))}
-                className="rounded-xl border border-gold/20 bg-cream px-2.5 py-2 text-xs font-bold text-royal focus:border-gold focus:outline-none dark:bg-brandDark dark:text-white"
+                className={FILTER_CONTROL}
               >
                 <option value={10}>10</option>
                 <option value={25}>25</option>
@@ -1496,10 +1501,10 @@ export function AdminDashboard() {
               <button
                 type="button"
                 onClick={() => setUndispatchedOnly(false)}
-                className="inline-flex items-center gap-1 rounded-xl border border-orange-400/40 bg-orange-50 px-3 py-2 text-xs font-bold text-orange-700 dark:bg-orange-500/10 dark:text-orange-200"
+                className="inline-flex h-11 shrink-0 items-center gap-1 rounded-xl border border-orange-400/40 bg-orange-50 px-4 py-2.5 text-sm font-bold text-orange-700 dark:bg-orange-500/10 dark:text-orange-200"
               >
                 غير المرسلة فقط
-                <X className="h-3 w-3" />
+                <X className="h-3.5 w-3.5" />
               </button>
             ) : null}
             <select
@@ -1508,7 +1513,7 @@ export function AdminDashboard() {
                 setUndispatchedOnly(false);
                 setStatus(e.target.value);
               }}
-              className="rounded-xl border border-gold/20 bg-cream px-3 py-2 text-xs font-bold text-royal focus:border-gold focus:outline-none dark:bg-brandDark dark:text-white"
+              className={FILTER_CONTROL}
             >
               <option value="all">كل الحالات</option>
               {ADMIN_STATUSES.map((s) => (
@@ -1521,17 +1526,17 @@ export function AdminDashboard() {
               type="button"
               disabled={syncingTracking}
               onClick={() => void syncTracking()}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-gold/30 bg-gold/10 px-3 py-2 text-xs font-bold text-royal transition hover:bg-gold/20 disabled:opacity-60 dark:text-gold"
+              className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-xl border border-gold/30 bg-gold/10 px-4 py-2.5 text-sm font-bold text-royal transition hover:bg-gold/20 disabled:opacity-60 dark:text-gold"
             >
-              <RefreshCw className={cn("h-3.5 w-3.5", syncingTracking && "animate-spin")} />
+              <RefreshCw className={cn("h-4 w-4", syncingTracking && "animate-spin")} />
               تحديث التتبع
             </button>
             <button
               type="button"
               onClick={() => downloadCsv("orders-chifaglow.csv", ordersToCsv(filtered))}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-emeraldCustom/30 bg-emeraldCustom/10 px-3 py-2 text-xs font-bold text-emeraldCustom sm:hidden"
+              className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-xl border border-emeraldCustom/30 bg-emeraldCustom/10 px-4 py-2.5 text-sm font-bold text-emeraldCustom lg:hidden"
             >
-              <Download className="h-3.5 w-3.5" />
+              <Download className="h-4 w-4" />
               CSV
             </button>
           </div>
@@ -1553,10 +1558,10 @@ export function AdminDashboard() {
             )}
           </div>
           <div className="hidden overflow-x-auto md:block">
-            <table id="orders-table" className="w-full text-right text-xs text-royal dark:text-slate-200">
+            <table id="orders-table" className="w-full text-right text-sm font-medium text-royal dark:text-slate-200">
               <thead className="border-b border-gold/10 bg-cream font-bold text-royal/70 dark:bg-brandDark dark:text-slate-400">
                 <tr>
-                  <th className="p-3.5 text-center">
+                  <th className="p-4 text-center">
                     <input
                       ref={selectAllRef}
                       type="checkbox"
@@ -1567,14 +1572,14 @@ export function AdminDashboard() {
                       aria-label="تحديد كل طلبيات هذه الصفحة"
                     />
                   </th>
-                  <th className="p-3.5">إجراءات</th>
-                  <th className="p-3.5">الرقم المرجعي</th>
-                  <th className="p-3.5">الزبون</th>
-                  <th className="p-3.5">المدينة</th>
-                  <th className="p-3.5">الهاتف والتواصل</th>
-                  <th className="p-3.5">المنتج المختارة</th>
-                  <th className="p-3.5">المبلغ</th>
-                  <th className="p-3.5 text-center">حالة الطلبية</th>
+                  <th className="p-4">إجراءات</th>
+                  <th className="p-4">الرقم المرجعي</th>
+                  <th className="p-4">الزبون</th>
+                  <th className="p-4">المدينة</th>
+                  <th className="p-4">الهاتف والتواصل</th>
+                  <th className="p-4">المنتج المختارة</th>
+                  <th className="p-4">المبلغ</th>
+                  <th className="p-4 text-center">حالة الطلبية</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gold/10 font-medium">
@@ -1598,7 +1603,7 @@ export function AdminDashboard() {
             </table>
           </div>
 
-          <div className="flex flex-col items-center justify-between gap-3 border-t border-gold/10 bg-cream/30 p-4 text-xs dark:bg-brandDark/30 sm:flex-row">
+          <div className="flex flex-col items-center justify-between gap-3 border-t border-gold/10 bg-cream/30 p-4 text-sm dark:bg-brandDark/30 sm:flex-row">
             <div className="font-medium text-royal/60 dark:text-slate-400">
               إظهار <span className="font-bold text-royal dark:text-white">{filtered.length === 0 ? 0 : start + 1}</span> إلى{" "}
               <span className="font-bold text-royal dark:text-white">{end}</span> من أصل{" "}
@@ -1664,8 +1669,8 @@ export function AdminDashboard() {
         {prefs.observatory ? <ViewsObservatory hideAll={hideAll} /> : null}
       </main>
 
-      <footer className="border-t border-gold/20 bg-white px-4 py-4 text-center text-xs text-royal/60 transition-colors dark:bg-cardDark dark:text-slate-500">
-        © 2026 Chifaglow Admin Panel — نظام إدارة وتصنيف الطلبيات
+      <footer className="border-t border-gold/20 bg-white py-4 text-center text-sm text-royal/60 transition-colors dark:bg-cardDark dark:text-slate-500">
+        <div className={DASHBOARD_SHELL}>© 2026 Chifaglow Admin Panel — نظام إدارة وتصنيف الطلبيات</div>
       </footer>
     </div>
       {printing ? <ShippingLabel order={printing} onClose={closePrint} /> : null}

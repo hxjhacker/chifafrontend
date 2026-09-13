@@ -199,7 +199,7 @@ export function OrderAlertsBell({
   }
 
   return (
-    <div className="relative" ref={boxRef}>
+    <div className="relative z-30" ref={boxRef}>
       <button
         type="button"
         aria-label={label}
@@ -213,8 +213,8 @@ export function OrderAlertsBell({
         }}
         className={cn(
           variant === "icon"
-            ? "relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border text-slate-500 transition hover:bg-slate-100 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:bg-white/[0.08]"
-            : "relative inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-amber-500/40 bg-amber-500/10 px-2.5 text-xs font-medium text-amber-700 transition hover:bg-amber-500/20 dark:text-amber-300",
+            ? "relative z-20 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border text-slate-500 transition hover:bg-slate-100 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:bg-white/[0.08]"
+            : "relative z-30 inline-flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border border-amber-500/40 bg-amber-500/10 px-3.5 py-2 text-sm font-semibold text-amber-700 transition hover:bg-amber-500/20 dark:text-amber-300",
           variant === "icon" && alert && "border-orange-500/50 text-orange-600 dark:text-orange-300",
           className,
         )}
@@ -240,7 +240,7 @@ export function OrderAlertsBell({
         <div
           dir="rtl"
           className={cn(
-            "z-[70] overflow-hidden rounded-xl border border-slate-800 bg-[#111a2e] text-white shadow-2xl",
+            "z-[80] overflow-hidden rounded-xl border border-slate-800 bg-[#111a2e] text-white shadow-2xl",
             panel === "sheet"
               ? "fixed inset-x-2 top-14 max-h-[min(28rem,calc(100dvh-4.5rem))]"
               : "absolute right-0 top-full mt-2 w-80",

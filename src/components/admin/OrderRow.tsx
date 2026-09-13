@@ -59,7 +59,7 @@ function StatusSelect({
         value={order.status}
         disabled={saving || allowedNextStatuses(order.status).length === 0}
         onChange={(e) => onStatusSelect(e.target.value as AdminStatus, e.currentTarget)}
-        className={cn("rounded-lg border px-2 py-1 text-[11px] font-bold focus:outline-none", meta.selectClass)}
+        className={cn("rounded-lg border px-2.5 py-1.5 text-sm font-bold focus:outline-none", meta.selectClass)}
       >
         {statusOptions.map((s) => (
           <option key={s.id} value={s.id} disabled={s.id !== order.status && !canTransitionStatus(order.status, s.id)}>
@@ -163,7 +163,7 @@ function PhoneActions({
         title="انقر لنسخ الرقم"
         onClick={onCopyPhone}
         className={cn(
-          "ml-1 rounded-md px-1.5 py-0.5 text-left font-mono text-xs font-bold transition hover:bg-gold/15 hover:text-gold",
+          "ml-1 rounded-md px-1.5 py-0.5 text-left font-mono text-sm font-medium transition hover:bg-gold/15 hover:text-gold",
           hideNums && "blurred-number",
           copied && "text-emeraldCustom",
         )}
@@ -222,7 +222,7 @@ export function OrderDesktopRow(props: OrderRowProps) {
   const { order, selected, onToggleSelected, copiedId, copiedTrackingId, hideNums, onCopyPhone, onCopyTracking } = props;
   return (
     <tr className="transition hover:bg-cream/50 dark:hover:bg-brandDark/50">
-      <td className="p-3.5 text-center">
+      <td className="p-4 text-center">
         <input
           type="checkbox"
           checked={selected}
@@ -231,10 +231,10 @@ export function OrderDesktopRow(props: OrderRowProps) {
           aria-label={`تحديد طلبية ${order.full_name}`}
         />
       </td>
-      <td className="p-3.5">
+      <td className="p-4">
         <Menu props={props} />
       </td>
-      <td className="p-3.5 font-mono text-[11px] text-royal/60 dark:text-slate-400" title={order.order_id}>
+      <td className="p-4 font-mono text-xs text-royal/60 dark:text-slate-400" title={order.order_id}>
         <div>{shortOrderRef(order.order_id)}</div>
         <TrackingChip
           order={order}
@@ -243,8 +243,8 @@ export function OrderDesktopRow(props: OrderRowProps) {
           onPrint={props.onPrint}
         />
       </td>
-      <td className="p-3.5 font-bold">{order.full_name}</td>
-      <td className="p-3.5">
+      <td className="p-4 font-bold">{order.full_name}</td>
+      <td className="p-4">
         <div className="flex flex-col items-start gap-0.5">
           <span className="rounded-md bg-gold/10 px-2 py-1 text-gold-600 dark:text-gold">{order.city}</span>
           {order.shipping_city ? (
@@ -254,12 +254,12 @@ export function OrderDesktopRow(props: OrderRowProps) {
           ) : null}
         </div>
       </td>
-      <td className="p-3.5">
+      <td className="p-4">
         <PhoneActions order={order} copied={copiedId === order.order_id} hideNums={hideNums} onCopyPhone={onCopyPhone} />
       </td>
-      <td className="p-3.5">{order.pack_label}</td>
-      <td className={cn("p-3.5 font-bold text-emeraldCustom", hideNums && "blurred-number")}>{formatMad(order.total)}</td>
-      <td className="p-3.5 text-center">
+      <td className="p-4">{order.pack_label}</td>
+      <td className={cn("p-4 font-bold text-emeraldCustom", hideNums && "blurred-number")}>{formatMad(order.total)}</td>
+      <td className="p-4 text-center">
         <StatusSelect
           order={order}
           saving={props.saving}
