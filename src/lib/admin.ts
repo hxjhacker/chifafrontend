@@ -13,6 +13,9 @@ export function carrierLabel(carrier?: string | null) {
   return hit?.label || "Meta Livraison";
 }
 
+/** Verified Quick warehouse SKU KH01/7513 */
+export const QUICK_STOCK_KH01_PRODUCT_ID = 6005;
+
 export type DeliveryWindow = "anytime" | "morning" | "afternoon" | "weekend";
 
 export type AdminOrder = {

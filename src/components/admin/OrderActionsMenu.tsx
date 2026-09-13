@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { CheckCircle2, Eye, Loader2, MoreVertical, Pencil, Printer, Repeat2, Trash2, Truck, Warehouse } from "lucide-react";
-import { ADMIN_CARRIERS, shortOrderRef, hasTracking, LABEL_PRINT_HINT, type AdminCarrier, type AdminOrder } from "@/lib/admin";
+import { ADMIN_CARRIERS, shortOrderRef, hasTracking, LABEL_PRINT_HINT, QUICK_STOCK_KH01_PRODUCT_ID, type AdminCarrier, type AdminOrder } from "@/lib/admin";
 import { cn } from "@/lib/cn";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import { DispatchQuickStockModal } from "@/components/admin/DispatchQuickStockModal";
@@ -235,9 +235,9 @@ export function OrderActionsMenu({
                 className={cn(CARD, "border-emerald-500/40 bg-emerald-950/30 text-emerald-300 hover:bg-emerald-900/40")}
               >
                 <span className="min-w-0 flex-1 text-right">
-                  {sent && (order.carrier || "") === "quick_livraison" ? "تم الإرسال من مخزون Quick" : "إرسال من مخزون Quick"}
+                  {sent && (order.carrier || "") === "quick_livraison" ? "تم الإرسال من مخزون Quick (KH01)" : "إرسال من مخزون Quick (KH01)"}
                   <span className="mt-0.5 block truncate font-mono text-[10px] font-bold text-emerald-200/80">
-                    Quick #{order.quick_product_id || "—"} · ×{order.tier_qty}
+                    KH01 #{order.quick_product_id || QUICK_STOCK_KH01_PRODUCT_ID} · ×{order.tier_qty}
                   </span>
                 </span>
                 {shipping ? (
@@ -362,9 +362,9 @@ export function OrderActionsMenu({
               <Warehouse className="h-4 w-4 shrink-0 text-emerald-500" />
             )}
             <span className="min-w-0 flex-1 text-left">
-              إرسال من مخزون Quick
+              إرسال من مخزون Quick (KH01)
               <span className="mt-0.5 block truncate font-mono text-[10px] font-bold text-emerald-600 dark:text-emerald-300">
-                Quick #{order.quick_product_id || "—"} · ×{order.tier_qty}
+                KH01 #{order.quick_product_id || QUICK_STOCK_KH01_PRODUCT_ID} · ×{order.tier_qty}
               </span>
             </span>
           </MenuItem>

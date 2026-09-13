@@ -57,6 +57,7 @@ import {
   needsConfirmModal,
   ordersToCsv,
   pct,
+  QUICK_STOCK_KH01_PRODUCT_ID,
   type AdminCarrier,
   type AdminOrder,
   type AdminStats,
@@ -566,7 +567,10 @@ export function AdminDashboard() {
         credentials: "include",
         cache: "no-store",
         headers: { Accept: "application/json", "Content-Type": "application/json" },
-        body: "{}",
+        body: JSON.stringify({
+          product_id: QUICK_STOCK_KH01_PRODUCT_ID,
+          quantity: Math.max(1, Number(order.tier_qty) || 1),
+        }),
       });
       const raw = (await res.json().catch(() => ({}))) as Record<string, unknown> & {
         detail?: string | Record<string, unknown>;
@@ -618,7 +622,7 @@ export function AdminDashboard() {
         ),
       );
       setNoticeKind("ok");
-      setNotice(tracking ? `تم تسجيل الطلب بنجاح في مخزون Quick — ${tracking}` : "تم تسجيل الطلب بنجاح في مخزون Quick");
+      setNotice(tracking ? `تم إرسال KH01 من مخزون Quick — ${tracking}` : "تم إرسال KH01 من مخزون Quick");
       await refreshStats();
     } catch (err) {
       setError(err instanceof Error ? err.message : "تعذر تسجيل الطلب في مخزون Quick.");
