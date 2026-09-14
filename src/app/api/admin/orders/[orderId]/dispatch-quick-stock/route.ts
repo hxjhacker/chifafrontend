@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { proxyAdminRequest } from "@/lib/server/admin-backend";
 
 export const runtime = "nodejs";
@@ -9,5 +9,18 @@ export async function POST(
   { params }: { params: Promise<{ orderId: string }> },
 ) {
   const { orderId } = await params;
-  return proxyAdminRequest(req, `/api/admin/orders/${orderId}/dispatch-quick-stock`, "POST");
+  try {
+    return await proxyAdminRequest(req, `/api/admin/orders/${orderId}/dispatch-quick-stock`, "POST");
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "تعذر الاتصال بخادم Quick Livraison.";
+    return NextResponse.json(
+      {
+        success: false,
+        ok: false,
+        detail: message,
+        message,
+      },
+      { status: 400 },
+    );
+  }
 }

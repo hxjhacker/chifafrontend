@@ -588,12 +588,13 @@ export function AdminDashboard() {
         meta_livraison_code?: string | null;
         tracking_number?: string | null;
         code_envoi?: string | null;
+        city?: string | null;
       };
       const body = raw as AdminOrder & typeof raw;
       if (!res.ok || body.success === false) {
         const map: Record<string, string> = {
           quick_livraison_not_configured: "أضف مفتاح Quick Livraison في الخادم أولاً.",
-          quick_district_not_mapped: "هذه المدينة غير مربوطة بـ Quick Livraison. زامن قائمة المدن أولاً.",
+          quick_district_not_mapped: `المدينة غير مطابقة في نظام Quick Livraison: ${order.shipping_city || order.city || ""}`.trim(),
           quick_product_id_missing: "أضف معرف المنتج في كويك من إدارة المنتجات قبل الإرسال من المخزون.",
           not_quick_stock: "هذا المنتج ليس من مخزون Quick.",
           product_sku_missing: "أضف كود المنتج (SKU) في إدارة المنتجات قبل الإرسال من المخزون.",
@@ -603,14 +604,21 @@ export function AdminDashboard() {
           not_authenticated: "جلسة الأدمن غير صالحة. أعد تسجيل الدخول.",
           quick_stock_no_tracking: "Quick Livraison لم تُرجع كود التتبع.",
         };
-        throw new Error(
-          body.message ||
-            body.error ||
-            (typeof body.detail === "object" && body.detail
-              ? JSON.stringify(body.detail)
-              : map[String(body.detail || "")] || String(body.detail || "")) ||
-            "تعذر تسجيل الطلب في مخزون Quick.",
-        );
+        const detail = typeof body.detail === "string" ? body.detail.trim() : "";
+        const message = typeof body.message === "string" ? body.message.trim() : "";
+        const code = String(body.error || (detail.includes(" ") ? "" : detail) || "");
+        const cityLabel = String(body.city || order.shipping_city || order.city || "").trim();
+        const mapped = map[code] || map[detail];
+        const msg =
+          (detail && (detail.includes(" ") || /[^\u0000-\u007f]/.test(detail)) ? detail : "") ||
+          (message && (message.includes(" ") || /[^\u0000-\u007f]/.test(message)) ? message : "") ||
+          mapped ||
+          (cityLabel ? `المدينة غير مطابقة في نظام Quick Livraison: ${cityLabel}` : "") ||
+          "تعذر تسجيل الطلب في مخزون Quick.";
+        setError(msg);
+        setNoticeKind("warn");
+        setNotice(msg);
+        return;
       }
       const tracking = String(body.meta_livraison_code || body.code_envoi || body.tracking_number || "").trim();
       setOrders((list) =>
@@ -634,7 +642,17 @@ export function AdminDashboard() {
       setNotice(tracking ? `تم إرسال KH01 من مخزون Quick — ${tracking}` : "تم إرسال KH01 من مخزون Quick");
       await refreshStats();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "تعذر تسجيل الطلب في مخزون Quick.");
+      const cityLabel = String(order.shipping_city || order.city || "").trim();
+      const raw = err instanceof Error ? err.message : "";
+      const msg =
+        raw && !/failed to fetch|network error|load failed/i.test(raw)
+          ? raw
+          : cityLabel
+            ? `المدينة غير مطابقة في نظام Quick Livraison: ${cityLabel}`
+            : "تعذر تسجيل الطلب في مخزون Quick.";
+      setError(msg);
+      setNoticeKind("warn");
+      setNotice(msg);
     } finally {
       setShippingId(null);
     }
