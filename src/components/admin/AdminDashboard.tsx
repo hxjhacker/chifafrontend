@@ -28,6 +28,7 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
+import { ThemeToggle, WhatsAppIcon } from "@/components/Chrome";
 import { DASHBOARD_LOGIN, DASHBOARD_HOME, goAdmin } from "@/lib/admin-paths";
 import SplashScreen from "@/components/SplashScreen";
 import { AddOrderModal } from "@/components/admin/AddOrderModal";
