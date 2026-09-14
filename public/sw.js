@@ -17,7 +17,12 @@ self.addEventListener("push", function (event) {
 
 self.addEventListener("notificationclick", function (event) {
   event.notification.close();
-  const url = event.notification.data && event.notification.data.url ? event.notification.data.url : "/mydashboard";
+  var raw = event.notification.data && event.notification.data.url ? String(event.notification.data.url) : "/mydashboard";
+  if (raw.indexOf("https://mydashboard") === 0) raw = "/mydashboard" + raw.slice("https://mydashboard".length);
+  if (raw.indexOf("http://mydashboard") === 0) raw = "/mydashboard" + raw.slice("http://mydashboard".length);
+  if (raw.indexOf("//mydashboard") === 0) raw = "/mydashboard" + raw.slice("//mydashboard".length);
+  if (raw.charAt(0) !== "/") raw = "/" + raw.replace(/^\/+/, "");
+  var url = raw;
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(function (clientList) {
       for (let i = 0; i < clientList.length; i += 1) {
