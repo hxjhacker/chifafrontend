@@ -1,6 +1,6 @@
 import { displayStatus } from "@/lib/admin";
 import { MOROCCO_REGIONS, regionIdForCity } from "@/lib/admin-geo";
-import { buildTarifIndex, DEFAULT_DELIVERY_FEE, DEFAULT_REFUSAL_FEE, DEFAULT_RETURN_FEE, feesForCity, type CityTarifRow } from "@/lib/city-tarifs";
+import { buildTarifIndex, DEFAULT_DELIVERY_FEE, DEFAULT_REFUSAL_FEE, DEFAULT_RETURN_FEE, feesForCity, foldCityName, type CityTarifRow } from "@/lib/city-tarifs";
 import { trueDeliveryRate, type LogisticsAnalytics, type LogisticsRegion } from "@/lib/logistics";
 import { ensureSchema, getPool } from "@/lib/server/db";
 
@@ -59,13 +59,32 @@ export async function logisticsAnalytics(): Promise<LogisticsAnalytics> {
   await ensureSchema();
   const client = await getPool().connect();
   try {
-    const result = await client.query<{
-      status: string;
-      total_cents: number;
-      region_id: string | null;
-      city: string | null;
-      shipping_city: string | null;
-    }>(`SELECT status, total_cents, region_id, city, shipping_city FROM orders`);
+    let result: {
+      rows: Array<{
+        status: string;
+        total_cents: number;
+        region_id: string | null;
+        city: string | null;
+        shipping_city: string | null;
+        carrier: string | null;
+        shipping_cost: number | null;
+      }>;
+    };
+    try {
+      result = await client.query(
+        `SELECT status, total_cents, region_id, city, shipping_city,
+                COALESCE(carrier, 'meta_livraison') AS carrier,
+                shipping_cost
+         FROM orders`,
+      );
+    } catch {
+      result = await client.query(
+        `SELECT status, total_cents, region_id, city, shipping_city,
+                'meta_livraison' AS carrier,
+                NULL::double precision AS shipping_cost
+         FROM orders`,
+      );
+    }
     let tarifRows: CityTarifRow[] = [];
     try {
       const tarifs = await client.query<CityTarifRow>(
@@ -76,6 +95,30 @@ export async function logisticsAnalytics(): Promise<LogisticsAnalytics> {
       tarifRows = [];
     }
     const tarifIndex = buildTarifIndex(tarifRows);
+    const quickByKey = new Map<string, number>();
+    try {
+      const quick = await client.query<{ city_name: string; city_name_ar: string | null; quick_delivery_price: number }>(
+        `SELECT city_name, city_name_ar, quick_delivery_price FROM delivery_cities`,
+      );
+      for (const row of quick.rows) {
+        for (const name of [row.city_name, row.city_name_ar || ""]) {
+          const key = foldCityName(name);
+          if (key && !quickByKey.has(key)) quickByKey.set(key, Number(row.quick_delivery_price) || 0);
+        }
+      }
+    } catch {
+      // delivery_cities may be empty on older schemas
+    }
+
+    function quickFee(...names: Array<string | null | undefined>) {
+      for (const name of names) {
+        const key = foldCityName(name || "");
+        if (key && quickByKey.has(key)) return quickByKey.get(key)!;
+        const compact = key.replace(/\s+/g, "");
+        if (compact && quickByKey.has(compact)) return quickByKey.get(compact)!;
+      }
+      return null;
+    }
 
     const regions = new Map<string, Bucket>();
     for (const region of MOROCCO_REGIONS) {
@@ -96,20 +139,34 @@ export async function logisticsAnalytics(): Promise<LogisticsAnalytics> {
     for (const row of result.rows) {
       const status = displayStatus(row.status || "pending");
       const amount = Number(row.total_cents || 0);
-      const fees = feesForCity(tarifIndex, row.shipping_city, row.city);
+      const stored = row.shipping_cost == null ? null : Number(row.shipping_cost);
+      const metaFees = feesForCity(tarifIndex, row.shipping_city, row.city);
+      const isQuick = row.carrier === "quick_livraison";
+      let delivery = metaFees.delivery;
+      let refusal = metaFees.refusal;
+      let returned = metaFees.returned;
+      if (stored != null && Number.isFinite(stored) && stored >= 0) {
+        delivery = stored;
+      } else if (isQuick) {
+        delivery = quickFee(row.shipping_city, row.city) ?? metaFees.delivery;
+      }
+      if (isQuick) {
+        refusal = 0;
+        returned = 0;
+      }
       if (status === "delivered") {
         deliveredCount += 1;
         deliveredCents += amount;
-        deliveryCosts += fees.delivery;
+        deliveryCosts += delivery;
       } else if (status === "shipped") {
         inTransitCount += 1;
         inTransitCents += amount;
       } else if (status === "returned") {
         returnedCount += 1;
-        returnCosts += fees.returned;
+        returnCosts += returned;
       } else if (status === "cancelled") {
         cancelledCount += 1;
-        refusalCosts += fees.refusal;
+        refusalCosts += refusal;
       }
 
       const rid = resolveRegion(row.region_id, row.shipping_city, row.city);

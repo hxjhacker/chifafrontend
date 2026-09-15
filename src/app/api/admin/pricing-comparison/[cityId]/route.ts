@@ -24,6 +24,8 @@ export async function PATCH(request: NextRequest, ctx: Ctx) {
       competitor_delivery_price?: number;
       competitor_retour_price?: number;
       competitor_name?: string;
+      quick_delivery_price?: number;
+      meta_delivery_fee?: number;
     };
     await ensureSchema();
     const client = await getPool().connect();
@@ -40,16 +42,21 @@ export async function PATCH(request: NextRequest, ctx: Ctx) {
       }
       const row = current.rows[0];
       const delivery =
-        body.competitor_delivery_price == null ? row.competitor_delivery_price : Number(body.competitor_delivery_price);
+        body.meta_delivery_fee == null && body.competitor_delivery_price == null
+          ? row.competitor_delivery_price
+          : Number(body.meta_delivery_fee ?? body.competitor_delivery_price);
       const retour =
         body.competitor_retour_price == null ? row.competitor_retour_price : Number(body.competitor_retour_price);
       const name =
-        body.competitor_name == null ? row.competitor_name : String(body.competitor_name).trim() || "ناقل بديل";
+        body.competitor_name == null ? row.competitor_name : String(body.competitor_name).trim() || "Meta Livraison";
+      const quickPrice =
+        body.quick_delivery_price == null ? row.quick_delivery_price : Number(body.quick_delivery_price);
       const updated = await client.query(
         `UPDATE delivery_cities
          SET competitor_delivery_price = $2,
              competitor_retour_price = $3,
              competitor_name = $4,
+             quick_delivery_price = $5,
              quick_retour_price = 0,
              quick_refus_price = 0,
              updated_at = now()
@@ -57,7 +64,7 @@ export async function PATCH(request: NextRequest, ctx: Ctx) {
          RETURNING id, city_key, city_name, city_name_ar, delivery_delay,
                    quick_delivery_price, quick_retour_price, quick_refus_price,
                    competitor_name, competitor_delivery_price, competitor_retour_price`,
-        [cityId, delivery, retour, name],
+        [cityId, delivery, retour, name, quickPrice],
       );
       return NextResponse.json(serializePricingCity(updated.rows[0]));
     } finally {

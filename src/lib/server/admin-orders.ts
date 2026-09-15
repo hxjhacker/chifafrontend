@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { AdminOrder, AdminStats, AdminStatus, DeliveryWindow } from "@/lib/admin";
-import { assertStatusTransition, displayStatus, hasCompleteConfirmDetails, packLabel } from "@/lib/admin";
+import { assertStatusTransition, displayStatus, displayTrackingCode, hasCompleteConfirmDetails, packLabel } from "@/lib/admin";
 import { resolveProductSlug } from "@/lib/server/admin-products";
 import { ensureSchema, getPool } from "./db";
 
@@ -39,6 +39,7 @@ type OrderRow = {
   meta_livraison_ticket_url?: string | null;
   shipping_city?: string | null;
   carrier?: string | null;
+  shipping_cost?: number | null;
 };
 
 const CATALOG_BY_SLUG: Record<string, { code: string; quick_product_id: number | null; is_quick_stock: boolean }> = {
@@ -148,6 +149,13 @@ function serialize(row: OrderRow): AdminOrder {
   const pastShipped = status === "shipped" || status === "delivered" || status === "returned";
   const slug = row.product_slug || "quran";
   const catalog = CATALOG_BY_SLUG[slug];
+  const carrier = row.carrier === "quick_livraison" || row.carrier === "force_log" ? row.carrier : "meta_livraison";
+  const tracking =
+    displayTrackingCode({
+      carrier,
+      meta_livraison_code: row.meta_livraison_code,
+      order_id: String(row.id),
+    }) || row.meta_livraison_code || null;
   return {
     order_id: String(row.id),
     created_at: created,
@@ -193,15 +201,16 @@ function serialize(row: OrderRow): AdminOrder {
     shipped_at: stampReached(row.shipped_at, updated, pastShipped),
     delivered_at: stampReached(row.delivered_at, updated, status === "delivered"),
     cancelled_at: stampReached(row.cancelled_at, updated, status === "cancelled"),
-    meta_livraison_code: row.meta_livraison_code || null,
     meta_livraison_sent_at: iso(row.meta_livraison_sent_at || null),
     meta_livraison_ticket_url: row.meta_livraison_ticket_url || null,
-    carrier: (row.carrier === "quick_livraison" || row.carrier === "force_log" ? row.carrier : "meta_livraison"),
-    tracking_number: row.meta_livraison_code || null,
-    code_envoi: row.meta_livraison_code || null,
+    carrier,
+    tracking_number: tracking,
+    code_envoi: tracking,
+    meta_livraison_code: tracking,
     product_code: catalog?.code || String(slug).toUpperCase() || null,
     quick_product_id: catalog?.quick_product_id ?? null,
     is_quick_stock: Boolean(catalog?.is_quick_stock),
+    shipping_cost: row.shipping_cost == null || !Number.isFinite(Number(row.shipping_cost)) ? null : Number(row.shipping_cost),
   };
 }
 

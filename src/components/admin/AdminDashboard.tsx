@@ -56,6 +56,7 @@ import {
   hasCompleteConfirmDetails,
   hasTracking,
   LABEL_PRINT_HINT,
+  displayTrackingCode,
   needsConfirmModal,
   ordersToCsv,
   pct,
@@ -404,7 +405,7 @@ export function AdminDashboard() {
   }
 
   async function copyTracking(order: AdminOrder) {
-    const code = (order.meta_livraison_code || "").trim();
+    const code = displayTrackingCode(order);
     if (!code) return;
     const ok = await copyText(code);
     if (!ok) {
@@ -463,7 +464,7 @@ export function AdminDashboard() {
     if (shippingId) return;
     if (order.meta_livraison_code) {
       setNoticeKind("ok");
-      setNotice(`الطلب مرسل مسبقاً إلى ${carrierLabel(order.carrier)}: ${order.meta_livraison_code}`);
+      setNotice(`الطلب مرسل مسبقاً إلى ${carrierLabel(order.carrier)}: ${displayTrackingCode(order)}`);
       return;
     }
     if (order.status === "cancelled" || order.status === "returned") {
@@ -551,7 +552,7 @@ export function AdminDashboard() {
     if (shippingId) return;
     if (order.meta_livraison_code) {
       setNoticeKind("ok");
-      setNotice(`الطلب مرسل مسبقاً إلى ${carrierLabel(order.carrier)}: ${order.meta_livraison_code}`);
+      setNotice(`الطلب مرسل مسبقاً إلى ${carrierLabel(order.carrier)}: ${displayTrackingCode(order)}`);
       return;
     }
     if (order.status === "cancelled" || order.status === "returned") {
@@ -620,7 +621,12 @@ export function AdminDashboard() {
         setNotice(msg);
         return;
       }
-      const tracking = String(body.meta_livraison_code || body.code_envoi || body.tracking_number || "").trim();
+      const rawTracking = String(body.meta_livraison_code || body.code_envoi || body.tracking_number || "").trim();
+      const tracking = displayTrackingCode({
+        carrier: "quick_livraison",
+        order_id: order.order_id,
+        meta_livraison_code: rawTracking,
+      }) || rawTracking;
       setOrders((list) =>
         list.map((row) =>
           row.order_id === order.order_id

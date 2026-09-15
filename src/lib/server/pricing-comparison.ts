@@ -1,8 +1,11 @@
+import { getRegionForCity, UNKNOWN_REGION } from "@/lib/admin-geo";
+
 export type PricingCity = {
   id: string;
   city_key: string;
   city_name: string;
   city_name_ar: string;
+  region?: string;
   delivery_delay: string | null;
   quick_delivery_price: number;
   quick_retour_price: number;
@@ -10,6 +13,9 @@ export type PricingCity = {
   competitor_name: string;
   competitor_delivery_price: number | null;
   competitor_retour_price: number;
+  meta_delivery_fee?: number | null;
+  quick_covered?: boolean;
+  meta_covered?: boolean;
   quick_total: number;
   competitor_total: number | null;
   savings: number | null;
@@ -55,25 +61,30 @@ export function serializePricingCity(row: DbCity): PricingCity {
       : money(row.competitor_delivery_price);
   const competitorRetour = money(row.competitor_retour_price, 15);
   const quickTotal = quickDelivery;
-  const competitorTotal = competitorDelivery == null ? null : Math.round((competitorDelivery + competitorRetour) * 100) / 100;
+  const competitorTotal = competitorDelivery;
   let cheaper: PricingCity["cheaper"] = "unknown";
   let savings: number | null = null;
-  if (competitorTotal != null) {
-    savings = Math.round((competitorTotal - quickTotal) * 100) / 100;
+  if (competitorDelivery != null) {
+    savings = Math.round((competitorDelivery - quickDelivery) * 100) / 100;
     cheaper = savings > 0 ? "quick" : savings < 0 ? "competitor" : "tie";
   }
+  const regionName = getRegionForCity(row.city_name);
   return {
     id: String(row.id),
     city_key: row.city_key,
     city_name: row.city_name,
     city_name_ar: row.city_name_ar || "",
+    region: regionName === UNKNOWN_REGION ? "" : regionName,
     delivery_delay: (row.delivery_delay || "").trim() || null,
     quick_delivery_price: quickDelivery,
     quick_retour_price: 0,
     quick_refus_price: 0,
-    competitor_name: (row.competitor_name || "ناقل بديل").trim() || "ناقل بديل",
+    competitor_name: (row.competitor_name || "Meta Livraison").trim() || "Meta Livraison",
     competitor_delivery_price: competitorDelivery,
     competitor_retour_price: competitorRetour,
+    meta_delivery_fee: competitorDelivery,
+    quick_covered: true,
+    meta_covered: competitorDelivery != null,
     quick_total: quickTotal,
     competitor_total: competitorTotal,
     savings,
@@ -156,7 +167,7 @@ export async function citiesFromQuickJsonFile(): Promise<{ cities: PricingCity[]
             quick_delivery_price: quickDelivery,
             quick_retour_price: 0,
             quick_refus_price: 0,
-            competitor_name: "ناقل بديل",
+            competitor_name: "Meta Livraison",
             competitor_delivery_price: 35,
             competitor_retour_price: 15,
           }),

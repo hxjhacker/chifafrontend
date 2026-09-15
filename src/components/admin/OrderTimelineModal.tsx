@@ -176,6 +176,12 @@ export function OrderTimelineModal({ order, onClose, onEdit }: Props) {
                 <dt className="text-slate-500">المبلغ الإجمالي</dt>
                 <dd className="mt-0.5 font-black text-emerald-400">{formatMad(order.total)}</dd>
               </div>
+              {order.shipping_cost != null ? (
+                <div>
+                  <dt className="text-slate-500">تكلفة الشحن ({order.carrier === "quick_livraison" ? "كويك" : "ميتا"})</dt>
+                  <dd className="mt-0.5 font-black text-amber-300">{formatMad(order.shipping_cost)}</dd>
+                </div>
+              ) : null}
               <div className="sm:col-span-2">
                 <dt className="flex items-center gap-1 text-slate-500">
                   <MapPin className="h-3 w-3" /> العنوان التفصيلي

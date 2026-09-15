@@ -1,3 +1,5 @@
+import { displayTrackingCode } from "@/lib/admin";
+
 const REGION_HUB: Record<string, string> = {
   MA01: "TANGER",
   MA02: "OUJDA",
@@ -138,8 +140,13 @@ export function labelQrValue(order: {
   );
 }
 
-export function trackingCode(order: { meta_livraison_code?: string | null; tracking_number?: string | null; order_id?: string | null }) {
-  return (order.meta_livraison_code || order.tracking_number || "").trim() || parcelOrderCode(order.order_id);
+export function trackingCode(order: {
+  carrier?: string | null;
+  meta_livraison_code?: string | null;
+  tracking_number?: string | null;
+  order_id?: string | null;
+}) {
+  return displayTrackingCode(order) || parcelOrderCode(order.order_id);
 }
 
 export function merchandiseLines(order: {

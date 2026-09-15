@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { CheckCircle2, Eye, Loader2, MoreVertical, Pencil, Printer, Repeat2, Trash2, Truck, Warehouse } from "lucide-react";
-import { ADMIN_CARRIERS, shortOrderRef, hasTracking, LABEL_PRINT_HINT, type AdminCarrier, type AdminOrder } from "@/lib/admin";
+import { ADMIN_CARRIERS, shortOrderRef, hasTracking, LABEL_PRINT_HINT, displayTrackingCode, type AdminCarrier, type AdminOrder } from "@/lib/admin";
 import { cn } from "@/lib/cn";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import { DispatchQuickStockModal } from "@/components/admin/DispatchQuickStockModal";
@@ -215,8 +215,8 @@ export function OrderActionsMenu({
                     {sent && (order.carrier || "meta_livraison") === row.id
                       ? `تم الإرسال إلى ${row.label}`
                       : `إرسال إلى ${row.label}`}
-                    {sent && (order.carrier || "meta_livraison") === row.id && order.meta_livraison_code ? (
-                      <span className="mt-0.5 block truncate font-mono text-[10px] font-bold">{order.meta_livraison_code}</span>
+                    {sent && (order.carrier || "meta_livraison") === row.id && displayTrackingCode(order) ? (
+                      <span className="mt-0.5 block truncate font-mono text-[10px] font-bold">{displayTrackingCode(order)}</span>
                     ) : null}
                     {!row.enabled ? <span className="mt-0.5 block text-[10px] font-bold text-amber-300">قريباً</span> : null}
                   </span>
@@ -347,9 +347,9 @@ export function OrderActionsMenu({
                 {sent && (order.carrier || "meta_livraison") === row.id
                   ? `Envoyé à ${row.label}`
                   : `Envoyer à ${row.label}`}
-                {sent && (order.carrier || "meta_livraison") === row.id && order.meta_livraison_code ? (
+                {sent && (order.carrier || "meta_livraison") === row.id && displayTrackingCode(order) ? (
                   <span className="mt-0.5 block truncate font-mono text-[10px] font-bold text-sky-600 dark:text-sky-300">
-                    {order.meta_livraison_code}
+                    {displayTrackingCode(order)}
                   </span>
                 ) : null}
                 {!row.enabled ? <span className="mt-0.5 block text-[10px] font-bold text-amber-500">Bientôt</span> : null}

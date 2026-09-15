@@ -9,11 +9,15 @@ type PricingCity = {
   id: string;
   city_name: string;
   city_name_ar: string;
+  region?: string;
   delivery_delay: string | null;
   quick_delivery_price: number;
   competitor_name: string;
   competitor_delivery_price: number | null;
   competitor_retour_price: number;
+  meta_delivery_fee?: number | null;
+  quick_covered?: boolean;
+  meta_covered?: boolean;
   quick_total: number;
   competitor_total: number | null;
   savings: number | null;
@@ -28,9 +32,8 @@ type PricingStats = {
 };
 
 type EditDraft = {
-  competitor_name: string;
+  quick_delivery_price: string;
   competitor_delivery_price: string;
-  competitor_retour_price: string;
 };
 
 function mad(value: number | null | undefined) {
@@ -41,7 +44,7 @@ function mad(value: number | null | undefined) {
 
 function cheaperLabel(row: PricingCity) {
   if (row.cheaper === "quick") return { text: "Quick أوفر", className: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30" };
-  if (row.cheaper === "competitor") return { text: "البديل أوفر", className: "bg-amber-500/15 text-amber-300 border-amber-500/30" };
+  if (row.cheaper === "competitor") return { text: "ميتا أوفر", className: "bg-amber-500/15 text-amber-300 border-amber-500/30" };
   if (row.cheaper === "tie") return { text: "متعادل", className: "bg-slate-500/15 text-slate-300 border-slate-500/30" };
   return { text: "غير محدد", className: "bg-slate-500/10 text-slate-400 border-slate-500/20" };
 }
@@ -49,7 +52,7 @@ function cheaperLabel(row: PricingCity) {
 function matchesQuery(row: PricingCity, query: string) {
   const needle = query.trim().toLocaleLowerCase("ar");
   if (!needle) return true;
-  const hay = `${row.city_name} ${row.city_name_ar}`.toLocaleLowerCase("ar");
+  const hay = `${row.city_name} ${row.city_name_ar} ${row.region || ""}`.toLocaleLowerCase("ar");
   return hay.includes(needle);
 }
 
@@ -117,9 +120,8 @@ export function PricingComparisonPage() {
   function startEdit(row: PricingCity) {
     setEditingId(row.id);
     setDraft({
-      competitor_name: row.competitor_name,
-      competitor_delivery_price: row.competitor_delivery_price == null ? "" : String(row.competitor_delivery_price),
-      competitor_retour_price: String(row.competitor_retour_price ?? 15),
+      quick_delivery_price: String(row.quick_delivery_price ?? ""),
+      competitor_delivery_price: row.competitor_delivery_price == null && row.meta_delivery_fee == null ? "" : String(row.meta_delivery_fee ?? row.competitor_delivery_price),
     });
   }
 
@@ -134,9 +136,9 @@ export function PricingComparisonPage() {
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          competitor_name: draft.competitor_name,
+          quick_delivery_price: Number(draft.quick_delivery_price),
           competitor_delivery_price: Number(draft.competitor_delivery_price),
-          competitor_retour_price: Number(draft.competitor_retour_price),
+          meta_delivery_fee: Number(draft.competitor_delivery_price),
         }),
       });
       const updated = (await res.json().catch(() => ({}))) as PricingCity & { detail?: string };
@@ -160,7 +162,7 @@ export function PricingComparisonPage() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-xs font-semibold tracking-wide text-emerald-400/90">الخطة رقم 3 · مقارنة الأسعار</p>
-            <h1 className="mt-1 text-2xl font-black text-white">مقارنة أسعار QuickLivraison</h1>
+            <h1 className="mt-1 text-2xl font-black text-white">مقارنة أسعار Quick و Meta</h1>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <button
@@ -222,15 +224,15 @@ export function PricingComparisonPage() {
 
         <div className="overflow-hidden rounded-2xl border" style={{ borderColor: "#1e2d4a", background: "#0b1324" }}>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[980px] text-right text-sm">
+            <table className="w-full min-w-[1080px] text-right text-sm">
               <thead className="text-xs uppercase tracking-wide text-slate-400" style={{ background: "#070d19" }}>
                 <tr>
-                  <th className="px-4 py-3 font-bold">المدينة</th>
-                  <th className="px-4 py-3 font-bold">مدة التوصيل</th>
-                  <th className="px-4 py-3 font-bold">سعر التوصيل Quick</th>
-                  <th className="px-4 py-3 font-bold">الارجاع والرفض Quick</th>
-                  <th className="px-4 py-3 font-bold">شركة التوصيل البديلة</th>
-                  <th className="px-4 py-3 font-bold">المقارنة الإجمالية</th>
+                  <th className="px-4 py-3 font-bold">اسم المدينة</th>
+                  <th className="px-4 py-3 font-bold">الجهة</th>
+                  <th className="px-4 py-3 font-bold">سعر كويك</th>
+                  <th className="px-4 py-3 font-bold">سعر ميتا</th>
+                  <th className="px-4 py-3 font-bold">التغطية</th>
+                  <th className="px-4 py-3 font-bold">المقارنة</th>
                   <th className="px-4 py-3 font-bold">تعديل</th>
                 </tr>
               </thead>
@@ -252,61 +254,60 @@ export function PricingComparisonPage() {
                   filtered.map((row) => {
                     const badge = cheaperLabel(row);
                     const editing = editingId === row.id;
+                    const metaPrice = row.meta_delivery_fee ?? row.competitor_delivery_price;
                     return (
                       <tr key={row.id} className="border-t" style={{ borderColor: "#1e2d4a" }}>
                         <td className="px-4 py-3">
                           <div className="font-bold text-white">{row.city_name}</div>
                           {row.city_name_ar ? <div className="text-xs text-slate-400">{row.city_name_ar}</div> : null}
                         </td>
-                        <td className="px-4 py-3 text-slate-300">{row.delivery_delay || "—"}</td>
-                        <td className="px-4 py-3 font-black text-sky-300">{mad(row.quick_delivery_price)}</td>
-                        <td className="px-4 py-3">
-                          <span className="inline-flex rounded-full border border-emerald-500/30 bg-emerald-500/15 px-2.5 py-1 text-xs font-bold text-emerald-300">
-                            مجاني 0 د.م
-                          </span>
+                        <td className="px-4 py-3 text-slate-300">{row.region || "—"}</td>
+                        <td className="px-4 py-3 font-black text-sky-300">
+                          {editing && draft ? (
+                            <input
+                              type="number"
+                              min={0}
+                              value={draft.quick_delivery_price}
+                              onChange={(e) => setDraft({ ...draft, quick_delivery_price: e.target.value })}
+                              className="h-8 w-24 rounded-lg border px-2 text-xs text-white"
+                              style={{ borderColor: "#1e2d4a", background: "#070d19" }}
+                            />
+                          ) : (
+                            mad(row.quick_delivery_price)
+                          )}
+                        </td>
+                        <td className="px-4 py-3 font-black text-violet-300">
+                          {editing && draft ? (
+                            <input
+                              type="number"
+                              min={0}
+                              value={draft.competitor_delivery_price}
+                              onChange={(e) => setDraft({ ...draft, competitor_delivery_price: e.target.value })}
+                              className="h-8 w-24 rounded-lg border px-2 text-xs text-white"
+                              style={{ borderColor: "#1e2d4a", background: "#070d19" }}
+                            />
+                          ) : (
+                            mad(metaPrice)
+                          )}
                         </td>
                         <td className="px-4 py-3">
-                          {editing && draft ? (
-                            <div className="grid max-w-[240px] gap-1.5">
-                              <input
-                                value={draft.competitor_name}
-                                onChange={(e) => setDraft({ ...draft, competitor_name: e.target.value })}
-                                className="h-8 rounded-lg border px-2 text-xs text-white"
-                                style={{ borderColor: "#1e2d4a", background: "#070d19" }}
-                              />
-                              <input
-                                type="number"
-                                min={0}
-                                value={draft.competitor_delivery_price}
-                                onChange={(e) => setDraft({ ...draft, competitor_delivery_price: e.target.value })}
-                                className="h-8 rounded-lg border px-2 text-xs text-white"
-                                style={{ borderColor: "#1e2d4a", background: "#070d19" }}
-                                placeholder="سعر التوصيل"
-                              />
-                              <input
-                                type="number"
-                                min={0}
-                                value={draft.competitor_retour_price}
-                                onChange={(e) => setDraft({ ...draft, competitor_retour_price: e.target.value })}
-                                className="h-8 rounded-lg border px-2 text-xs text-white"
-                                style={{ borderColor: "#1e2d4a", background: "#070d19" }}
-                                placeholder="سعر الارجاع"
-                              />
-                            </div>
-                          ) : (
-                            <div>
-                              <div className="text-xs text-slate-400">{row.competitor_name}</div>
-                              <div className="font-semibold text-slate-200">توصيل {mad(row.competitor_delivery_price)}</div>
-                              <div className="text-xs text-rose-300">ارجاع {mad(row.competitor_retour_price)}</div>
-                            </div>
-                          )}
+                          <div className="flex flex-wrap gap-1">
+                            <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-bold ${row.quick_covered === false ? "border-slate-500/20 bg-slate-500/10 text-slate-400" : "border-emerald-500/30 bg-emerald-500/15 text-emerald-300"}`}>
+                              كويك {row.quick_covered === false ? "غير مغطاة" : "مغطاة"}
+                            </span>
+                            <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-bold ${row.meta_covered === false || metaPrice == null ? "border-slate-500/20 bg-slate-500/10 text-slate-400" : "border-violet-500/30 bg-violet-500/15 text-violet-300"}`}>
+                              ميتا {row.meta_covered === false || metaPrice == null ? "غير مغطاة" : "مغطاة"}
+                            </span>
+                          </div>
                         </td>
                         <td className="px-4 py-3">
                           <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${badge.className}`}>
                             {badge.text}
                           </span>
-                          {row.savings != null && row.savings > 0 ? (
-                            <div className="mt-1 text-[11px] text-emerald-400">توفير {mad(row.savings)}</div>
+                          {row.savings != null && row.savings !== 0 ? (
+                            <div className={`mt-1 text-[11px] ${row.savings > 0 ? "text-emerald-400" : "text-amber-300"}`}>
+                              {row.savings > 0 ? `توفير ${mad(row.savings)}` : `فرق ${mad(Math.abs(row.savings))}`}
+                            </div>
                           ) : null}
                         </td>
                         <td className="px-4 py-3">

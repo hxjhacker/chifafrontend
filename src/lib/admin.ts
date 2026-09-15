@@ -77,6 +77,7 @@ export type AdminOrder = {
   stock_quantity?: number | null;
   carrier_status?: string | null;
   dispatched_at?: string | null;
+  shipping_cost?: number | null;
   can_open?: boolean | null;
 };
 
@@ -172,6 +173,28 @@ export function displayStatus(raw: string): AdminStatus {
 export const LABEL_PRINT_HINT =
   "يجب إرسال الطلبية إلى Meta Livraison أولاً للحصول على رقم التتبع قبل الطباعة.";
 
+export function quickClientCode(orderId?: string | null) {
+  const id = String(orderId || "").trim();
+  return id ? `CFG-${id.slice(0, 8)}` : "";
+}
+
+export function isDummyParcelCode(code?: string | null) {
+  return String(code || "").trim().toUpperCase().startsWith("PARCEL_");
+}
+
+export function displayTrackingCode(order: {
+  carrier?: string | null;
+  meta_livraison_code?: string | null;
+  tracking_number?: string | null;
+  order_id?: string | null;
+}) {
+  const stored = String(order.meta_livraison_code || order.tracking_number || "").trim();
+  if ((order.carrier || "") === "quick_livraison" && isDummyParcelCode(stored)) {
+    return quickClientCode(order.order_id) || stored;
+  }
+  return stored;
+}
+
 export function hasTracking(order: { meta_livraison_code?: string | null; tracking_number?: string | null }): boolean {
   return Boolean((order.meta_livraison_code || order.tracking_number || "").trim());
 }
@@ -181,10 +204,11 @@ export function carrierTrackingUrl(order: {
   meta_livraison_code?: string | null;
   tracking_number?: string | null;
   meta_livraison_ticket_url?: string | null;
+  order_id?: string | null;
 }): string | null {
   const ticket = String(order.meta_livraison_ticket_url || "").trim();
   if (ticket) return ticket;
-  const code = String(order.meta_livraison_code || order.tracking_number || "").trim();
+  const code = displayTrackingCode(order);
   if (!code) return null;
   if ((order.carrier || "meta_livraison") === "quick_livraison") {
     return `https://clients.quicklivraison.ma/tracking/${encodeURIComponent(code)}`;

@@ -15,6 +15,7 @@ import {
   telHref,
   waHref,
   carrierTrackingUrl,
+  displayTrackingCode,
   type AdminCarrier,
   type AdminOrder,
   type AdminStatus,
@@ -99,7 +100,8 @@ function TrackingChip({
   onCopy: () => void;
   onPrint?: (order: AdminOrder) => void;
 }) {
-  if (!order.meta_livraison_code) return null;
+  const tracking = displayTrackingCode(order);
+  if (!tracking) return null;
   const quick = (order.carrier || "meta_livraison") === "quick_livraison";
   const trackUrl = carrierTrackingUrl(order);
   return (
@@ -116,7 +118,7 @@ function TrackingChip({
         )}
       >
         {copied ? <Check className="h-3 w-3 shrink-0 text-emeraldCustom" /> : <Copy className="h-3 w-3 shrink-0" />}
-        <span className="truncate">{order.meta_livraison_code}</span>
+        <span className="truncate">{tracking}</span>
         <CarrierBadge carrier={order.carrier} />
       </button>
       {onPrint ? (
@@ -258,7 +260,15 @@ export function OrderDesktopRow(props: OrderRowProps) {
         <PhoneActions order={order} copied={copiedId === order.order_id} hideNums={hideNums} onCopyPhone={onCopyPhone} />
       </td>
       <td className="p-4">{order.pack_label}</td>
-      <td className={cn("p-4 font-bold text-emeraldCustom", hideNums && "blurred-number")}>{formatMad(order.total)}</td>
+      <td className="p-4">
+        <div className={cn("font-bold text-emeraldCustom", hideNums && "blurred-number")}>{formatMad(order.total)}</div>
+        {order.shipping_cost != null ? (
+          <div className={cn("text-[10px] font-bold text-royal/45 dark:text-slate-400", hideNums && "blurred-number")}>
+            شحن {formatMad(order.shipping_cost)}
+            {order.carrier === "quick_livraison" ? " · كويك" : order.carrier === "meta_livraison" ? " · ميتا" : ""}
+          </div>
+        ) : null}
+      </td>
       <td className="p-4 text-center">
         <StatusSelect
           order={order}
@@ -324,7 +334,13 @@ export function OrderMobileCard(props: OrderRowProps) {
             hideNums && "blurred-number",
           )}
         >
-          {formatMad(order.total)}
+          <span className={cn("block font-bold text-emeraldCustom", hideNums && "blurred-number")}>{formatMad(order.total)}</span>
+          {order.shipping_cost != null ? (
+            <span className={cn("block text-[10px] font-bold text-royal/45 dark:text-slate-400", hideNums && "blurred-number")}>
+              شحن {formatMad(order.shipping_cost)}
+              {order.carrier === "quick_livraison" ? " · كويك" : order.carrier === "meta_livraison" ? " · ميتا" : ""}
+            </span>
+          ) : null}
         </div>
       </div>
 
