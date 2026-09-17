@@ -21,6 +21,7 @@ const PRODUCTS = [
     body: "المصحف كاملاً بصوت أشهر القراء، أدعية وأذكار الصباح والمساء، والرقية الشرعية جاهزة للاستماع في السيارة والمنزل بجودة عالية.",
     price: "199 درهم",
     oldPrice: "299 درهم",
+    savings: "توفير 100 درهم",
   },
   {
     href: "/product",
@@ -32,6 +33,7 @@ const PRODUCTS = [
     body: "قصص الأنبياء المصورة، الحروف والأرقام، أناشيد هادفة لحماية أطفالك من إدمان شاشات الهواتف ومحتوى الإنترنت العشوائي.",
     price: "149 درهم",
     oldPrice: "249 درهم",
+    savings: "توفير 100 درهم",
   },
   {
     href: "/products/music",
@@ -43,6 +45,19 @@ const PRODUCTS = [
     body: "أفضل المقاطع الموسيقية المغربية والشرقية المختارة للسفر والسيارة، جاهزة بصيغة MP3 عالية النقاء وبدون انقطاع.",
     price: "199 درهم",
     oldPrice: "299 درهم",
+    savings: "توفير 100 درهم",
+  },
+  {
+    href: "/products/pack-royal",
+    badge: "الأكثر طلباً - شحن مجاني",
+    badgeClass: "bg-moroccoRed text-white",
+    image: "/images/royal/pack-hero.svg",
+    alt: "الباك الملكي المتكامل",
+    title: "الباك الملكي المتكامل",
+    body: "زيت التدليك المركز + عسل الطاقة بالأعشاب الطبيعية",
+    price: "199 درهم",
+    oldPrice: "450 درهم",
+    savings: "توفير 251 درهم",
   },
 ] as const;
 
@@ -221,7 +236,7 @@ export function HomePage() {
                       </span>
                     </div>
                     <span className="rounded bg-emeraldCustom/10 px-2 py-0.5 text-xs font-bold text-emeraldCustom">
-                      توفير 100 درهم
+                      {p.savings}
                     </span>
                   </div>
                   <Link
