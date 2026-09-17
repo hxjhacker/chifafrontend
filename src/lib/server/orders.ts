@@ -16,10 +16,13 @@ const PRODUCT_SLUGS = new Set([
   "almisk_alabyad",
   "kids",
   "educative",
+  "pack-royal",
+  "pack-royal-power",
 ]);
 const TIER_CENTS: Record<number, number> = { 1: 19900, 2: 27900, 3: 34900 };
 const EDUCATIVE_TIER_CENTS: Record<number, number> = { 1: 14900, 2: 24900, 3: 32900 };
 const TAALIM_TIER_CENTS: Record<number, number> = { 1: 19900, 2: 29900, 3: 37900 };
+const ROYAL_PACK_TIER_CENTS: Record<number, number> = { 1: 19900, 2: 34900 };
 const CROSS_SELL_CENTS = 19900;
 const UPSELL_CENTS = 9900;
 
@@ -71,6 +74,7 @@ export class OrderError extends Error {
 
 function canonicalProductSlug(slug: string) {
   if (slug === "kids" || slug === "educative") return "taalim";
+  if (slug === "pack-royal") return "pack-royal-power";
   return slug;
 }
 
@@ -81,6 +85,7 @@ function centsToMad(cents: number) {
 function tierTable(slug: string) {
   if (slug === "educative") return EDUCATIVE_TIER_CENTS;
   if (slug === "taalim") return TAALIM_TIER_CENTS;
+  if (slug === "pack-royal" || slug === "pack-royal-power") return ROYAL_PACK_TIER_CENTS;
   return TIER_CENTS;
 }
 
@@ -141,6 +146,8 @@ async function pushSheets(order: OrderRow, items: ItemRow[]) {
     almisk_alabyad: "المسك الأبيض",
     kids: "USB تعليم الأطفال",
     educative: "الفلاشة التعليمية الذكية للأطفال",
+    "pack-royal-power": "الباك الملكي المتكامل",
+    "pack-royal": "الباك الملكي المتكامل",
   };
   try {
     await fetch(url, {

@@ -1,5 +1,8 @@
 export function scrollToOrderFields() {
-  const el = document.getElementById("order-form") ?? document.getElementById("order-fields");
+  const el =
+    document.getElementById("order-form") ??
+    document.getElementById("order-fields") ??
+    document.getElementById("order-section");
   if (!el) return;
   const header = document.querySelector("header");
   const headerH = header instanceof HTMLElement ? header.getBoundingClientRect().height : 72;

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Bell, Clock3, Truck, Volume2, X } from "lucide-react";
+import { DashboardBanner } from "@/components/admin/DashboardAlert";
 import { PushToggle } from "@/components/admin/PushToggle";
 import { IosSwitch } from "@/components/admin/IosSwitch";
 import { ADMIN_CARRIERS, hasTracking, type AdminCarrier, type AdminOrder } from "@/lib/admin";
@@ -385,26 +386,20 @@ export function OverdueOrdersBanner({
   if (count < 1 || hidden) return null;
 
   return (
-    <div className="mb-3 flex flex-col items-start justify-between gap-2 rounded-2xl border border-amber-400/40 bg-amber-50 px-3 py-2.5 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100 sm:flex-row sm:items-center">
-      <p className="text-xs font-bold">
-        ⚠️ لديك {count} طلبات مؤكدة لم يتم إرسالها لشركة الشحن بعد.
-      </p>
-      <div className="flex items-center gap-2">
+    <DashboardBanner
+      tone="warning"
+      className="mb-3"
+      title={`لديك ${count} طلبات مؤكدة لم يتم إرسالها لشركة الشحن بعد.`}
+      action={
         <button
           type="button"
           onClick={onShow}
-          className="rounded-lg bg-amber-500 px-3 py-1.5 text-[11px] font-black text-white"
+          className="rounded-full bg-[#f59e0b]/20 px-3 py-1.5 text-[11px] font-black text-[#f59e0b] transition hover:bg-[#f59e0b]/30"
         >
           عرض الطلبات
         </button>
-        <button
-          type="button"
-          onClick={() => setHidden(true)}
-          className="rounded-lg px-2 py-1.5 text-[11px] font-bold text-amber-800/80 dark:text-amber-200"
-        >
-          إخفاء
-        </button>
-      </div>
-    </div>
+      }
+      onClose={() => setHidden(true)}
+    />
   );
 }

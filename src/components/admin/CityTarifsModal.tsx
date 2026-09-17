@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Calculator, Loader2, Pencil, Save, Search, X } from "lucide-react";
+import { DashboardBanner, notifyDashboard } from "@/components/admin/DashboardAlert";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 
 export type CityTarifLookup = {
@@ -145,7 +146,9 @@ export function CityTarifsModal({ open, onClose }: Props) {
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") return;
         setRows([]);
-        setError("تعذر تحميل جدول الأسعار.");
+        const msg = "تعذر تحميل جدول الأسعار.";
+        setError(msg);
+        notifyDashboard(msg, "error");
       } finally {
         if (!controller.signal.aborted) setLoading(false);
       }
@@ -193,8 +196,11 @@ export function CityTarifsModal({ open, onClose }: Props) {
       }
       setEditingKey(null);
       setDraft(null);
+      notifyDashboard("تم حفظ تعريفة المدينة", "success");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "تعذر حفظ التعديل");
+      const msg = err instanceof Error ? err.message : "تعذر حفظ التعديل";
+      setError(msg);
+      notifyDashboard(msg, "error");
     } finally {
       setSaving(false);
     }
@@ -253,9 +259,7 @@ export function CityTarifsModal({ open, onClose }: Props) {
 
         <div className="min-h-0 flex-1 overflow-auto px-5 py-4">
           {error ? (
-            <p className="mb-3 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-bold text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200">
-              {error}
-            </p>
+            <DashboardBanner tone="error" className="mb-3" title={error} onClose={() => setError("")} />
           ) : null}
           {loading && !rows.length ? (
             <div className="flex items-center justify-center gap-2 py-16 text-sm font-bold text-royal/60 dark:text-slate-400">

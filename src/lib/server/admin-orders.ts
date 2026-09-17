@@ -49,6 +49,7 @@ const CATALOG_BY_SLUG: Record<string, { code: string; quick_product_id: number |
   zit_alfasokh: { code: "zital2/7513", quick_product_id: 5775, is_quick_stock: true },
   alkhatm_alrijali: { code: "KH01/7513", quick_product_id: 6005, is_quick_stock: true },
   almisk_alabyad: { code: "MSK_01/7513", quick_product_id: 6107, is_quick_stock: true },
+  "pack-royal-power": { code: "PACK_ROYAL", quick_product_id: null, is_quick_stock: false },
 };
 
 const ALLOWED: AdminStatus[] = ["new", "confirmed", "shipped", "delivered", "returned", "cancelled"];

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Chifaglow</string>
+    <string name="title_activity_main">Chifaglow</string>
+    <string name="package_name">com.chifaglow.app</string>
+    <string name="custom_url_scheme">com.chifaglow.app</string>
+</resources>

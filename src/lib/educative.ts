@@ -1,4 +1,5 @@
 export const EDUCATIVE_SLUG = "educative" as const;
+export const TAALIM_SLUG = "taalim" as const;
 export const STOCK_LEFT = 14;
 export const STOCK_CAP = 50;
 

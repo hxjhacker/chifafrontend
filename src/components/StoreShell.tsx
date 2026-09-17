@@ -18,6 +18,15 @@ function ShellInner({ children }: { children: React.ReactNode }) {
       </>
     );
   }
+  if (pathname?.startsWith("/lp")) {
+    return (
+      <>
+        <ThemeSync />
+        <PixelLoader />
+        {children}
+      </>
+    );
+  }
   const raisedFloats =
     pathname === "/product" || pathname === "/usb-taalim" || pathname.startsWith("/products/");
   if (pathname === "/usb-taalim") {

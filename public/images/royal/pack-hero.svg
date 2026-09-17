@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="800" y2="800">
+      <stop offset="0%" stop-color="#07140F"/>
+      <stop offset="55%" stop-color="#0B1A14"/>
+      <stop offset="100%" stop-color="#10231C"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="42%" r="48%">
+      <stop offset="0%" stop-color="#D4AF37" stop-opacity=".28"/>
+      <stop offset="100%" stop-color="#D4AF37" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="oilGlass" x1="250" y1="180" x2="390" y2="620">
+      <stop offset="0%" stop-color="#14532D"/>
+      <stop offset="45%" stop-color="#064E3B"/>
+      <stop offset="100%" stop-color="#022C22"/>
+    </linearGradient>
+    <linearGradient id="honeyGlass" x1="430" y1="250" x2="600" y2="640">
+      <stop offset="0%" stop-color="#F6E05E"/>
+      <stop offset="50%" stop-color="#D4AF37"/>
+      <stop offset="100%" stop-color="#92400E"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F3E9C8"/>
+      <stop offset="50%" stop-color="#D4AF37"/>
+      <stop offset="100%" stop-color="#AA820A"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="800" rx="48" fill="url(#bg)"/>
+  <rect width="800" height="800" fill="url(#glow)"/>
+  <circle cx="400" cy="400" r="290" stroke="#D4AF37" stroke-opacity=".18" stroke-width="2"/>
+  <circle cx="400" cy="400" r="250" stroke="#10B981" stroke-opacity=".12" stroke-width="1"/>
+
+  <!-- Honey jar -->
+  <rect x="448" y="268" width="168" height="278" rx="28" fill="url(#honeyGlass)"/>
+  <rect x="468" y="300" width="128" height="210" rx="16" fill="#FBBF24" fill-opacity=".35"/>
+  <path d="M490 360h84M490 400h84M490 440h84" stroke="#92400E" stroke-opacity=".25" stroke-width="6"/>
+  <rect x="470" y="232" width="124" height="44" rx="8" fill="url(#gold)"/>
+  <rect x="494" y="208" width="76" height="28" rx="6" fill="#1F2937"/>
+  <ellipse cx="532" cy="548" rx="70" ry="14" fill="#000" opacity=".25"/>
+
+  <!-- Oil bottle -->
+  <rect x="236" y="214" width="148" height="330" rx="36" fill="url(#oilGlass)"/>
+  <rect x="258" y="250" width="104" height="250" rx="24" fill="#34D399" fill-opacity=".12"/>
+  <path d="M278 320c22 18 64 18 86 0" stroke="#A7F3D0" stroke-opacity=".4" stroke-width="3"/>
+  <rect x="276" y="168" width="68" height="56" rx="10" fill="url(#gold)"/>
+  <rect x="292" y="132" width="36" height="44" rx="8" fill="#111827"/>
+  <circle cx="310" cy="126" r="10" fill="url(#gold)"/>
+  <ellipse cx="310" cy="552" rx="72" ry="16" fill="#000" opacity=".28"/>
+
+  <text x="400" y="680" text-anchor="middle" fill="#F3E9C8" font-size="28" font-family="Georgia, serif" letter-spacing="4">ROYAL POWER</text>
+  <text x="400" y="718" text-anchor="middle" fill="#10B981" font-size="20" font-family="Tahoma, sans-serif">'D2J* 'DEDCJ + 'D93D 'DEDCJ</text>
+</svg>

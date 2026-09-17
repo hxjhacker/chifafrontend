@@ -148,6 +148,8 @@ export const PACK_NAMES: Record<string, string> = {
   kids: "USB تعليم الأطفال",
   educative: "الفلاشة التعليمية الذكية",
   extra: "مفتاح إضافي بسعر العرض",
+  "pack-royal-power": "الباك الملكي المتكامل",
+  "pack-royal": "الباك الملكي المتكامل",
 };
 
 export const NEW_EQUIV = new Set(["pending", "upsell_accepted", "new"]);
@@ -267,7 +269,16 @@ export function packLabel(order: {
   cross_sell_slug: string | null;
   upsell_slug: string | null;
 }) {
-  const parts = [`${PACK_NAMES[order.product_slug] || order.product_slug} × ${order.tier_qty}`];
+  const royalLabels: Record<number, string> = {
+    1: "الزيت الملكي (تدليك مركز)",
+    2: "الباك الملكي المتكامل (زيت + عسل)",
+    3: "الباك الملكي المضاعف (2 زيت + 2 عسل)",
+  };
+  const primary =
+    order.product_slug === "pack-royal-power" || order.product_slug === "pack-royal"
+      ? royalLabels[order.tier_qty] || PACK_NAMES[order.product_slug]
+      : `${PACK_NAMES[order.product_slug] || order.product_slug} × ${order.tier_qty}`;
+  const parts = [primary];
   if (order.cross_sell_slug) parts.push(PACK_NAMES[order.cross_sell_slug] || order.cross_sell_slug);
   if (order.upsell_slug) parts.push(`${PACK_NAMES[order.upsell_slug] || order.upsell_slug} (عرض)`);
   return parts.join(" + ");

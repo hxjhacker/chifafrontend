@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Loader2, Pencil, RefreshCw, Save, Search, X } from "lucide-react";
+import { DashboardBanner, notifyDashboard } from "@/components/admin/DashboardAlert";
 import { DASHBOARD_HOME } from "@/lib/admin-paths";
 
 type PricingCity = {
@@ -81,7 +82,9 @@ export function PricingComparisonPage() {
       setRows(Array.isArray(data.cities) ? data.cities : []);
       setStats(data.stats || null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "تعذر تحميل الأسعار");
+      const msg = err instanceof Error ? err.message : "تعذر تحميل الأسعار";
+      setError(msg);
+      notifyDashboard(msg, "error");
       setRows([]);
     } finally {
       setLoading(false);
@@ -110,8 +113,11 @@ export function PricingComparisonPage() {
         throw new Error(data.detail || "seed_failed");
       }
       await load();
+      notifyDashboard("تم تحديث قائمة المدن بنجاح", "success");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "تعذر تحديث المدن");
+      const msg = err instanceof Error ? err.message : "تعذر تحديث المدن";
+      setError(msg);
+      notifyDashboard(msg, "error");
     } finally {
       setSeeding(false);
     }
@@ -146,8 +152,11 @@ export function PricingComparisonPage() {
       setRows((list) => list.map((row) => (row.id === id ? { ...row, ...updated } : row)));
       setEditingId(null);
       setDraft(null);
+      notifyDashboard("تم حفظ تعريفة المدينة", "success");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "تعذر حفظ التعديل");
+      const msg = err instanceof Error ? err.message : "تعذر حفظ التعديل";
+      setError(msg);
+      notifyDashboard(msg, "error");
     } finally {
       setSaving(false);
     }
@@ -186,12 +195,11 @@ export function PricingComparisonPage() {
           </div>
         </div>
 
-        <div
-          className="rounded-2xl border px-4 py-3 text-sm font-semibold leading-relaxed text-emerald-200"
-          style={{ borderColor: "rgba(16,185,129,0.35)", background: "linear-gradient(90deg,#10261d,#0b1324)" }}
-        >
-          🎉 ميزة QuickLivraison: الارجاع (Retour) والرفض (Refus) مجاني 0 درهم لجميع المدن
-        </div>
+        <DashboardBanner
+          tone="success"
+          title="ميزة QuickLivraison"
+          detail="الارجاع (Retour) والرفض (Refus) مجاني 0 درهم لجميع المدن"
+        />
 
         <div className="grid gap-3 sm:grid-cols-3">
           {[
@@ -219,7 +227,7 @@ export function PricingComparisonPage() {
         </div>
 
         {error ? (
-          <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{error}</div>
+          <DashboardBanner tone="error" title={error} onClose={() => setError("")} />
         ) : null}
 
         <div className="overflow-hidden rounded-2xl border" style={{ borderColor: "#1e2d4a", background: "#0b1324" }}>

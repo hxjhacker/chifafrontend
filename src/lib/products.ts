@@ -120,13 +120,13 @@ export const PRODUCTS: Product[] = [
 ];
 
 export function getProduct(slug: string) {
-  if (slug === "educative") {
+  if (slug === "educative" || slug === "taalim") {
     const kids = PRODUCTS.find((p) => p.slug === "kids");
     if (!kids) return undefined;
     return {
       ...kids,
-      nameAr: "الفلاشة التعليمية الذكية للأطفال",
-      tagline: "100% بدون إنترنت — رفيق التفوق المدرسي.",
+      nameAr: slug === "taalim" ? "فلاشة Taalim Kids التعليمية" : "الفلاشة التعليمية الذكية للأطفال",
+      tagline: slug === "taalim" ? "حوّل التلفاز إلى مدرسة ذكية لطفلك." : "100% بدون إنترنت — رفيق التفوق المدرسي.",
     };
   }
   return PRODUCTS.find((p) => p.slug === slug);

@@ -14,7 +14,7 @@ const PRODUCT_SET = new Set<string>(VIEW_PRODUCTS);
 
 export function normalizeViewSlug(slug?: string | null) {
   const raw = String(slug || "").trim().toLowerCase();
-  if (raw === "educative") return "kids";
+  if (raw === "educative" || raw === "taalim") return "kids";
   if (PRODUCT_SET.has(raw)) return raw as ViewProductSlug;
   return null;
 }

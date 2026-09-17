@@ -25,6 +25,7 @@ const PRIMARY_PRODUCTS = [
   { slug: "zit_alfasokh", label: "زيت الفسوخ (249 درهم)", price: 249 },
   { slug: "alkhatm_alrijali", label: "الخاتم الرجالي (299 درهم)", price: 299 },
   { slug: "almisk_alabyad", label: "المسك الأبيض (199 درهم)", price: 199 },
+  { slug: "pack-royal-power", label: "الباك الملكي المتكامل (199 درهم)", price: 199 },
 ] as const;
 
 const SECONDARY_PRODUCTS = [

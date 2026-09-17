@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, type ReactNode } from "react";
+import { DashboardToastHost } from "@/components/admin/DashboardAlert";
 
 function isEditableTarget(target: EventTarget | null) {
   if (!(target instanceof HTMLElement)) return false;
   if (target.isContentEditable) return true;
   const tag = target.tagName;
   if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
-  return Boolean(target.closest("input, textarea, select, [contenteditable='true']"));
+  return Boolean(target.closest("input, textarea, select, [contenteditable='true'], [data-allow-select]"));
 }
 
 function isInspectShortcut(e: KeyboardEvent) {
@@ -62,5 +63,10 @@ export function DashboardShield({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  return <div className="no-select select-none">{children}</div>;
+  return (
+    <div className="no-select select-none">
+      {children}
+      <DashboardToastHost />
+    </div>
+  );
 }

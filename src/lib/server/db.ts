@@ -337,6 +337,20 @@ const PRODUCT_SEED = [
     stock_quantity: 22,
     default_price_cents: 19900,
   },
+  {
+    slug: "pack-royal-power",
+    code: "PACK_ROYAL",
+    name_ar: "الباك الملكي المتكامل",
+    name_en: "Royal Dual Pack",
+    tagline_ar: "زيت التدليك المركز + عسل الطاقة بالأعشاب — طاقة وصلابة طبيعية.",
+    description_ar: "الباك الملكي المتكامل: زيت التدليك المركز وعسل الطاقة بالأعشاب. تغليف سري والدفع عند الاستلام.",
+    accent: "emerald",
+    category: "standard",
+    is_quick_stock: false,
+    quick_product_id: null as number | null,
+    stock_quantity: 999,
+    default_price_cents: 19900,
+  },
 ] as const;
 
 const ACTIVE_PRODUCT_SLUGS = PRODUCT_SEED.map((product) => product.slug);

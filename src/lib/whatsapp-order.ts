@@ -96,6 +96,17 @@ const STORE_FALLBACK: WhatsAppCatalogProduct[] = [
     stockTone: "blue",
     quickProductId: null,
   },
+  {
+    slug: "pack-royal-power",
+    name: "الباك الملكي المتكامل",
+    code: "PACK_ROYAL",
+    price: 199,
+    isQuickStock: false,
+    stockQuantity: null,
+    stockLabel: "شحن عادي",
+    stockTone: "blue",
+    quickProductId: null,
+  },
 ];
 
 function quickStockTone(qty: number): WhatsAppStockTone {

@@ -4,8 +4,9 @@ import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { FAQS } from "@/lib/educative";
 
-export function Faq() {
+export function Faq({ items }: { items?: { q: string; a: string }[] }) {
   const [open, setOpen] = useState(0);
+  const list = items ?? FAQS;
 
   return (
     <section aria-labelledby="faq-heading">
@@ -13,7 +14,7 @@ export function Faq() {
         أسئلة كيطرحوها بزاف
       </h2>
       <div className="mt-5 space-y-3">
-        {FAQS.map((item, index) => {
+        {list.map((item, index) => {
           const expanded = open === index;
           const panelId = `faq-panel-${index}`;
           return (

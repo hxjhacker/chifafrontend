@@ -11,6 +11,7 @@ export const MANUAL_PRODUCTS = [
   { id: "zit_alfasokh", label: "زيت الفسوخ", price: 249, slug: "zit_alfasokh", qty: 1 },
   { id: "alkhatm_alrijali", label: "الخاتم الرجالي", price: 299, slug: "alkhatm_alrijali", qty: 1 },
   { id: "almisk_alabyad", label: "المسك الأبيض", price: 199, slug: "almisk_alabyad", qty: 1 },
+  { id: "pack-royal-power", label: "الباك الملكي المتكامل", price: 199, slug: "pack-royal-power", qty: 1 },
 ] as const;
 
 export const CITY_CHART_COLORS = ["#84bfce", "#e3fb71", "#d050cf", "#6ece55", "#4eaff7", "#22df36", "#f59e0b", "#e11d48", "#0A192F", "#D4AF37"];

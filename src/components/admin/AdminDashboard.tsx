@@ -4,8 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import {
   Calculator,
-  CheckCircle2,
-  CircleAlert,
   ChevronLeft,
   ChevronRight,
   Download,
@@ -38,8 +36,10 @@ import { BulkActionBar } from "@/components/admin/BulkActionBar";
 import { CityTarifsModal } from "@/components/admin/CityTarifsModal";
 import { CompleteDetailsModal } from "@/components/admin/CompleteDetailsModal";
 import { IosSwitch } from "@/components/admin/IosSwitch";
+import { LandingPagesCard } from "@/components/admin/LandingPagesCard";
 import { LogisticsKpiCards } from "@/components/admin/LogisticsKpiCards";
 import { MoroccoMap } from "@/components/admin/MoroccoMap";
+import { DashboardBanner, notifyDashboard } from "@/components/admin/DashboardAlert";
 import { OrderAlertsBell, OverdueOrdersBanner } from "@/components/admin/OrderAlertsBell";
 import { OrderDesktopRow, OrderMobileCard } from "@/components/admin/OrderRow";
 import { OrderTimelineModal } from "@/components/admin/OrderTimelineModal";
@@ -203,8 +203,6 @@ export function AdminDashboard() {
   const [undispatchedOnly, setUndispatchedOnly] = useState(false);
   const [alerts, setAlerts] = useState<UndispatchedSummary>(EMPTY_UNDISPATCHED);
   const [syncingTracking, setSyncingTracking] = useState(false);
-  const [notice, setNotice] = useState("");
-  const [noticeKind, setNoticeKind] = useState<"ok" | "warn">("ok");
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [hideAll, setHideAll] = useState(false);
   const [hideOverview, setHideOverview] = useState(false);
@@ -222,12 +220,6 @@ export function AdminDashboard() {
 
   const closeTimeline = useCallback(() => setViewingId(null), []);
   const closePrint = useCallback(() => setPrintingId(null), []);
-
-  useEffect(() => {
-    if (!notice) return;
-    const timer = window.setTimeout(() => setNotice(""), 4200);
-    return () => window.clearTimeout(timer);
-  }, [notice]);
 
   useEffect(() => {
     setPrefs(readPrefs());
@@ -294,8 +286,7 @@ export function AdminDashboard() {
         const body = (await ordersRes.json().catch(() => ({}))) as { detail?: string; message?: string };
         const msg = serverErrorMessage(ordersRes.status, body.message || body.detail, "تعذر تحميل الطلبات.");
         setError(msg);
-        setNoticeKind("warn");
-        setNotice(msg);
+        notifyDashboard(msg, "error");
       }
     } catch (err) {
       const msg =
@@ -303,8 +294,7 @@ export function AdminDashboard() {
           ? "انتهت مهلة الاتصال بالخادم."
           : "تعذر الاتصال بالخادم.";
       setError(msg);
-      setNoticeKind("warn");
-      setNotice(msg);
+      notifyDashboard(msg, "error");
     } finally {
       setLoading(false);
     }
@@ -349,7 +339,9 @@ export function AdminDashboard() {
     if (next === order.status) return;
     if (!canTransitionStatus(order.status, next)) {
       selectEl.value = order.status;
-      setError("لا يمكن القفز في حالة الطلب. اتبع المسار: جديدة → تم التأكيد → قيد الشحن → تم التسليم / مرتجع.");
+      const msg = "لا يمكن القفز في حالة الطلب. اتبع المسار: جديدة → تم التأكيد → قيد الشحن → تم التسليم / مرتجع.";
+      setError(msg);
+      notifyDashboard(msg, "warning");
       return;
     }
     if (needsConfirmModal(order, next)) {
@@ -386,8 +378,7 @@ export function AdminDashboard() {
       setOrders((list) => list.map((o) => (o.order_id === order.order_id ? { ...o, status: prev } : o)));
       const msg = err instanceof Error && err.message !== "fail" ? err.message : "فشل تحديث الحالة. أعد المحاولة.";
       setError(msg);
-      setNoticeKind("warn");
-      setNotice(msg);
+      notifyDashboard(msg, "error");
     } finally {
       setSavingId(null);
     }
@@ -397,7 +388,9 @@ export function AdminDashboard() {
     const phone = copyablePhone(order);
     const ok = await copyText(phone);
     if (!ok) {
-      setError("تعذر نسخ الرقم. انسخه يدوياً.");
+      const msg = "تعذر نسخ الرقم. انسخه يدوياً.";
+      setError(msg);
+      notifyDashboard(msg, "error");
       return;
     }
     setCopiedId(order.order_id);
@@ -409,7 +402,9 @@ export function AdminDashboard() {
     if (!code) return;
     const ok = await copyText(code);
     if (!ok) {
-      setError("تعذر نسخ كود التتبع. انسخه يدوياً.");
+      const msg = "تعذر نسخ كود التتبع. انسخه يدوياً.";
+      setError(msg);
+      notifyDashboard(msg, "error");
       return;
     }
     setCopiedTrackingId(order.order_id);
@@ -418,8 +413,7 @@ export function AdminDashboard() {
 
   function printShipping(order: AdminOrder) {
     if (!hasTracking(order)) {
-      setNoticeKind("warn");
-      setNotice(LABEL_PRINT_HINT);
+      notifyDashboard(LABEL_PRINT_HINT, "warning");
       return;
     }
     setPrintingId(order.order_id);
@@ -450,11 +444,12 @@ export function AdminDashboard() {
       setOrders((list) => [created, ...list]);
       setPage(1);
       if (status !== "all" && status !== "new") setStatus("all");
-      setNoticeKind("ok");
-      setNotice("تم إنشاء طلبية جديدة بنجاح من هذه الطلبية");
+      notifyDashboard("تم إنشاء طلبية جديدة بنجاح من هذه الطلبية", "success");
       await refreshStats();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "تعذر إنشاء الطلبية الجديدة.");
+      const msg = err instanceof Error ? err.message : "تعذر إنشاء الطلبية الجديدة.";
+      setError(msg);
+      notifyDashboard(msg, "error");
     } finally {
       setDuplicatingId(null);
     }
@@ -463,22 +458,24 @@ export function AdminDashboard() {
   async function sendToLivraison(order: AdminOrder, carrier: AdminCarrier = "meta_livraison") {
     if (shippingId) return;
     if (order.meta_livraison_code) {
-      setNoticeKind("ok");
-      setNotice(`الطلب مرسل مسبقاً إلى ${carrierLabel(order.carrier)}: ${displayTrackingCode(order)}`);
+      notifyDashboard("الطلب مرسل مسبقاً", "info", `${carrierLabel(order.carrier)}: ${displayTrackingCode(order)}`);
       return;
     }
     if (order.status === "cancelled" || order.status === "returned") {
-      setError(order.status === "returned" ? "لا يمكن شحن طلبية مرتجعة." : "لا يمكن شحن طلبية ملغاة.");
+      const msg = order.status === "returned" ? "لا يمكن شحن طلبية مرتجعة." : "لا يمكن شحن طلبية ملغاة.";
+      setError(msg);
+      notifyDashboard(msg, "error");
       return;
     }
     if (!hasCompleteConfirmDetails(order)) {
       setCompleting(order);
-      setError("كمّل عنوان التوصيل قبل إرسال الطرد.");
+      const msg = "كمّل عنوان التوصيل قبل إرسال الطرد.";
+      setError(msg);
+      notifyDashboard(msg, "warning");
       return;
     }
     if (carrier === "force_log") {
-      setNoticeKind("warn");
-      setNotice("Force Log غير مفعّل بعد.");
+      notifyDashboard("Force Log غير مفعّل بعد.", "warning");
       return;
     }
     setShippingId(order.order_id);
@@ -520,29 +517,28 @@ export function AdminDashboard() {
             `تعذر إرسال الطرد إلى ${carrierLabel(carrier)}.`,
         );
       }
-      setOrders((list) =>
-        list.map((row) =>
-          row.order_id === order.order_id
-            ? {
-                ...row,
-                ...body,
-                proxied_status: undefined,
-                target_url: undefined,
-                backend_response: undefined,
-                success: undefined,
-              }
-            : row,
-        ),
-      );
-      setNoticeKind("ok");
-      setNotice(
-        body.meta_livraison_code
-          ? `تم إرسال الطرد عبر ${carrierLabel(carrier)}. كود التتبع: ${body.meta_livraison_code}`
-          : `تم إرسال الطرد عبر ${carrierLabel(carrier)}.`,
+      const merged = {
+        ...order,
+        ...body,
+        carrier,
+        proxied_status: undefined,
+        target_url: undefined,
+        backend_response: undefined,
+        success: undefined,
+      };
+      setOrders((list) => list.map((row) => (row.order_id === order.order_id ? merged : row)));
+      const tracking = displayTrackingCode(merged) || String(body.meta_livraison_code || "").trim();
+      notifyDashboard(
+        `تم إرسال الطرد عبر ${carrierLabel(carrier)} بنجاح`,
+        "success",
+        tracking ? `كود التتبع: ${tracking}` : undefined,
       );
       await refreshStats();
     } catch (err) {
-      setError(err instanceof Error ? err.message : `تعذر إرسال الطرد إلى ${carrierLabel(carrier)}.`);
+      const msg = err instanceof Error ? err.message : `تعذر إرسال الطرد إلى ${carrierLabel(carrier)}.`;
+      const warning = /غير مربوطة|غير مطابقة|Force Log|كمّل معلومات/i.test(msg);
+      setError(msg);
+      notifyDashboard(msg, warning ? "warning" : "error");
     } finally {
       setShippingId(null);
     }
@@ -551,21 +547,26 @@ export function AdminDashboard() {
   async function sendQuickStock(order: AdminOrder) {
     if (shippingId) return;
     if (order.meta_livraison_code) {
-      setNoticeKind("ok");
-      setNotice(`الطلب مرسل مسبقاً إلى ${carrierLabel(order.carrier)}: ${displayTrackingCode(order)}`);
+      notifyDashboard("الطلب مرسل مسبقاً", "info", `${carrierLabel(order.carrier)}: ${displayTrackingCode(order)}`);
       return;
     }
     if (order.status === "cancelled" || order.status === "returned") {
-      setError(order.status === "returned" ? "لا يمكن شحن طلبية مرتجعة." : "لا يمكن شحن طلبية ملغاة.");
+      const msg = order.status === "returned" ? "لا يمكن شحن طلبية مرتجعة." : "لا يمكن شحن طلبية ملغاة.";
+      setError(msg);
+      notifyDashboard(msg, "error");
       return;
     }
     if (!hasCompleteConfirmDetails(order)) {
       setCompleting(order);
-      setError("كمّل عنوان التوصيل قبل إرسال الطرد.");
+      const msg = "كمّل عنوان التوصيل قبل إرسال الطرد.";
+      setError(msg);
+      notifyDashboard(msg, "warning");
       return;
     }
     if (!order.is_quick_stock || !order.quick_product_id) {
-      setError("هذا المنتج ليس من مخزون Quick. استخدم شحن الناقل العادي، أو أضف معرف Quick من إدارة المنتجات.");
+      const msg = "هذا المنتج ليس من مخزون Quick. استخدم شحن الناقل العادي، أو أضف معرف Quick من إدارة المنتجات.";
+      setError(msg);
+      notifyDashboard(msg, "warning");
       return;
     }
     setShippingId(order.order_id);
@@ -616,9 +617,9 @@ export function AdminDashboard() {
           mapped ||
           (cityLabel ? `المدينة غير مطابقة في نظام Quick Livraison: ${cityLabel}` : "") ||
           "تعذر تسجيل الطلب في مخزون Quick.";
+        const warning = /غير مطابقة|غير مربوطة|كمّل معلومات|ليس من مخزون/i.test(msg);
         setError(msg);
-        setNoticeKind("warn");
-        setNotice(msg);
+        notifyDashboard("تعذر إرسال الطرد إلى Quick Livraison", warning ? "warning" : "error", msg);
         return;
       }
       const rawTracking = String(body.meta_livraison_code || body.code_envoi || body.tracking_number || "").trim();
@@ -644,8 +645,11 @@ export function AdminDashboard() {
             : row,
         ),
       );
-      setNoticeKind("ok");
-      setNotice(tracking ? `تم إرسال KH01 من مخزون Quick — ${tracking}` : "تم إرسال KH01 من مخزون Quick");
+      notifyDashboard(
+        "تم إرسال الطرد عبر Quick Livraison بنجاح",
+        "success",
+        tracking ? `كود التتبع: ${tracking}` : undefined,
+      );
       await refreshStats();
     } catch (err) {
       const cityLabel = String(order.shipping_city || order.city || "").trim();
@@ -656,9 +660,9 @@ export function AdminDashboard() {
           : cityLabel
             ? `المدينة غير مطابقة في نظام Quick Livraison: ${cityLabel}`
             : "تعذر تسجيل الطلب في مخزون Quick.";
+      const warning = /غير مطابقة|غير مربوطة/i.test(msg);
       setError(msg);
-      setNoticeKind("warn");
-      setNotice(msg);
+      notifyDashboard("تعذر إرسال الطرد إلى Quick Livraison", warning ? "warning" : "error", msg);
     } finally {
       setShippingId(null);
     }
@@ -715,7 +719,9 @@ export function AdminDashboard() {
         link.click();
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "تعذر تنفيذ العملية.");
+      const msg = err instanceof Error ? err.message : "تعذر تنفيذ العملية.";
+      setError(msg);
+      notifyDashboard(msg, "error");
     } finally {
       setBulkBusy(null);
     }
@@ -751,16 +757,18 @@ export function AdminDashboard() {
       const ok = Number(body.success_count || 0);
       const fail = Number(body.failed_count || 0);
       const firstFail = (body.results || []).find((row) => !row.success)?.error;
-      setNoticeKind(fail ? "warn" : "ok");
-      setNotice(`تم إرسال ${ok} طلبية إلى ${carrierLabel(dispatchCarrier)}${fail ? ` — فشل ${fail}${firstFail ? ` (${firstFail})` : ""}` : ""}.`);
+      notifyDashboard(
+        fail ? `تم إرسال ${ok} طلبية إلى ${carrierLabel(dispatchCarrier)}` : `تم إرسال ${ok} طلبية إلى ${carrierLabel(dispatchCarrier)} بنجاح`,
+        fail ? "warning" : "success",
+        fail ? `فشل ${fail}${firstFail ? ` (${firstFail})` : ""}` : undefined,
+      );
       setBulkConfirm(false);
       await load();
       await refreshStats();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "تعذر الإرسال الجماعي.";
       setError(msg);
-      setNoticeKind("warn");
-      setNotice(msg);
+      notifyDashboard(msg, "error");
     } finally {
       setBulkBusy(null);
     }
@@ -793,12 +801,14 @@ export function AdminDashboard() {
         throw new Error(map[String(body.detail || body.error || "")] || body.message || "تعذر تحديث التتبع.");
       }
       const n = Number(body.updated_count || 0);
-      setNoticeKind("ok");
-      setNotice(`تم تحديث حالات الشحن بنجاح (${n} طلبية تم تحديثها)`);
+      notifyDashboard(
+        "تم تحديث تتبع الطلبيات بنجاح",
+        "success",
+        n > 0 ? `تم تحديث ${n} طلبية` : "لا توجد حالات جديدة للتحديث",
+      );
       await load();
     } catch (err) {
-      setNoticeKind("warn");
-      setNotice(err instanceof Error ? err.message : "تعذر تحديث التتبع. أعد المحاولة.");
+      notifyDashboard(err instanceof Error ? err.message : "تعذر تحديث التتبع. أعد المحاولة.", "error");
     } finally {
       setSyncingTracking(false);
     }
@@ -818,7 +828,9 @@ export function AdminDashboard() {
       setDeleteTarget(null);
       await refreshStats();
     } catch {
-      setError("فشل حذف الطلبية. أعد المحاولة.");
+      const msg = "فشل حذف الطلبية. أعد المحاولة.";
+      setError(msg);
+      notifyDashboard(msg, "error");
     } finally {
       setDeleting(false);
     }
@@ -918,8 +930,7 @@ export function AdminDashboard() {
       setPage(1);
     },
     onNotice: (message: string, kind?: "ok" | "warn") => {
-      setNoticeKind(kind || "ok");
-      setNotice(message);
+      notifyDashboard(message, kind);
     },
     onSummary: setAlerts,
   };
@@ -935,6 +946,7 @@ export function AdminDashboard() {
           setOrders((list) => [order, ...list]);
           setPage(1);
           void refreshStats();
+          notifyDashboard("تم إنشاء الطلبية بنجاح", "success");
         }}
       />
       <CityTarifsModal open={tarifsOpen} onClose={() => setTarifsOpen(false)} />
@@ -942,8 +954,7 @@ export function AdminDashboard() {
         open={productsOpen}
         onClose={() => setProductsOpen(false)}
         onNotice={(message, kind) => {
-          setNoticeKind(kind || "ok");
-          setNotice(message);
+          notifyDashboard(message, kind);
         }}
       />
       {prefsOpen ? (
@@ -1013,13 +1024,11 @@ export function AdminDashboard() {
           setOrders((list) => [order, ...list]);
           setPage(1);
           if (status !== "all" && status !== "new") setStatus("all");
-          setNoticeKind("ok");
-          setNotice("تم إنشاء طلبية جديدة بنجاح من هذه الطلبية");
+          notifyDashboard("تم إنشاء طلبية جديدة بنجاح من هذه الطلبية", "success");
           void refreshStats();
         }}
         onWarning={(message) => {
-          setNoticeKind("warn");
-          setNotice(message);
+          notifyDashboard(message, "warning");
         }}
       />
       <OrderTimelineModal
@@ -1354,9 +1363,7 @@ export function AdminDashboard() {
 
       <main className={cn(DASHBOARD_SHELL, "flex-grow space-y-6 py-6", selectedIds.length ? "pb-28" : "")}>
         {error ? (
-          <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-bold text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200">
-            {error}
-          </p>
+          <DashboardBanner tone="error" title={error} onClose={() => setError("")} />
         ) : null}
         {prefs.logistics ? (
           <LogisticsKpiCards
@@ -1365,6 +1372,7 @@ export function AdminDashboard() {
             onToggleNumbers={() => setHideLogistics((v) => !v)}
           />
         ) : null}
+        <LandingPagesCard />
         {prefs.overview ? (
         <div className="relative rounded-3xl border border-gold/20 bg-white p-6 shadow-luxury transition-all dark:bg-cardDark">
           <div className="flex items-center justify-between border-b border-gold/10 pb-4">
@@ -1736,25 +1744,6 @@ export function AdminDashboard() {
         onManifest={() => void openBulkFile("/api/admin/orders/manifest", "text/html", "manifest")}
         onClear={() => setSelectedIds([])}
       />
-      {notice ? (
-        <div
-          role="status"
-          className={cn(
-            "fixed left-1/2 z-[80] flex -translate-x-1/2 items-center gap-2 rounded-2xl border px-4 py-3 text-sm font-bold shadow-2xl",
-            selectedIds.length ? "bottom-24" : "bottom-6",
-            noticeKind === "warn"
-              ? "border-amber-400/40 bg-[#0b1322] text-amber-200"
-              : "border-emerald-400/40 bg-[#0b1322] text-emerald-200",
-          )}
-        >
-        {noticeKind === "warn" ? (
-          <CircleAlert className="h-4 w-4 shrink-0 text-amber-400" />
-        ) : (
-          <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
-        )}
-        {notice}
-      </div>
-    ) : null}
     </>
   );
 }

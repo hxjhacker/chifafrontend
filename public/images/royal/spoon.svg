@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" fill="none">
+  <defs>
+    <linearGradient id="sbg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#140F08"/>
+      <stop offset="100%" stop-color="#1C140A"/>
+    </linearGradient>
+    <linearGradient id="swood" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#E8D5A3"/>
+      <stop offset="100%" stop-color="#92400E"/>
+    </linearGradient>
+    <linearGradient id="shoney" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FDE68A"/>
+      <stop offset="100%" stop-color="#D97706"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="800" rx="48" fill="url(#sbg)"/>
+  <ellipse cx="400" cy="400" rx="250" ry="220" fill="#D4AF37" opacity=".08"/>
+  <rect x="430" y="250" width="210" height="44" rx="22" transform="rotate(28 430 250)" fill="url(#swood)"/>
+  <ellipse cx="330" cy="430" rx="120" ry="78" fill="url(#swood)"/>
+  <ellipse cx="330" cy="428" rx="92" ry="54" fill="url(#shoney)"/>
+  <path d="M330 490c10 40 8 70 0 110" stroke="#F59E0B" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="330" cy="612" r="12" fill="#F59E0B"/>
+  <text x="400" y="680" text-anchor="middle" fill="#F3E9C8" font-size="24" font-family="Tahoma, sans-serif">ED9B) 'D93D 'DJHEJ)</text>
+  <text x="400" y="718" text-anchor="middle" fill="#F59E0B" font-size="16" font-family="Tahoma, sans-serif">5('-'K 9DI 'D1JB</text>
+</svg>

@@ -14,6 +14,7 @@ import { fetchOrder, finalizePurchase, type OrderResponse } from "@/lib/api";
 import { getProduct } from "@/lib/products";
 import { trackPurchaseOnce } from "@/lib/tracking";
 import { waLink, WhatsAppIcon } from "@/components/Chrome";
+import { isRoyalPackSlug, ROYAL_PACK_TIER_LABELS, type RoyalTierQty } from "@/lib/royal-pack";
 
 type OrderDetails = {
   name: string;
@@ -23,6 +24,9 @@ type OrderDetails = {
 };
 
 function productLabel(order: OrderResponse) {
+  if (isRoyalPackSlug(order.product_slug)) {
+    return ROYAL_PACK_TIER_LABELS[order.tier_qty as RoyalTierQty] || "الباك الملكي المتكامل";
+  }
   const product = getProduct(order.product_slug);
   const name = product?.nameAr || order.product_slug;
   return order.tier_qty > 1 ? `${name} × ${order.tier_qty}` : name;
