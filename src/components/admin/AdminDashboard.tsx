@@ -36,7 +36,6 @@ import { BulkActionBar } from "@/components/admin/BulkActionBar";
 import { CityTarifsModal } from "@/components/admin/CityTarifsModal";
 import { CompleteDetailsModal } from "@/components/admin/CompleteDetailsModal";
 import { IosSwitch } from "@/components/admin/IosSwitch";
-import { LandingPagesCard } from "@/components/admin/LandingPagesCard";
 import { LogisticsKpiCards } from "@/components/admin/LogisticsKpiCards";
 import { MoroccoMap } from "@/components/admin/MoroccoMap";
 import { DashboardBanner, notifyDashboard } from "@/components/admin/DashboardAlert";
@@ -1372,7 +1371,6 @@ export function AdminDashboard() {
             onToggleNumbers={() => setHideLogistics((v) => !v)}
           />
         ) : null}
-        <LandingPagesCard />
         {prefs.overview ? (
         <div className="relative rounded-3xl border border-gold/20 bg-white p-6 shadow-luxury transition-all dark:bg-cardDark">
           <div className="flex items-center justify-between border-b border-gold/10 pb-4">
