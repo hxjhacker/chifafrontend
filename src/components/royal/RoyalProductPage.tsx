@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { CheckCircle2, Droplets, Eye, ShieldCheck, Truck, XCircle } from "lucide-react";
 import { TrackPageView } from "@/components/TrackPageView";
 import { ProductCarousel } from "@/components/lp/ProductCarousel";
@@ -11,8 +11,6 @@ import { padTime, useOfferCountdown } from "@/hooks/useOfferCountdown";
 import { scrollToOrderFields } from "@/lib/scroll";
 import { trackFunnel } from "@/lib/tracking";
 import {
-  getRoyalTier,
-  ROYAL_DEFAULT_TIER,
   ROYAL_FAQS,
   ROYAL_FEATURES,
   ROYAL_GALLERY,
@@ -21,18 +19,16 @@ import {
   ROYAL_REVIEWS,
   ROYAL_SPECS,
   ROYAL_STOCK,
-  type RoyalTierQty,
+  ROYAL_TIERS,
 } from "@/lib/royal-pack";
-import { RoyalTierSelector } from "./RoyalTierSelector";
 import { RoyalCodForm } from "./RoyalCodForm";
 
 const STOCK_CAP = 50;
 
 export function RoyalProductPage({ landing = false }: { landing?: boolean }) {
   const initiated = useRef(false);
-  const [qty, setQty] = useState<RoyalTierQty>(ROYAL_DEFAULT_TIER);
   const time = useOfferCountdown("cg-pack-royal-offer-end");
-  const tier = getRoyalTier(qty);
+  const tier = ROYAL_TIERS[0];
   const stockPct = Math.max(8, Math.round((ROYAL_STOCK / STOCK_CAP) * 100));
 
   const markCheckout = useCallback(() => {
@@ -107,11 +103,9 @@ export function RoyalProductPage({ landing = false }: { landing?: boolean }) {
                 </span>
               </div>
               <p className="mt-3 border-t border-gold/10 pt-3 text-sm font-semibold text-royal/80 dark:text-slate-300">
-                {tier.title} · التوصيل مجاني لجميع المدن
+                {tier.title} · {tier.subtitle} · التوصيل مجاني لجميع المدن
               </p>
             </div>
-
-            <RoyalTierSelector value={qty} onChange={setQty} />
 
             <div className="rounded-2xl border border-gold/30 bg-gold/10 p-4 dark:bg-cardDark">
               <p className="text-sm font-bold text-royal dark:text-white">العرض ينتهي خلال</p>

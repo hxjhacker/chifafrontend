@@ -22,7 +22,7 @@ const PRODUCT_SLUGS = new Set([
 const TIER_CENTS: Record<number, number> = { 1: 19900, 2: 27900, 3: 34900 };
 const EDUCATIVE_TIER_CENTS: Record<number, number> = { 1: 14900, 2: 24900, 3: 32900 };
 const TAALIM_TIER_CENTS: Record<number, number> = { 1: 19900, 2: 29900, 3: 37900 };
-const ROYAL_PACK_TIER_CENTS: Record<number, number> = { 1: 19900, 2: 34900 };
+const ROYAL_PACK_TIER_CENTS: Record<number, number> = { 1: 19900 };
 const CROSS_SELL_CENTS = 19900;
 const UPSELL_CENTS = 9900;
 
@@ -208,6 +208,9 @@ export async function createOrder(
   if (payload.cross_sell_slug) {
     if (crossSlug === productSlug || !PRODUCT_SLUGS.has(payload.cross_sell_slug)) {
       throw new OrderError(422, "invalid_cross_sell");
+    }
+    if (productSlug === "pack-royal-power") {
+      throw new OrderError(422, "cross_sell_not_available");
     }
   }
 

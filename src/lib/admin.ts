@@ -269,14 +269,9 @@ export function packLabel(order: {
   cross_sell_slug: string | null;
   upsell_slug: string | null;
 }) {
-  const royalLabels: Record<number, string> = {
-    1: "الزيت الملكي (تدليك مركز)",
-    2: "الباك الملكي المتكامل (زيت + عسل)",
-    3: "الباك الملكي المضاعف (2 زيت + 2 عسل)",
-  };
   const primary =
     order.product_slug === "pack-royal-power" || order.product_slug === "pack-royal"
-      ? royalLabels[order.tier_qty] || PACK_NAMES[order.product_slug]
+      ? PACK_NAMES[order.product_slug]
       : `${PACK_NAMES[order.product_slug] || order.product_slug} × ${order.tier_qty}`;
   const parts = [primary];
   if (order.cross_sell_slug) parts.push(PACK_NAMES[order.cross_sell_slug] || order.cross_sell_slug);

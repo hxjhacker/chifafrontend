@@ -3,7 +3,7 @@ export const ROYAL_PACK_ROUTE_SLUG = "pack-royal";
 export const ROYAL_LANDING_PATH = `/lp/${ROYAL_PACK_ROUTE_SLUG}`;
 export const ROYAL_STOCK = 18;
 
-export type RoyalTierQty = 1 | 2;
+export type RoyalTierQty = 1;
 
 export type RoyalTier = {
   qty: RoyalTierQty;
@@ -26,14 +26,14 @@ export const ROYAL_PACK = {
   nameEn: "Royal Dual Pack",
   oilName: "زيت التدليك المركز",
   honeyName: "عسل الطاقة بالأعشاب",
-  title: "الباك الملكي المتكامل: زيت التدليك المركز + عسل الطاقة بالأعشاب",
+  title: "الباك الملكي المتكامل",
   headline: "استرجع طاقتك، صلابتك وثقتك بنفسك بحل طبيعي 100% بدون أدوية كيميائية",
   tagline: "تركيبة مزدوجة: قوة موضعية بالزيت الملكي المركز، وطاقة داخلية بملعقة يومية من العسل الملكي بالأعشاب.",
   rating: 4.9,
   reviewCountLabel: "أكثر من 420 طلب مؤكد",
 };
 
-export const ROYAL_TIERS: RoyalTier[] = [
+export const ROYAL_TIERS: [RoyalTier] = [
   {
     qty: 1,
     price: 199,
@@ -47,30 +47,16 @@ export const ROYAL_TIERS: RoyalTier[] = [
     featured: true,
     freeShipping: true,
   },
-  {
-    qty: 2,
-    price: 349,
-    compareAt: 598,
-    save: 249,
-    savePct: 42,
-    title: "الباك المضاعف",
-    subtitle: "2 زيت + 2 عسل",
-    badge: "شحن مجاني",
-    highlight: "أكبر توفير",
-    freeShipping: true,
-  },
 ];
 
 export const ROYAL_DEFAULT_TIER: RoyalTierQty = 1;
 
 export const ROYAL_TIER_CENTS: Record<RoyalTierQty, number> = {
   1: 19900,
-  2: 34900,
 };
 
 export const ROYAL_PACK_TIER_LABELS: Record<RoyalTierQty, string> = {
   1: "الباك الملكي المتكامل (زيت + عسل)",
-  2: "الباك المضاعف (2 زيت + 2 عسل)",
 };
 
 export const ROYAL_GALLERY = [
@@ -117,7 +103,7 @@ export const ROYAL_REVIEWS = [
     name: "أمين",
     city: "مراكش",
     stars: 5,
-    text: "الباك المضاعف ستاهل الثمن. واحد للدار وواحد خليتو احتياط. العسل مدّاقو زوين وما فيهش ريحة أدوية.",
+    text: "الباك الكامل ستاهل الثمن. العسل مدّاقو زوين وما فيهش ريحة أدوية.",
   },
   {
     name: "محسن",
@@ -130,7 +116,7 @@ export const ROYAL_REVIEWS = [
 export const ROYAL_FAQS = [
   {
     q: "شنو كاين داخل الباك الملكي المتكامل؟",
-    a: "زيت التدليك المركز للاستعمال الموضعي، وعسل الطاقة بالأعشاب كمكمل يومي. الباك المضاعف فيه جوج زيت وجوج عسل.",
+    a: "زيت التدليك المركز للاستعمال الموضعي، وعسل الطاقة بالأعشاب كمكمل يومي.",
   },
   {
     q: "واش كيمكن نعاين السلعة قبل ما نخلّص؟",
