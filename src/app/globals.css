@@ -87,7 +87,8 @@ html.dark body {
   to { width: 0%; }
 }
 
-.animate-toast-progress {
+.animate-toast-progress,
+.animate-progress-30s {
   animation: toast-progress-shrink 30s linear forwards;
 }
 
@@ -176,7 +177,8 @@ html.dark body {
   .pulse-dot { animation: none; }
   .cta-pulse { animation: none; }
   .wa-pulse { animation: none; }
-  .animate-toast-progress { animation: none; }
+  .animate-toast-progress,
+  .animate-progress-30s { animation: none; }
 }
 
 .pulse-dot {

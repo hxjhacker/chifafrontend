@@ -127,11 +127,11 @@ export function OrderAlertsBell({
           if (desktop) {
             for (const item of [...fresh].reverse()) {
               showOrderToast({
-                orderId: item.order_id,
+                isBlacklisted: Boolean(item.is_blacklisted),
                 name: item.full_name,
                 phone: item.phone,
                 city: item.city,
-                isBlacklisted: Boolean(item.is_blacklisted),
+                orderId: item.order_id,
               });
             }
           }
