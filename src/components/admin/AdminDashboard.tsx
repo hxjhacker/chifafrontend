@@ -178,7 +178,7 @@ function escapeToastText(value: string) {
 }
 
 function installOrderToasts() {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined") return () => undefined;
 
   window.showOrderToast = function ({
     isBlacklisted = false,
@@ -272,6 +272,10 @@ function installOrderToasts() {
       setTimeout(() => toast.remove(), 300);
     }, 30000);
   };
+
+  return () => {
+    delete window.showOrderToast;
+  };
 }
 
 declare global {
@@ -342,7 +346,7 @@ export function AdminDashboard() {
   const closePrint = useCallback(() => setPrintingId(null), []);
 
   useEffect(() => {
-    installOrderToasts();
+    return installOrderToasts();
   }, []);
 
   useEffect(() => {
