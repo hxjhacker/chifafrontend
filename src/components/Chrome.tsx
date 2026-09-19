@@ -12,7 +12,7 @@ export function waLink(message: string) {
   return `https://wa.me/212620863895?text=${encodeURIComponent(message)}`;
 }
 
-export const WA_LINK = waLink("Salam Chifaglow, bghit nswl 3la l-USB");
+export const WA_LINK = waLink("Salam Chifaglow Homme, bghit nswl 3la l-3orod.");
 
 function hashHref(home: boolean, hash: string) {
   return home ? hash : `/${hash}`;
@@ -128,13 +128,13 @@ export function BackToTop({ raised = false }: { raised?: boolean }) {
 
 export function TopBar() {
   return (
-    <div className="border-b border-gold/30 bg-royal px-4 py-2.5 text-center text-xs font-bold text-white dark:bg-cardDark md:text-sm">
+    <div className="border-b border-red-900/60 bg-gradient-to-r from-red-950 via-black to-red-950 px-4 py-2.5 text-center text-xs font-bold text-white md:text-sm">
       <div className="mx-auto flex max-w-6xl items-center justify-center gap-2">
-        <span className="inline-flex animate-pulse items-center justify-center rounded-md bg-moroccoRed px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-white">
+        <span className="inline-flex animate-pulse items-center justify-center rounded-md bg-[#ff2e00] px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-white">
           عرض حصري
         </span>
-        <span className="text-gold-100">
-          توصيل مجاني لجميع مدن المغرب + الدفع نقدًا بعد معاينة السلعة بيدك!
+        <span className="text-amber-100">
+          توصيل سري ومجاني لجميع مدن المغرب · قلب الكولي بيدك عاد خلص
         </span>
       </div>
     </div>
@@ -146,40 +146,39 @@ export function Header() {
   const home = pathname === "/";
 
   return (
-    <header className="sticky top-0 z-40 border-b border-gold/20 bg-white/95 shadow-sm backdrop-blur-md transition-colors duration-300 dark:bg-brandDark/95">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3.5">
+    <header className="sticky top-0 z-40 border-b border-red-950 bg-[#060303]/95 shadow-sm backdrop-blur-md">
+      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3.5">
         <Link href="/" className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl border-2 border-gold bg-royal shadow-sm dark:bg-cardDark md:h-11 md:w-11">
-            <span className="font-cinzel text-xl font-black text-gold">C</span>
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-[#ff6a00]/50 bg-gradient-to-br from-[#ff2e00] to-black shadow-sm md:h-11 md:w-11">
+            <span className="font-cinzel text-xl font-black text-amber-300">C</span>
           </div>
           <div>
-            <span className="font-cinzel block text-lg font-black tracking-widest text-royal dark:text-white md:text-xl">
+            <span className="font-cinzel block text-lg font-black tracking-widest text-white md:text-xl">
               CHIFAGLOW
             </span>
-            <span className="-mt-1 block text-[10px] font-extrabold tracking-wider text-gold-600 dark:text-gold">
-              شيفا جلو المغرب
+            <span className="-mt-1 block text-[9px] font-extrabold tracking-[.2em] text-[#ff6a00]">
+              HOMME · POWER & VITALITY
             </span>
           </div>
         </Link>
 
         <div className="flex items-center gap-3 md:gap-6">
-          <nav className="hidden items-center gap-6 text-sm font-bold text-royal/90 dark:text-slate-200 md:flex">
-            <Link href={hashHref(home, "#catalog")} className="transition hover:text-gold">
+          <nav className="hidden items-center gap-6 text-sm font-bold text-stone-300 md:flex">
+            <Link href={hashHref(home, "#products")} className="transition hover:text-[#ff6a00]">
               المنتجات
             </Link>
-            <Link href={hashHref(home, "#features")} className="transition hover:text-gold">
+            <Link href={hashHref(home, "#mechanism")} className="transition hover:text-[#ff6a00]">
               المميزات
             </Link>
-            <Link href={hashHref(home, "#reviews")} className="transition hover:text-gold">
+            <Link href={hashHref(home, "#reviews")} className="transition hover:text-[#ff6a00]">
               آراء الزبناء
             </Link>
           </nav>
-          <ThemeToggle />
           <Link
-            href={hashHref(home, "#catalog")}
-            className="rounded-xl border border-gold bg-royal px-4 py-2 text-xs font-black text-gold shadow-sm transition-all hover:brightness-110 dark:bg-gold dark:text-brandDark md:text-sm"
+            href={hashHref(home, "#products")}
+            className="fire-button rounded-xl px-4 py-2 text-xs font-black text-white md:text-sm"
           >
-            تصفح الباقات
+            اطلب الآن
           </Link>
         </div>
       </div>
@@ -192,24 +191,24 @@ export function Footer() {
   const home = pathname === "/";
 
   return (
-    <footer className="border-t border-gold/30 bg-royal py-10 text-cream transition-colors duration-300 dark:bg-brandDark">
-      <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 px-4 text-center md:flex-row md:text-right">
+    <footer className="border-t border-red-950 bg-black py-10 text-stone-300">
+      <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-6 px-4 text-center md:flex-row md:text-right">
         <div>
-          <span className="font-cinzel text-xl font-bold text-gold">CHIFAGLOW</span>
-          <p className="mt-1 text-xs text-cream/70">شيفا جلو — المتجر المغربي المعتمد لمنتجات الوسائط الفاخرة.</p>
+          <span className="font-cinzel text-xl font-bold text-[#ff2e00]">CHIFAGLOW HOMME</span>
+          <p className="mt-1 text-xs text-stone-400">الدار المغربية للقوة، النشاط، والروتين الرجالي الطبيعي.</p>
         </div>
-        <div className="flex items-center gap-6 text-xs font-semibold text-cream/80">
-          <Link href={hashHref(home, "#catalog")} className="transition hover:text-gold">
+        <div className="flex items-center gap-6 text-xs font-semibold text-stone-400">
+          <Link href={hashHref(home, "#products")} className="transition hover:text-[#ff6a00]">
             المنتجات
           </Link>
-          <Link href={hashHref(home, "#features")} className="transition hover:text-gold">
+          <Link href={hashHref(home, "#mechanism")} className="transition hover:text-[#ff6a00]">
             الضمان والتوصيل
           </Link>
-          <a href={WA_LINK} target="_blank" rel="noreferrer" className="transition hover:text-gold">
+          <a href={WA_LINK} target="_blank" rel="noreferrer" className="transition hover:text-[#ff6a00]">
             واتساب
           </a>
         </div>
-        <p className="text-xs text-cream/60">© {new Date().getFullYear()} Chifaglow.com — جميع الحقوق محفوظة.</p>
+        <p className="text-xs text-stone-600">© {new Date().getFullYear()} Chifaglow Homme. جميع الحقوق محفوظة.</p>
       </div>
     </footer>
   );

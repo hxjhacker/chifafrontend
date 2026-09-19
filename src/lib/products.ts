@@ -1,4 +1,4 @@
-export type ProductSlug = "quran" | "kids" | "music";
+export type ProductSlug = "pack-royal" | "royal-honey" | "royal-oil";
 
 export type Product = {
   slug: ProductSlug;
@@ -6,9 +6,13 @@ export type Product = {
   nameEn: string;
   tagline: string;
   description: string;
-  accent: "gold" | "emerald" | "bronze";
+  accent: "fire" | "gold" | "ember";
   image: string;
   heroImage: string;
+  gallery: string[];
+  price: number;
+  compareAt: number;
+  badge: string;
   bullets: string[];
   features: { title: string; body: string; image: string }[];
   reviews: { name: string; city: string; text: string; stars: number }[];
@@ -16,119 +20,122 @@ export type Product = {
 
 export const PRODUCTS: Product[] = [
   {
-    slug: "quran",
-    nameAr: "USB القرآن الكريم",
-    nameEn: "Holy Quran USB",
-    tagline: "القرآن كامل بجودة عالية… يتسمع في الدار والسيارة.",
+    slug: "pack-royal",
+    nameAr: "الباك الملكي المتكامل",
+    nameEn: "Royal Power Pack",
+    tagline: "عسل الطاقة الحار + زيت التدليك الحراري المركز.",
     description:
-      "مكتبة قرآنية فاخرة على USB جاهز للتشغيل. مناسب للإهداء، للوالدين، وللإستماع اليومي بلا نت وبلا إعلانات.",
+      "تركيبة متكاملة من عسل الطاقة بالأعشاب وزيت التدليك المركز، مع توصيل سري مجاني والدفع بعد المعاينة.",
+    accent: "fire",
+    image: "/image/spack-royal/hero.jpg",
+    heroImage: "/image/spack-royal/hero.jpg",
+    gallery: [
+      "/image/spack-royal/ingredients.jpg",
+      "/image/spack-royal/productpak1.jpg",
+      "/image/spack-royal/productpak2.jpg",
+      "/image/spack-royal/productpak3.jpg",
+      "/image/spack-royal/productpak4.jpg",
+    ],
+    price: 199,
+    compareAt: 450,
+    badge: "الأكثر طلباً",
+    bullets: [
+      "طاقة يومية طبيعية بالأعشاب",
+      "زيت تدليك حراري سريع الامتصاص",
+      "شحن سري ومعاينة قبل الأداء",
+    ],
+    features: [
+      {
+        title: "طاقة من الداخل",
+        body: "عسل الطاقة بالأعشاب مخصص لروتين النشاط اليومي.",
+        image: "/image/spack-royal/product3asal1.jpg",
+      },
+      {
+        title: "دفء موضعي مريح",
+        body: "زيت تدليك مركز بملمس خفيف واستعمال سهل.",
+        image: "/image/spack-royal/oil.jpg",
+      },
+    ],
+    reviews: [
+      { name: "يوسف", city: "الدار البيضاء", stars: 5, text: "التغليف كان سري والتأكيد بالهاتف محترم." },
+      { name: "رشيد", city: "طنجة", stars: 5, text: "طلب سهل والتوصيل وصلني حتى للدار." },
+    ],
+  },
+  {
+    slug: "royal-honey",
+    nameAr: "عسل الطاقة والجينسنغ الملكي",
+    nameEn: "Royal Energy Honey",
+    tagline: "عسل بالأعشاب والجينسنغ لروتين نشاطك اليومي.",
+    description:
+      "عسل طاقة بالأعشاب الطبيعية والجينسنغ، في تغليف سري وتوصيل مجاني لكل مدن المغرب.",
     accent: "gold",
-    image: "/images/usb-quran.svg",
-    heroImage: "/images/hero-quran.svg",
+    image: "/image/spack-royal/product3asal1.jpg",
+    heroImage: "/image/spack-royal/product3asal1.jpg",
+    gallery: ["/image/spack-royal/product3asal1.jpg", "/image/spack-royal/product3asal2.jpg"],
+    price: 149,
+    compareAt: 249,
+    badge: "طاقة داخلية",
     bullets: [
-      "تلاوات واضحة بجودة استوديو",
-      "تشغيل مباشر — بلا نت وبلا تطبيقات",
-      "هدية محترمة للوالدين وفي رمضان",
+      "عسل طبيعي بالأعشاب",
+      "جينسنغ ضمن التركيبة",
+      "توصيل مجاني وسري",
     ],
     features: [
       {
-        title: "البركة في الدار",
-        body: "حطّيه فالسيارة، فالمطبخ، أو فالليل. القرآن حاضر بلا تقطيع وبلا إعلانات.",
-        image: "/images/feature-home.svg",
+        title: "روتين طاقة بسيط",
+        body: "ملعقة يومية ضمن نظام متوازن ونمط حياة صحي.",
+        image: "/image/spack-royal/product3asal2.jpg",
       },
       {
-        title: "هدية ما كتخيبش",
-        body: "للوالدين، للعمرة، ولرمضان. محتوى يستاهل، ماشي غير بلاستيك رخيص.",
-        image: "/images/feature-gift.svg",
+        title: "مكونات مختارة",
+        body: "عسل وأعشاب بنكهة دافئة ومناسبة للاستعمال اليومي.",
+        image: "/image/spack-royal/product3asal1.jpg",
       },
     ],
     reviews: [
-      { name: "فاطمة", city: "مراكش", stars: 5, text: "الصوت نقي بزاف. خديت جوج: واحد للدار وواحد للواليدة." },
-      { name: "يوسف", city: "طنجة", stars: 5, text: "تسنايت غير نهارين وتوصل. الدفع عند الاستلام مرتاح." },
-      { name: "سارة", city: "الرباط", stars: 5, text: "هدية للعمرة كانت في المستوى. التغليف زوين." },
-      { name: "حسن", city: "أكادير", stars: 4, text: "كيخدم فالسيارة بلا مشاكل. جودة أحسن مما توقعت." },
+      { name: "أمين", city: "مراكش", stars: 5, text: "العسل مداقو زوين والتوصيل كان سريع." },
+      { name: "عادل", city: "فاس", stars: 5, text: "الخدمة محترمة والدفع من بعد المعاينة ريحني." },
     ],
   },
   {
-    slug: "kids",
-    nameAr: "USB تعليم الأطفال",
-    nameEn: "Children Learning USB",
-    tagline: "محتوى تربوي جاهز… ولادك يتعلمو وأنت مرتاح.",
+    slug: "royal-oil",
+    nameAr: "زيت التدليك والنشاط المركز",
+    nameEn: "Royal Massage Oil",
+    tagline: "زيت تدليك دافئ بملمس خفيف وروتين استعمال بسيط.",
     description:
-      "تجميعة تعليمية للأطفال: حروف، أرقام، أناشيد وألعاب تعلم. بلا إعلانات وبلا نت — للدار وللسيارة.",
-    accent: "emerald",
-    image: "/images/usb-kids.svg",
-    heroImage: "/images/hero-kids.svg",
+      "زيت تدليك مركز للاستخدام الموضعي، بتغليف سري وتوصيل مجاني مع إمكانية المعاينة قبل الأداء.",
+    accent: "ember",
+    image: "/image/spack-royal/oil.jpg",
+    heroImage: "/image/spack-royal/oil.jpg",
+    gallery: ["/image/spack-royal/oil.jpg", "/image/spack-royal/productoil1.jpg"],
+    price: 129,
+    compareAt: 199,
+    badge: "تنشيط موضعي",
     bullets: [
-      "حروف وأرقام وأناشيد تربوية",
-      "بلا إعلانات وبدون إنترنت",
-      "مناسب من 3 سنين وفوق",
+      "زيت تدليك مركز",
+      "استعمال موضعي مريح",
+      "شحن مجاني لجميع المدن",
     ],
     features: [
       {
-        title: "وقت الشاشة يولي تعلم",
-        body: "بدل ما غير يتفرجو، كيتعلمو حروف وأرقام وأناشيد مفيدة.",
-        image: "/images/feature-learn.svg",
+        title: "ملمس خفيف",
+        body: "تركيبة سهلة التدليك وسريعة الامتصاص.",
+        image: "/image/spack-royal/productoil1.jpg",
       },
       {
-        title: "للدار وللجدة وللسيارة",
-        body: "باكيت جوج أو ثلاثة قطع كيحلّو المشكل ديال كل بيت.",
-        image: "/images/feature-family.svg",
+        title: "روتين العناية",
+        body: "استعمله مع تدليك خفيف كجزء من روتين الراحة.",
+        image: "/image/spack-royal/oil.jpg",
       },
     ],
     reviews: [
-      { name: "نادية", city: "فاس", stars: 5, text: "ولدي بدا كيعاود الحروف. بستاهل الثمن." },
-      { name: "كريم", city: "الدار البيضاء", stars: 5, text: "خديت 3 قطع: الدار، الكرانما، ودار الوالدة." },
-      { name: "إيمان", city: "وجدة", stars: 5, text: "التوصيل سريع والسلعة أصلية. شكرا شيفا جلو." },
-      { name: "أمين", city: "المحمدية", stars: 4, text: "المحتوى منظم وما فيهش إعلانات. عجبني." },
-    ],
-  },
-  {
-    slug: "music",
-    nameAr: "USB الأغاني والموسيقى",
-    nameEn: "Music & Songs USB",
-    tagline: "موسيقى جاهزة، بلا نت وبلا تقطيعة.",
-    description:
-      "مكتبة أغاني مرتبة للسيارة، المحل، والتجمعات العائلية. تشغيل مباشر من الـ USB — بلا نت وبلا إعلانات.",
-    accent: "bronze",
-    image: "/images/usb-music.svg",
-    heroImage: "/images/hero-music.svg",
-    bullets: [
-      "تجميعة مرتبة للسيارة والمحل",
-      "بلا نت وبلا تقطيع",
-      "جاهزة للحفلات والتجمعات",
-    ],
-    features: [
-      {
-        title: "للطاكسي والمحل والدار",
-        body: "حطّيه وكمل خدمتك. الموسيقى كتسولّي بلا ما تدور فالتيليفون.",
-        image: "/images/feature-car.svg",
-      },
-      {
-        title: "نوستالجيا مرتبة",
-        body: "أغاني كتعرفها، تجميعة نظيفة، ماشي فولدر عشوائي.",
-        image: "/images/feature-party.svg",
-      },
-    ],
-    reviews: [
-      { name: "رشيد", city: "سلا", stars: 5, text: "فالسيارة واعر. ما بقاتش خصني نت." },
-      { name: "ليلى", city: "تطوان", stars: 5, text: "خديت جوج: واحد ليا وواحد لخويا. التوصيل حتى للباب." },
-      { name: "محسن", city: "الجديدة", stars: 4, text: "الجودة مزيانة والتجميعة متنوعة." },
-      { name: "حنان", city: "مكناس", stars: 5, text: "طلبت بالليل، عيّطو ليا الصباح. محترفين." },
+      { name: "محسن", city: "الرباط", stars: 5, text: "جاني فكرطونة محايدة والمعاينة كانت سهلة." },
+      { name: "كريم", city: "وجدة", stars: 4, text: "الطلب تسجل بسرعة وتاصل بيا الفريق للتأكيد." },
     ],
   },
 ];
 
 export function getProduct(slug: string) {
-  if (slug === "educative" || slug === "taalim") {
-    const kids = PRODUCTS.find((p) => p.slug === "kids");
-    if (!kids) return undefined;
-    return {
-      ...kids,
-      nameAr: slug === "taalim" ? "فلاشة Taalim Kids التعليمية" : "الفلاشة التعليمية الذكية للأطفال",
-      tagline: slug === "taalim" ? "حوّل التلفاز إلى مدرسة ذكية لطفلك." : "100% بدون إنترنت — رفيق التفوق المدرسي.",
-    };
-  }
   return PRODUCTS.find((p) => p.slug === slug);
 }
 
@@ -139,8 +146,8 @@ export function otherProducts(slug: string) {
 export function galleryShots(product: Product) {
   return [
     { id: "hero", label: product.nameAr, src: product.heroImage },
-    { id: "usb", label: "الفلاشة", src: product.image },
-    ...product.features.map((f, i) => ({ id: `feature-${i}`, label: f.title, src: f.image })),
+    { id: "product", label: product.nameAr, src: product.image },
+    ...product.gallery.map((src, i) => ({ id: `gallery-${i}`, label: `صورة ${i + 1}`, src })),
     { id: "use", label: "الاستعمال", src: product.heroImage },
   ];
 }

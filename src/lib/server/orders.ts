@@ -18,6 +18,8 @@ const PRODUCT_SLUGS = new Set([
   "educative",
   "pack-royal",
   "pack-royal-power",
+  "royal-honey",
+  "royal-oil",
 ]);
 const TIER_CENTS: Record<number, number> = { 1: 19900, 2: 27900, 3: 34900 };
 const EDUCATIVE_TIER_CENTS: Record<number, number> = { 1: 14900, 2: 24900, 3: 32900 };
@@ -83,6 +85,8 @@ function centsToMad(cents: number) {
 }
 
 function tierTable(slug: string) {
+  if (slug === "royal-honey") return { 1: 14900 };
+  if (slug === "royal-oil") return { 1: 12900 };
   if (slug === "educative") return EDUCATIVE_TIER_CENTS;
   if (slug === "taalim") return TAALIM_TIER_CENTS;
   if (slug === "pack-royal" || slug === "pack-royal-power") return ROYAL_PACK_TIER_CENTS;
@@ -148,6 +152,8 @@ async function pushSheets(order: OrderRow, items: ItemRow[]) {
     educative: "الفلاشة التعليمية الذكية للأطفال",
     "pack-royal-power": "الباك الملكي المتكامل",
     "pack-royal": "الباك الملكي المتكامل",
+    "royal-honey": "عسل الطاقة والجينسنغ الملكي",
+    "royal-oil": "زيت التدليك والنشاط المركز",
   };
   try {
     await fetch(url, {

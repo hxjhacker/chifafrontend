@@ -27,9 +27,9 @@ const cinzel = Cinzel({
 });
 
 export const metadata: Metadata = {
-  title: "Chifaglow | شيفا جلو — مفاتيح USB فاخرة والدفع عند الاستلام",
+  title: "CHIFAGLOW HOMME | القوة والنشاط للرجال",
   description:
-    "مفاتيح USB أصلية ومعدنية: القرآن الكريم كاملاً، تعليم الأطفال، وأروع الموسيقى. توصيل مجاني والدفع بعد المعاينة.",
+    "عروض Chifaglow Homme: عسل الطاقة بالأعشاب، زيت التدليك المركز، والباك الملكي المتكامل. توصيل سري مجاني والدفع بعد المعاينة.",
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://chifaglow.com"),
 };
 
@@ -51,7 +51,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         ) : null}
       </head>
       <body
-        className={`${cairo.variable} ${tajawal.variable} ${cinzel.variable} font-tajawal bg-cream text-royal antialiased transition-colors duration-300 selection:bg-gold selection:text-royal dark:bg-brandDark dark:text-slate-100`}
+        className={`${cairo.variable} ${tajawal.variable} ${cinzel.variable} font-tajawal bg-[#060303] text-red-50 antialiased selection:bg-[#ff2e00] selection:text-white`}
       >
         {FB_PIXEL_ID ? (
           <noscript>

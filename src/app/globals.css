@@ -12,15 +12,48 @@ html.dark {
 }
 
 body {
-  background: #FAF8F5;
-  color: #0B1F3A;
+  background: #060303;
+  color: #FEE2E2;
 }
 
 .dark body,
 html.dark body {
-  background: #070F1B;
-  color: #f1f5f9;
+  background: #060303;
+  color: #FEE2E2;
 }
+
+.fire-gradient,
+.fire-button {
+  background: linear-gradient(135deg, #ff7a00 0%, #ff2e00 55%, #b71c1c 100%);
+}
+
+.fire-button {
+  box-shadow: 0 4px 22px rgba(255, 46, 0, .45);
+  transition: transform .2s ease, filter .2s ease;
+}
+
+.fire-button:hover { filter: brightness(1.12); transform: translateY(-1px); }
+.fire-button:active { transform: scale(.97); }
+
+.fire-gradient-text {
+  background: linear-gradient(135deg, #fff59d 0%, #ffae00 35%, #ff3d00 75%, #d50000 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.homme-input {
+  margin-top: .35rem;
+  width: 100%;
+  border: 1px solid #3b1410;
+  border-radius: .875rem;
+  background: #060303;
+  padding: .75rem .9rem;
+  color: #fff;
+  font-weight: 700;
+  outline: none;
+}
+.homme-input:focus { border-color: #ff2e00; box-shadow: 0 0 12px rgba(255, 46, 0, .3); }
 
 .card-lux {
   @apply rounded-2xl border border-gold/20 bg-white shadow-sm dark:bg-cardDark;
