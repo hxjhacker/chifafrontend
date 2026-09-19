@@ -168,8 +168,135 @@ function StandalonePackUpsell() {
   );
 }
 
+const VOICE_REVIEWS = [
+  { name: "كريم", city: "الرباط", src: "/odio/odio1.mp3", fallback: "/odio/odio1" },
+  { name: "يوسف", city: "أزرو", src: "/odio/odio2.mp3", fallback: "/odio/odio2" },
+  { name: "رشيد", city: "الدار البيضاء", src: "/odio/odio3.mp3", fallback: "/odio/odio3" },
+] as const;
+
+function formatClock(seconds: number) {
+  if (!Number.isFinite(seconds) || seconds <= 0) return "0:00";
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${String(secs).padStart(2, "0")}`;
+}
+
+function VoiceNoteReviews() {
+  const [currentPlaying, setCurrentPlaying] = useState<number | null>(null);
+  const [progress, setProgress] = useState<Record<number, number>>({ 0: 0, 1: 0, 2: 0 });
+  const [durations, setDurations] = useState<Record<number, string>>({ 0: "0:00", 1: "0:00", 2: "0:00" });
+  const audioRefs = useRef<(HTMLAudioElement | null)[]>([]);
+
+  useEffect(() => {
+    return () => {
+      audioRefs.current.forEach((audio) => {
+        audio?.pause();
+      });
+    };
+  }, []);
+
+  function pauseOthers(except: number) {
+    audioRefs.current.forEach((audio, index) => {
+      if (!audio || index === except) return;
+      audio.pause();
+      audio.currentTime = 0;
+    });
+  }
+
+  function togglePlay(index: number) {
+    const audio = audioRefs.current[index];
+    if (!audio) return;
+    if (currentPlaying === index && !audio.paused) {
+      audio.pause();
+      setCurrentPlaying(null);
+      return;
+    }
+    pauseOthers(index);
+    void audio.play().then(() => setCurrentPlaying(index)).catch(() => setCurrentPlaying(null));
+  }
+
+  return (
+    <section id="reviews">
+      <p className="text-xs font-black tracking-[.2em] text-[#FF2E00]">TÉMOIGNAGES CLIENTS</p>
+      <h2 className="mt-2 text-2xl font-black text-white">آراء الزبناء</h2>
+      <p className="mt-1 text-sm text-stone-400">تسجيلات صوتية حقيقية عبر واتساب بعد الاستلام والمعاينة.</p>
+      <div className="mt-6 grid gap-4 md:grid-cols-3">
+        {VOICE_REVIEWS.map((review, index) => {
+          const playing = currentPlaying === index;
+          const pct = progress[index] ?? 0;
+          return (
+            <article key={review.src} className="rounded-3xl border border-[#202C33] bg-[#111B21] p-5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#00A884] font-black text-white">{review.name[0]}</span>
+                  <div>
+                    <h3 className="font-bold text-white">{review.name} • {review.city}</h3>
+                    <p className="text-[10px] text-[#8696A0]">الباك الملكي المتكامل</p>
+                  </div>
+                </div>
+                <span className="rounded-full bg-emerald-950/60 px-2.5 py-1 text-[10px] font-bold text-emerald-400">مشترٍ موثق ✓</span>
+              </div>
+              <audio
+                ref={(el) => {
+                  audioRefs.current[index] = el;
+                }}
+                preload="metadata"
+                src={review.src}
+                onError={(event) => {
+                  const el = event.currentTarget;
+                  if (el.dataset.fallbackTried === "1") return;
+                  el.dataset.fallbackTried = "1";
+                  el.src = review.fallback;
+                }}
+                onLoadedMetadata={(event) => {
+                  setDurations((prev) => ({ ...prev, [index]: formatClock(event.currentTarget.duration) }));
+                }}
+                onTimeUpdate={(event) => {
+                  const el = event.currentTarget;
+                  const ratio = el.duration ? (el.currentTime / el.duration) * 100 : 0;
+                  setProgress((prev) => ({ ...prev, [index]: ratio }));
+                  setDurations((prev) => ({ ...prev, [index]: formatClock(el.duration - el.currentTime || el.duration) }));
+                }}
+                onEnded={() => {
+                  setCurrentPlaying((current) => (current === index ? null : current));
+                  setProgress((prev) => ({ ...prev, [index]: 0 }));
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => togglePlay(index)}
+                aria-label={playing ? `إيقاف تسجيل ${review.name}` : `تشغيل تسجيل ${review.name}`}
+                className="mt-5 flex w-full items-center gap-3 rounded-2xl border border-[#202C33] bg-[#202C33] p-3 text-right"
+              >
+                <span className={`flex h-9 w-9 items-center justify-center rounded-full bg-[#00A884] text-xs text-white ${playing ? "animate-pulse" : ""}`}>
+                  {playing ? "❚❚" : "▶"}
+                </span>
+                <span className="relative h-5 flex-1 overflow-hidden rounded-full bg-[#1a2730]">
+                  <span className="absolute inset-y-0 right-0 rounded-full bg-[#00A884] transition-[width] duration-150" style={{ width: `${Math.max(playing ? 8 : 0, pct)}%` }} />
+                  <span className={`absolute inset-0 flex items-center justify-center gap-0.5 ${playing ? "opacity-100" : "opacity-40"}`}>
+                    {[6, 12, 8, 16, 10, 14, 7, 18, 9, 13, 8, 15].map((h, bar) => (
+                      <span
+                        key={bar}
+                        className="w-0.5 rounded-full bg-[#d1f4ea]"
+                        style={{
+                          height: `${h}px`,
+                          animation: playing ? `pulse ${0.7 + (bar % 4) * 0.12}s ease-in-out infinite` : "none",
+                        }}
+                      />
+                    ))}
+                  </span>
+                </span>
+                <small className="min-w-[2.5rem] text-xs font-bold text-[#8696A0]">{durations[index] ?? "0:00"}</small>
+              </button>
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 function PackSalesSections() {
-  const [playing, setPlaying] = useState<number | null>(null);
   const contents = [
     ["🌿", "زيت التدليك المركز", "دهن موضعي حار سريع الامتصاص، كينشط الدورة الدموية ويسخن الأنسجة لصلابة وراحة فورية بلا ملمس دهني مزعج."],
     ["🍯", "عسل الطاقة بالأعشاب", "ملعقة صغيرة يومياً ترفع النشاط والتحمل، وكتحارب الفشلة والعياء باش ترجع الثقة والحرارة بشكل مستمر وطبيعي."],
@@ -181,10 +308,6 @@ function PackSalesSections() {
     ["2", "مكمل يومي (العسل)", "ملعقة صغيرة يومياً لطرد العياء طوال اليوم."],
     ["3", "شحن سري ومجاني", "تغليف محكم لا يكشف المحتوى."],
     ["4", "المعاينة قبل الدفع", "الدفع نقداً بعد فتح الطرد والتأكد منه."],
-  ] as const;
-  const reviews = [
-    ["يوسف", "الدار البيضاء", "0:18"],
-    ["رشيد", "طنجة", "0:24"],
   ] as const;
   return (
     <div className="mt-16 space-y-16 border-t border-red-950 pt-12">
@@ -212,14 +335,7 @@ function PackSalesSections() {
         </div>
       </section>
 
-      <section id="reviews">
-        <p className="text-xs font-black tracking-[.2em] text-[#FF2E00]">TÉMOIGNAGES CLIENTS</p>
-        <h2 className="mt-2 text-2xl font-black text-white">آراء الزبناء</h2>
-        <p className="mt-1 text-sm text-stone-400">تسجيلات صوتية عبر واتساب بعد الاستلام والمعاينة.</p>
-        <div className="mt-6 grid gap-4 md:grid-cols-2">
-          {reviews.map(([name, city, duration], index) => <article key={name} className="rounded-3xl border border-[#202C33] bg-[#111B21] p-5"><div className="flex items-center justify-between"><div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#00A884] font-black text-white">{name[0]}</span><div><h3 className="font-bold text-white">{name} · {city}</h3><p className="text-[10px] text-[#8696A0]">الباك الملكي المتكامل</p></div></div><span className="rounded-full bg-emerald-950/60 px-2.5 py-1 text-[10px] font-bold text-emerald-400">مشترٍ موثق ✓</span></div><button type="button" onClick={() => setPlaying(playing === index ? null : index)} className="mt-5 flex w-full items-center gap-3 rounded-2xl border border-[#202C33] bg-[#202C33] p-3 text-right"><span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#00A884] text-xs text-white">{playing === index ? "❚❚" : "▶"}</span><span className="h-1 flex-1 rounded bg-gradient-to-l from-[#00A884] via-[#00A884] to-[#8696A0]" /><small className="text-xs font-bold text-[#8696A0]">{duration}</small></button></article>)}
-        </div>
-      </section>
+      <VoiceNoteReviews />
 
       <section>
         <h2 className="text-2xl font-black text-white">الأسئلة الشائعة</h2>
