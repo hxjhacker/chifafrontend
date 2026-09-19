@@ -1172,7 +1172,8 @@ export function AdminDashboard() {
             </button>
             <OrderAlertsBell
               variant="icon"
-              poll={false}
+              poll
+              emitOrderToasts={false}
               panel="sheet"
               className="h-10 w-10 border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-400 dark:hover:bg-amber-500/20"
               {...alertBellShared}

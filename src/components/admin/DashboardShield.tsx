@@ -2,6 +2,7 @@
 
 import { useEffect, type ReactNode } from "react";
 import { DashboardToastHost } from "@/components/admin/DashboardAlert";
+import { OrderToastStack } from "@/components/admin/OrderToastStack";
 
 function isEditableTarget(target: EventTarget | null) {
   if (!(target instanceof HTMLElement)) return false;
@@ -67,6 +68,7 @@ export function DashboardShield({ children }: { children: ReactNode }) {
     <div className="no-select select-none">
       {children}
       <DashboardToastHost />
+      <OrderToastStack />
     </div>
   );
 }

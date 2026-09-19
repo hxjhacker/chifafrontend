@@ -15,6 +15,7 @@ import {
   type UndispatchedItem,
   type UndispatchedSummary,
 } from "@/lib/order-alerts";
+import { showOrderToast } from "@/lib/order-toasts";
 import { readStorage, writeStorage } from "@/lib/safe-storage";
 import { cn } from "@/lib/cn";
 
@@ -27,6 +28,7 @@ type Props = {
   className?: string;
   variant?: "toolbar" | "icon";
   poll?: boolean;
+  emitOrderToasts?: boolean;
   panel?: "dropdown" | "sheet";
   orders: AdminOrder[];
   shippingId: string | null;
@@ -86,6 +88,7 @@ export function OrderAlertsBell({
   className,
   variant = "toolbar",
   poll = true,
+  emitOrderToasts = true,
   panel = "dropdown",
   orders,
   shippingId,
@@ -118,11 +121,23 @@ export function OrderAlertsBell({
         seenRef.current = new Set(newIds);
       } else {
         const fresh = next.new_items.filter((item) => !seenRef.current!.has(item.order_id));
-        if (announce && fresh.length) {
+        if (announce && fresh.length && emitOrderToasts) {
           const soundEnabled = readStorage(SOUND_KEY) === "1";
+          const desktop = typeof window !== "undefined" && window.matchMedia("(min-width: 640px)").matches;
+          if (desktop) {
+            for (const item of [...fresh].reverse()) {
+              showOrderToast({
+                orderId: item.order_id,
+                name: item.full_name,
+                phone: item.phone,
+                city: item.city,
+                isBlacklisted: Boolean(item.is_blacklisted),
+              });
+            }
+          }
           if (soundEnabled) {
             playOrderPing();
-            void notifyNewOrderDesktop(fresh[0].full_name, fresh[0].city);
+            if (desktop) void notifyNewOrderDesktop(fresh[0].full_name, fresh[0].city);
           }
         }
         for (const id of newIds) seenRef.current.add(id);
@@ -132,7 +147,7 @@ export function OrderAlertsBell({
     } catch {
       /* keep last snapshot */
     }
-  }, [onSummary]);
+  }, [onSummary, emitOrderToasts]);
 
   useEffect(() => {
     setSoundOn(readStorage(SOUND_KEY) === "1");

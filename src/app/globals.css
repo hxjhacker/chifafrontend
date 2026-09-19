@@ -74,6 +74,23 @@ html.dark body {
   display: none;
 }
 
+.toast-scroll {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.toast-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+@keyframes toast-progress-shrink {
+  from { width: 100%; }
+  to { width: 0%; }
+}
+
+.animate-toast-progress {
+  animation: toast-progress-shrink 30s linear forwards;
+}
+
 .no-select input,
 .no-select textarea,
 .no-select select,
@@ -159,6 +176,7 @@ html.dark body {
   .pulse-dot { animation: none; }
   .cta-pulse { animation: none; }
   .wa-pulse { animation: none; }
+  .animate-toast-progress { animation: none; }
 }
 
 .pulse-dot {

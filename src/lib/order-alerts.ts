@@ -12,6 +12,7 @@ export type UndispatchedItem = {
   confirmed_at: string | null;
   hours_delayed: number;
   hours_ago?: number;
+  is_blacklisted?: boolean;
 };
 
 export type UndispatchedSummary = {
@@ -65,6 +66,7 @@ export function parseUndispatchedSummary(payload: unknown): UndispatchedSummary 
           confirmed_at: item.confirmed_at ? String(item.confirmed_at) : null,
           hours_delayed: Math.max(0, Number(item.hours_delayed) || 0),
           hours_ago: Math.max(0, Number(item.hours_ago) || Number(item.hours_delayed) || 0),
+          is_blacklisted: Boolean(item.is_blacklisted || item.blacklisted || item.is_blocked),
         };
       })
       .filter((row): row is UndispatchedItem => Boolean(row));
