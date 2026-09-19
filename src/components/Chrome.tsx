@@ -69,7 +69,8 @@ export function ThemeToggle({ className }: { className?: string }) {
   return (
     <button
       type="button"
-      aria-label="تبديل الوضع"
+      aria-label="تبديل المظهر"
+      title="تبديل المظهر"
       onClick={toggle}
       suppressHydrationWarning
       className={cn(

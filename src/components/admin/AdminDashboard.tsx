@@ -39,6 +39,14 @@ import { IosSwitch } from "@/components/admin/IosSwitch";
 import { LogisticsKpiCards } from "@/components/admin/LogisticsKpiCards";
 import { MoroccoMap } from "@/components/admin/MoroccoMap";
 import { DashboardBanner, notifyDashboard } from "@/components/admin/DashboardAlert";
+import {
+  AccountPopover,
+  DEFAULT_PROFILE_EMAIL,
+  DEFAULT_STORE_NAME,
+  EditProfileModal,
+  STORE_NAME_KEY,
+  storeInitials,
+} from "@/components/admin/EditProfileModal";
 import { OrderAlertsBell, OverdueOrdersBanner } from "@/components/admin/OrderAlertsBell";
 import { OrderDesktopRow, OrderMobileCard } from "@/components/admin/OrderRow";
 import { OrderTimelineModal } from "@/components/admin/OrderTimelineModal";
@@ -115,6 +123,8 @@ const SECTION_ITEMS: { key: keyof SectionPrefs; label: string }[] = [
 ];
 
 const DASHBOARD_SHELL = "mx-auto w-full max-w-[1720px] px-4 sm:px-6 lg:px-8";
+const ICON_BTN =
+  "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border shadow-sm transition active:scale-95";
 const DESKTOP_CHIP =
   "shrink-0 inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition";
 const FILTER_CONTROL =
@@ -201,19 +211,22 @@ export function AdminDashboard() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [storeName, setStoreName] = useState(DEFAULT_STORE_NAME);
   const [darkMode, setDarkMode] = useState(false);
   const selectAllRef = useRef<HTMLInputElement>(null);
   const accountRef = useRef<HTMLDivElement>(null);
   const mobileAccountRef = useRef<HTMLDivElement>(null);
   const actionsScrollRef = useHorizontalDragScroll<HTMLDivElement>();
 
-  useLockBodyScroll(Boolean(deleteTarget) || prefsOpen || menuOpen);
+  useLockBodyScroll(Boolean(deleteTarget) || prefsOpen || menuOpen || profileOpen);
 
   const closeTimeline = useCallback(() => setViewingId(null), []);
   const closePrint = useCallback(() => setPrintingId(null), []);
 
   useEffect(() => {
     setPrefs(readPrefs());
+    setStoreName(readStorage(STORE_NAME_KEY)?.trim() || DEFAULT_STORE_NAME);
     setDarkMode(resolveIsDark());
     function onTheme(e: Event) {
       setDarkMode(Boolean((e as CustomEvent<{ dark: boolean }>).detail?.dark));
@@ -229,6 +242,7 @@ export function AdminDashboard() {
       setMenuOpen(false);
       setActionsOpen(false);
       setAccountOpen(false);
+      setProfileOpen(false);
     }
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
@@ -280,6 +294,21 @@ export function AdminDashboard() {
       persistPrefs(next);
       return next;
     });
+  }
+
+  const profileEmail = username.includes("@") ? username : DEFAULT_PROFILE_EMAIL;
+  const initials = storeInitials(storeName);
+
+  function openProfileEditor() {
+    setAccountOpen(false);
+    setMenuOpen(false);
+    setProfileOpen(true);
+  }
+
+  function saveStoreName(name: string) {
+    setStoreName(name);
+    writeStorage(STORE_NAME_KEY, name);
+    notifyDashboard("تم حفظ تعديلات الملف الشخصي.", "ok");
   }
 
   const load = useCallback(async () => {
@@ -1135,17 +1164,17 @@ export function AdminDashboard() {
             <button
               type="button"
               aria-label="إضافة سريعة واتساب"
-              title="واتساب"
+              title="إضافة سريعة واتساب"
               onClick={() => setQuickOpen(true)}
-              className="flex h-10 w-10 items-center justify-center rounded-xl border border-emerald-500/40 bg-[#09221d] text-emerald-400 shadow-sm transition hover:text-emerald-300 active:scale-95"
+              className={`${ICON_BTN} border-emerald-500/40 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20`}
             >
-              <WhatsAppIcon className="h-5 w-5" />
+              <WhatsAppIcon className="h-4 w-4" />
             </button>
             <OrderAlertsBell
               variant="icon"
               poll={false}
               panel="sheet"
-              className="h-10 w-10 border-amber-500/40 bg-[#221c10] text-amber-400 shadow-sm hover:bg-[#221c10] hover:text-amber-300 dark:border-amber-500/40 dark:bg-[#221c10] dark:text-amber-400 dark:hover:bg-[#2a2314]"
+              className="h-10 w-10 border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-400 dark:hover:bg-amber-500/20"
               {...alertBellShared}
             />
           </div>
@@ -1153,57 +1182,25 @@ export function AdminDashboard() {
           <div className="relative z-30" ref={mobileAccountRef}>
             <button
               type="button"
-              aria-label="الملف الشخصي"
-              title="الملف الشخصي"
+              aria-label="معلومات الحساب"
+              title="معلومات الحساب"
               aria-expanded={accountOpen}
               onClick={() => setAccountOpen((v) => !v)}
-              className="relative flex items-center justify-center transition focus:outline-none active:scale-95"
+              className="group relative flex items-center justify-center transition focus:outline-none active:scale-95"
             >
-              <span className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-amber-500/80 bg-[#181615] text-sm font-extrabold tracking-wider text-amber-500 shadow-md shadow-amber-500/10">
-                CG
+              <span className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-amber-600/70 bg-[#181615] text-sm font-extrabold tracking-wider text-amber-500 shadow-md shadow-amber-500/10 transition-all duration-200 group-hover:scale-105 group-hover:border-amber-500">
+                {initials}
               </span>
-              <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-[#0b101b] bg-emerald-500" />
+              <span className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full border-2 border-[#0b101b] bg-emerald-500" />
             </button>
             {accountOpen ? (
-              <div
-                role="dialog"
-                aria-label="معلومات الحساب"
-                className="absolute left-0 top-full z-40 mt-3 w-72 origin-top-left rounded-2xl border border-slate-800/90 bg-[#0c1322] p-4 shadow-2xl"
-              >
-                <div className="flex items-center justify-between gap-3 border-b border-slate-800/70 pb-3">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 border-amber-600/70 bg-[#181615] text-sm font-black text-amber-500">
-                    CG
-                  </div>
-                  <div className="flex flex-1 flex-col text-left">
-                    <span className="text-sm font-extrabold tracking-wide text-white">CHIFA GLOW</span>
-                    <span className="max-w-[150px] truncate text-[11px] font-medium text-slate-400">
-                      {username || "manager@chifa.com"}
-                    </span>
-                  </div>
-                </div>
-                <div className="space-y-2.5 py-3 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-400">الصفة / الرتبة:</span>
-                    <span className="text-xs font-extrabold text-amber-500">لوحة إدارة المبيعات</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-400">حالة الحساب:</span>
-                    <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-bold text-emerald-400">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                      نشط الآن
-                    </span>
-                  </div>
-                </div>
-                <div className="border-t border-slate-800/70 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setAccountOpen(false)}
-                    className="w-full rounded-xl border border-slate-700/60 bg-[#162033] px-3 py-2 text-center text-xs font-bold text-slate-200 shadow-sm transition hover:bg-[#1c2942]"
-                  >
-                    الملف الشخصي
-                  </button>
-                </div>
-              </div>
+              <AccountPopover
+                className="w-72 p-4"
+                storeName={storeName}
+                email={profileEmail}
+                initials={initials}
+                onOpenProfile={openProfileEditor}
+              />
             ) : null}
           </div>
         </div>
@@ -1214,38 +1211,37 @@ export function AdminDashboard() {
         >
           <div className="flex min-w-0 flex-1 items-center gap-2">
             <ThemeToggle
-              className="h-auto w-auto shrink-0 rounded-lg border border-slate-800 bg-slate-900/90 p-2 text-amber-400 hover:scale-100 hover:border-slate-700 hover:text-white"
+              className={`${ICON_BTN} border-slate-800 bg-slate-900/90 text-amber-400 hover:scale-100 hover:border-slate-700 hover:text-white`}
             />
             <OrderAlertsBell
-              variant="toolbar"
-              className="h-auto rounded-lg px-3 py-1.5 text-xs font-semibold text-amber-400"
+              variant="icon"
+              className="h-10 w-10 border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-400 dark:hover:bg-amber-500/20"
               {...alertBellShared}
             />
             <button
               type="button"
               aria-label="إضافة سريعة واتساب"
+              title="إضافة سريعة واتساب"
               onClick={() => setQuickOpen(true)}
-              className={`${DESKTOP_CHIP} border border-emerald-500/40 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20`}
+              className={`${ICON_BTN} border-emerald-500/40 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20`}
             >
               <WhatsAppIcon className="h-4 w-4" />
-              إضافة سريعة واتساب
             </button>
             <span className="mx-1 h-6 w-px shrink-0 bg-slate-800" aria-hidden />
             <button
               type="button"
               id="toggleExpandBtn"
               aria-label="القائمة والإجراءات"
+              title="القائمة والإجراءات"
               aria-expanded={actionsOpen}
               onClick={() => setActionsOpen((v) => !v)}
               className={cn(
-                DESKTOP_CHIP,
-                "border bg-slate-900 text-slate-200 hover:bg-slate-800",
+                ICON_BTN,
+                "bg-slate-900 text-slate-200 hover:bg-slate-800",
                 actionsOpen ? "border-amber-500/50 text-amber-400" : "border-slate-700",
               )}
             >
-              <Menu className="h-4 w-4 text-slate-400" />
-              القائمة والإجراءات
-              <ChevronLeft className={cn("h-3.5 w-3.5 text-slate-400 transition-transform duration-300", actionsOpen && "rotate-180")} />
+              <Menu className={cn("h-4 w-4 transition-transform duration-300", actionsOpen && "rotate-90")} />
             </button>
             <div
               ref={actionsScrollRef}
@@ -1341,57 +1337,17 @@ export function AdminDashboard() {
               className="group relative flex items-center justify-center focus:outline-none"
             >
               <span className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-amber-600/70 bg-[#181615] text-sm font-extrabold tracking-wider text-amber-500 shadow-md shadow-amber-500/10 transition-all duration-200 group-hover:scale-105 group-hover:border-amber-500">
-                CG
+                {initials}
               </span>
               <span className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full border-2 border-[#0b101b] bg-emerald-500" />
             </button>
             {accountOpen ? (
-              <div
-                role="dialog"
-                aria-label="معلومات الحساب"
-                className="absolute left-0 top-full z-50 mt-3 w-80 origin-top-left rounded-2xl border border-slate-800/90 bg-[#0c1322] p-5 shadow-2xl"
-              >
-                <div className="flex items-center justify-between gap-3 border-b border-slate-800/70 pb-4">
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 border-amber-600/60 bg-[#181615] text-base font-black text-amber-500">
-                    CG
-                  </div>
-                  <div className="flex flex-1 flex-col text-left">
-                    <span className="text-base font-extrabold tracking-wide text-white">CHIFA GLOW</span>
-                    <span className="text-xs font-medium tracking-normal text-slate-400">
-                      {username || "manager@chifa.com"}
-                    </span>
-                  </div>
-                </div>
-                <div className="space-y-3.5 py-4 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-400">الصفة / الرتبة:</span>
-                    <span className="text-sm font-extrabold text-amber-500">لوحة إدارة المبيعات</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-400">حالة الحساب:</span>
-                    <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-400">
-                      <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                      نشط الآن
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2.5 border-t border-slate-800/70 pt-3">
-                  <button
-                    type="button"
-                    onClick={() => setAccountOpen(false)}
-                    className="flex-1 rounded-xl border border-slate-700/60 bg-[#162033] px-4 py-2 text-center text-xs font-bold text-slate-200 shadow-sm transition hover:bg-[#1c2942]"
-                  >
-                    الملف الشخصي
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void logout()}
-                    className="rounded-xl border border-rose-500/20 bg-[#25141e] px-3.5 py-2 text-xs font-bold text-rose-300 shadow-sm transition hover:bg-[#321927]"
-                  >
-                    خروج
-                  </button>
-                </div>
-              </div>
+              <AccountPopover
+                storeName={storeName}
+                email={profileEmail}
+                initials={initials}
+                onOpenProfile={openProfileEditor}
+              />
             ) : null}
           </div>
         </div>
@@ -1535,6 +1491,14 @@ export function AdminDashboard() {
           </div>
         </aside>
       </div>
+
+      <EditProfileModal
+        open={profileOpen}
+        storeName={storeName}
+        email={profileEmail}
+        onClose={() => setProfileOpen(false)}
+        onSave={saveStoreName}
+      />
 
       <main className={cn(DASHBOARD_SHELL, "flex-grow space-y-6 py-6", selectedIds.length ? "pb-28" : "")}>
         {error ? (

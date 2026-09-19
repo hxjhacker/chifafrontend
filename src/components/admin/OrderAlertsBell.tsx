@@ -204,6 +204,7 @@ export function OrderAlertsBell({
       <button
         type="button"
         aria-label={label}
+        title={label}
         aria-expanded={open}
         onClick={() => {
           setOpen((v) => !v);
