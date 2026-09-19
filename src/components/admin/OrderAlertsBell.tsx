@@ -126,13 +126,13 @@ export function OrderAlertsBell({
           const desktop = typeof window !== "undefined" && window.matchMedia("(min-width: 640px)").matches;
           if (desktop) {
             for (const item of [...fresh].reverse()) {
-              showOrderToast({
+              const payload = {
                 isBlacklisted: Boolean(item.is_blacklisted),
                 name: item.full_name,
                 phone: item.phone,
                 city: item.city,
-                orderId: item.order_id,
-              });
+              };
+              (window.showOrderToast || showOrderToast)(payload);
             }
           }
           if (soundEnabled) {

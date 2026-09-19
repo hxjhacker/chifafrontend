@@ -48,6 +48,8 @@ import {
   storeInitials,
 } from "@/components/admin/EditProfileModal";
 import { OrderAlertsBell, OverdueOrdersBanner } from "@/components/admin/OrderAlertsBell";
+import { OrderToastStack } from "@/components/admin/OrderToastStack";
+import { bindOrderToastGlobals } from "@/lib/order-toasts";
 import { OrderDesktopRow, OrderMobileCard } from "@/components/admin/OrderRow";
 import { OrderTimelineModal } from "@/components/admin/OrderTimelineModal";
 import { QuickWhatsAppOrderModal } from "@/components/admin/QuickWhatsAppOrderModal";
@@ -223,6 +225,10 @@ export function AdminDashboard() {
 
   const closeTimeline = useCallback(() => setViewingId(null), []);
   const closePrint = useCallback(() => setPrintingId(null), []);
+
+  useEffect(() => {
+    bindOrderToastGlobals();
+  }, []);
 
   useEffect(() => {
     setPrefs(readPrefs());
@@ -1860,6 +1866,7 @@ export function AdminDashboard() {
       <footer className="border-t border-gold/20 bg-white py-4 text-center text-sm text-royal/60 transition-colors dark:bg-cardDark dark:text-slate-500">
         <div className={DASHBOARD_SHELL}>© 2026 Chifaglow Admin Panel — نظام إدارة وتصنيف الطلبيات</div>
       </footer>
+      <OrderToastStack />
     </div>
       {printing ? <ShippingLabel order={printing} onClose={closePrint} /> : null}
       <BulkActionBar
