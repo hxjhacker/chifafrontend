@@ -15,7 +15,6 @@ import {
   type UndispatchedItem,
   type UndispatchedSummary,
 } from "@/lib/order-alerts";
-import { showOrderToast } from "@/lib/order-toasts";
 import { readStorage, writeStorage } from "@/lib/safe-storage";
 import { cn } from "@/lib/cn";
 
@@ -126,13 +125,14 @@ export function OrderAlertsBell({
           const desktop = typeof window !== "undefined" && window.matchMedia("(min-width: 640px)").matches;
           if (desktop) {
             for (const item of [...fresh].reverse()) {
-              const payload = {
-                isBlacklisted: Boolean(item.is_blacklisted),
-                name: item.full_name,
-                phone: item.phone,
-                city: item.city,
-              };
-              (window.showOrderToast || showOrderToast)(payload);
+              if (typeof window !== "undefined" && window.showOrderToast) {
+                window.showOrderToast({
+                  isBlacklisted: item.is_blacklisted ?? false,
+                  name: item.full_name || item.client_name || "زبون جديد",
+                  phone: item.phone || "",
+                  city: item.city || "المغرب",
+                });
+              }
             }
           }
           if (soundEnabled) {
