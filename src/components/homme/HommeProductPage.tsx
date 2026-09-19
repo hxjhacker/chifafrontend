@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { ChevronLeft, ChevronRight, Flame, MessageCircle, ShieldCheck, Truck } from "lucide-react";
 import { getProduct } from "@/lib/products";
 import { TrackPageView } from "@/components/TrackPageView";
@@ -141,10 +142,95 @@ export function HommeProductPage({ slug }: { slug: string }) {
             </section>
           </div>
         </section>
+        {product.slug === "pack-royal" ? <PackSalesSections /> : null}
         <section className="mt-14 grid gap-3 sm:grid-cols-3">{[[ShieldCheck, "قلب بيدك عاد خلص"], [Truck, "توصيل مجاني وسري"], [Flame, "عرض حصري محدود"]].map(([Icon, text]) => { const Component = Icon as typeof ShieldCheck; return <div key={String(text)} className="flex items-center gap-3 rounded-2xl border border-red-950 bg-[#0e0707] p-4 text-sm font-bold"><Component className="h-5 w-5 text-[#FFAE00]" />{String(text)}</div>; })}</section>
+        {product.slug !== "pack-royal" ? <StandalonePackUpsell /> : null}
       </main>
       <a href={waLink("سلام Chifaglow Homme، بغيت نطلب الباك الملكي.")} target="_blank" rel="noreferrer" aria-label="تواصل عبر واتساب" className="wa-pulse fixed bottom-24 left-5 z-50 flex h-12 w-12 items-center justify-center rounded-full border-2 border-white/80 bg-[#25D366] text-white shadow-2xl"><WhatsAppIcon className="h-7 w-7" /></a>
       <button type="button" onClick={() => { markCheckout(); scrollToOrderFields(); }} className="fire-button fixed inset-x-0 bottom-0 z-40 flex items-center justify-between px-4 py-3 md:hidden"><span className="text-right"><small className="block text-[10px] text-white/75">الباك الملكي المتكامل</small><b className="text-lg text-white">{product.price} درهم</b></span><span className="rounded-lg bg-black/20 px-4 py-2 text-xs font-black text-white">اطلب الآن ⚡</span></button>
+    </div>
+  );
+}
+
+function StandalonePackUpsell() {
+  return (
+    <section className="mt-14 overflow-hidden rounded-[2rem] border border-[#FF2E00]/60 bg-gradient-to-l from-[#210b08] via-[#0e0707] to-[#060303] p-6 shadow-[0_0_45px_-12px_rgba(255,46,0,.7)] sm:p-9">
+      <div className="grid gap-6 sm:grid-cols-[1fr_auto] sm:items-center">
+        <div>
+          <span className="inline-flex rounded-full bg-[#FF2E00] px-3 py-1 text-[10px] font-black text-white">عرض الترقية الحصري</span>
+          <h2 className="mt-3 text-2xl font-black text-white sm:text-3xl">باغي النتيجة القصوى والمضاعفة؟ 🔥</h2>
+          <p className="mt-3 max-w-2xl text-sm leading-7 text-stone-300">استفد من عرض الباك الملكي المتكامل (عسل الطاقة + زيت التدليك) بـ <b className="text-[#FFAE00]">199 درهم فقط</b> عوض <del className="text-stone-500">450 درهم</del>.</p>
+          <div className="mt-4 flex items-center gap-3 text-xs font-bold"><span className="text-emerald-400">✓ توصيل مجاني</span><span className="text-emerald-400">✓ تغليف سري</span><span className="text-emerald-400">✓ معاينة قبل الأداء</span></div>
+        </div>
+        <Link href="/products/pack-royal" className="fire-button inline-flex items-center justify-center rounded-xl px-7 py-4 text-center text-sm font-black text-white">اكتشف الباك الملكي — 199 درهم</Link>
+      </div>
+    </section>
+  );
+}
+
+function PackSalesSections() {
+  const [playing, setPlaying] = useState<number | null>(null);
+  const contents = [
+    ["🌿", "زيت التدليك المركز", "دهن موضعي حار سريع الامتصاص، كينشط الدورة الدموية ويسخن الأنسجة لصلابة وراحة فورية بلا ملمس دهني مزعج."],
+    ["🍯", "عسل الطاقة بالأعشاب", "ملعقة صغيرة يومياً ترفع النشاط والتحمل، وكتحارب الفشلة والعياء باش ترجع الثقة والحرارة بشكل مستمر وطبيعي."],
+    ["🛡️", "تركيبة طبيعية 100%", "أعشاب وعسل حر بلا مواد كيميائية، آمنة ومريحة، بلا إدمان وبلا أعراض جانبية."],
+    ["📦", "تغليف سري والمعاينة بيدك", "الطلب كيوصلك فـ كرتونة مسدودة، وتخلص بعد المعاينة أمام الموزع."],
+  ] as const;
+  const steps = [
+    ["1", "استعمال موضعي (الزيت)", "دهن موضعي مع تدليك خفيف، سريع الامتصاص."],
+    ["2", "مكمل يومي (العسل)", "ملعقة صغيرة يومياً لطرد العياء طوال اليوم."],
+    ["3", "شحن سري ومجاني", "تغليف محكم لا يكشف المحتوى."],
+    ["4", "المعاينة قبل الدفع", "الدفع نقداً بعد فتح الطرد والتأكد منه."],
+  ] as const;
+  const reviews = [
+    ["يوسف", "الدار البيضاء", "0:18"],
+    ["رشيد", "طنجة", "0:24"],
+  ] as const;
+  return (
+    <div className="mt-16 space-y-16 border-t border-red-950 pt-12">
+      <section>
+        <p className="text-xs font-black tracking-[.2em] text-[#FF6A00]">ROYAL PACK CONTENTS</p>
+        <h2 className="mt-2 text-2xl font-black text-white sm:text-3xl">مكونات الباك الملكي</h2>
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {contents.map(([icon, title, body]) => <article key={title} className="rounded-3xl border border-red-950 bg-[#0e0707] p-5 shadow-[0_0_28px_-15px_rgba(255,46,0,.7)]"><span className="text-2xl">{icon}</span><h3 className="mt-3 font-black text-white">{title}</h3><p className="mt-2 text-sm leading-relaxed text-stone-400">{body}</p></article>)}
+        </div>
+      </section>
+
+      <section>
+        <h2 className="text-center text-2xl font-black text-white sm:text-3xl">علاش تختار الباك الملكي بدل المواد الكيماوية؟</h2>
+        <div className="mx-auto mt-6 grid max-w-5xl gap-5 md:grid-cols-2">
+          <article className="rounded-3xl border border-red-900/70 bg-red-950/20 p-6"><h3 className="font-black text-red-400">✕ أضرار المنشطات الكيميائية</h3><ul className="mt-4 space-y-2 text-sm text-stone-300"><li>• تأثير مؤقت وسريع</li><li>• إجهاد القلب والأعصاب</li><li>• صداع وإحراج</li></ul></article>
+          <article className="rounded-3xl border border-emerald-800/60 bg-emerald-950/20 p-6"><h3 className="font-black text-emerald-400">✓ أمان وفاعلية التركيبة الملكية</h3><ul className="mt-4 space-y-2 text-sm text-stone-300"><li>• أعشاب بلدية وعسل نقي</li><li>• مفعول داخلي وخارجي</li><li>• تغليف سري ودفع بعد المعاينة</li></ul></article>
+        </div>
+      </section>
+
+      <section className="rounded-3xl border border-red-950 bg-[#0e0707] p-6 sm:p-8">
+        <p className="text-xs font-black tracking-[.2em] text-[#FF6A00]">DUAL PACK INSTRUCTIONS</p>
+        <h2 className="mt-2 text-2xl font-black text-white">طريقة الاستعمال</h2>
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {steps.map(([number, title, body]) => <article key={number} className="rounded-2xl border border-stone-800 bg-black/50 p-4"><span className="fire-gradient-text text-xl font-black">{number}</span><h3 className="mt-2 text-sm font-black text-[#FFAE00]">{title}</h3><p className="mt-2 text-xs leading-relaxed text-stone-400">{body}</p></article>)}
+        </div>
+      </section>
+
+      <section id="reviews">
+        <p className="text-xs font-black tracking-[.2em] text-[#FF2E00]">TÉMOIGNAGES CLIENTS</p>
+        <h2 className="mt-2 text-2xl font-black text-white">آراء الزبناء</h2>
+        <p className="mt-1 text-sm text-stone-400">تسجيلات صوتية عبر واتساب بعد الاستلام والمعاينة.</p>
+        <div className="mt-6 grid gap-4 md:grid-cols-2">
+          {reviews.map(([name, city, duration], index) => <article key={name} className="rounded-3xl border border-[#202C33] bg-[#111B21] p-5"><div className="flex items-center justify-between"><div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#00A884] font-black text-white">{name[0]}</span><div><h3 className="font-bold text-white">{name} · {city}</h3><p className="text-[10px] text-[#8696A0]">الباك الملكي المتكامل</p></div></div><span className="rounded-full bg-emerald-950/60 px-2.5 py-1 text-[10px] font-bold text-emerald-400">مشترٍ موثق ✓</span></div><button type="button" onClick={() => setPlaying(playing === index ? null : index)} className="mt-5 flex w-full items-center gap-3 rounded-2xl border border-[#202C33] bg-[#202C33] p-3 text-right"><span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#00A884] text-xs text-white">{playing === index ? "❚❚" : "▶"}</span><span className="h-1 flex-1 rounded bg-gradient-to-l from-[#00A884] via-[#00A884] to-[#8696A0]" /><small className="text-xs font-bold text-[#8696A0]">{duration}</small></button></article>)}
+        </div>
+      </section>
+
+      <section>
+        <h2 className="text-2xl font-black text-white">الأسئلة الشائعة</h2>
+        <div className="mt-5 max-w-4xl space-y-3">
+          {[
+            ["شنو كاين داخل الباك الملكي المتكامل؟", "زيت التدليك المركز للاستعمال الموضعي وعسل الطاقة بالأعشاب كمكمل يومي."],
+            ["واش نقدر نعاين السلعة قبل ما نخلص؟", "آه، كتفتح الكولي وكتتأكد من المنتوج قدام الموزع قبل ما تخلّص."],
+            ["واش التغليف كيكون سري؟", "نعم، الطلب كيوصل فـ كرتونة محايدة ومسدودة لا تكشف محتوى الكولي."],
+          ].map(([question, answer]) => <details key={question} className="group rounded-2xl border border-red-950 bg-[#0e0707] p-5"><summary className="flex cursor-pointer items-center justify-between font-bold text-white">{question}<span className="text-[#FF2E00] transition group-open:rotate-180">▼</span></summary><p className="mt-3 text-sm leading-relaxed text-stone-400">{answer}</p></details>)}
+        </div>
+      </section>
     </div>
   );
 }
