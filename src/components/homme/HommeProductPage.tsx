@@ -28,7 +28,6 @@ export function HommeProductPage({ slug }: { slug: string }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [city, setCity] = useState("");
-  const [address, setAddress] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -68,7 +67,6 @@ export function HommeProductPage({ slug }: { slug: string }) {
     if (name.trim().length < 3) return setError("كتب الاسم الكامل");
     if (!isTenDigitMaPhone(phone)) return setError("رقم الهاتف خاصو يكون 10 أرقام بالضبط، مثلا: 06XXXXXXXX");
     if (city.trim().length < 2) return setError("كتب اسم المدينة");
-    if (address.trim().length < 3) return setError("كتب العنوان بالتفصيل");
     setLoading(true);
     markCheckout();
     try {
@@ -76,7 +74,7 @@ export function HommeProductPage({ slug }: { slug: string }) {
         full_name: name.trim(),
         phone,
         city: city.trim(),
-        address: address.trim(),
+        address: "",
         product_slug: product.slug,
         tier_qty: 1,
         event_id: newEventId(),
@@ -134,7 +132,6 @@ export function HommeProductPage({ slug }: { slug: string }) {
                 <label className="block text-xs font-bold text-stone-300">الاسم الكامل<input value={name} onChange={(event) => setName(event.target.value)} autoComplete="name" required className="homme-input" /></label>
                 <label className="block text-xs font-bold text-stone-300">رقم الهاتف<input value={phone} onChange={(event) => setPhone(digitsOnly(event.target.value).slice(0, 10))} maxLength={10} type="tel" inputMode="tel" dir="ltr" placeholder="06XXXXXXXX" required className="homme-input text-right" /></label>
                 <label className="block text-xs font-bold text-stone-300">المدينة<input value={city} onChange={(event) => setCity(event.target.value)} autoComplete="address-level2" placeholder="كتب اسم المدينة" required className="homme-input" /></label>
-                <label className="block text-xs font-bold text-stone-300">العنوان<input value={address} onChange={(event) => setAddress(event.target.value)} autoComplete="street-address" placeholder="الحي، الشارع، رقم المنزل" required className="homme-input" /></label>
                 {error ? <p role="alert" className="text-sm font-semibold text-red-400">{error}</p> : null}
                 <button disabled={loading} className="fire-button w-full rounded-xl py-4 text-sm font-black text-white disabled:opacity-60">{loading ? "كنسجّلو الطلب…" : `تأكيد الطلب · ${product.price} درهم`}</button>
               </form>
