@@ -135,7 +135,9 @@ export function trackBrowser(
       COMMERCE_EVENTS.has(eventName) || COMMERCE_EVENTS.has(metaName)
         ? commerceParams(extra)
         : {};
-    w.fbq?.("track", metaName, params, { eventID: eventId });
+    if (eventName !== "PageView") {
+      w.fbq?.("track", metaName, params, { eventID: eventId });
+    }
     const tiktokName =
       eventName === "Purchase" ? "CompletePayment" : eventName === "PageView" ? "Pageview" : eventName;
     w.ttq?.track(tiktokName, { ...params, event_id: eventId });
