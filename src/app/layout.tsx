@@ -5,6 +5,14 @@ import { StoreShell } from "@/components/StoreShell";
 import { FB_PIXEL_ID } from "@/lib/pixels";
 import { HISTORY_GUARD_SCRIPT } from "@/lib/admin-paths";
 import { THEME_INIT_SCRIPT } from "@/lib/theme";
+import {
+  OG_IMAGE,
+  SITE_DESCRIPTION,
+  SITE_KEYWORDS,
+  SITE_NAME,
+  SITE_TITLE,
+  SITE_URL,
+} from "@/lib/site";
 import "./globals.css";
 
 const cairo = Cairo({
@@ -27,10 +35,51 @@ const cinzel = Cinzel({
 });
 
 export const metadata: Metadata = {
-  title: "CHIFAGLOW HOMME | القوة والنشاط للرجال",
-  description:
-    "عروض Chifaglow Homme: عسل الطاقة بالأعشاب، زيت التدليك المركز، والباك الملكي المتكامل. توصيل سري مجاني والدفع بعد المعاينة.",
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://chifaglow.com"),
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: SITE_TITLE,
+    template: `%s | ${SITE_NAME}`,
+  },
+  description: SITE_DESCRIPTION,
+  keywords: SITE_KEYWORDS,
+  applicationName: SITE_NAME,
+  authors: [{ name: SITE_NAME }],
+  creator: SITE_NAME,
+  publisher: SITE_NAME,
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    locale: "ar_MA",
+    url: SITE_URL,
+    siteName: SITE_NAME,
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    images: [
+      {
+        url: OG_IMAGE,
+        width: 1200,
+        height: 630,
+        alt: `${SITE_NAME} — عسل الطاقة بالأعشاب وزيت التدليك للرجال`,
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    images: [OG_IMAGE],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+  category: "health",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

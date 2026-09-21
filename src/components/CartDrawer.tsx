@@ -57,7 +57,7 @@ export function CartDrawer() {
               )}
               {cross ? (
                 <div className="rounded-2xl border border-dashed border-gold bg-white p-4 dark:bg-cardDark">
-                  <p className="text-sm font-bold text-royal dark:text-white">زيد USB ثاني بـ 199 درهم (الثمن الأصلي)</p>
+                  <p className="text-sm font-bold text-royal dark:text-white">أضف عرض آخر من Chifaglow Homme</p>
                   <p className="mt-1 text-sm text-royal/80 dark:text-slate-300">{cross.nameAr}</p>
                   <button
                     type="button"

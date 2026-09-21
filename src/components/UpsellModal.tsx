@@ -65,7 +65,7 @@ export function UpsellModal() {
         <motion.div className="fixed inset-0 z-[70] grid place-items-center bg-royal/70 p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
           <motion.div role="dialog" aria-modal initial={{ scale: 0.94 }} animate={{ scale: 1 }} className="w-full max-w-md rounded-3xl border border-gold/20 bg-cream p-6 text-center shadow-gold dark:bg-cardDark">
             <p className="text-sm font-bold text-emeraldCustom">عرض حصري — {seconds} ثانية</p>
-            <h2 className="mt-2 text-2xl font-bold text-royal dark:text-white">أضف USB إضافي فقط بـ 99 DH</h2>
+            <h2 className="mt-2 text-2xl font-bold text-royal dark:text-white">أضف عرض Homme إضافي فقط بـ 99 DH</h2>
             <p className="mt-2 text-royal/80 dark:text-slate-300">{offer.nameAr}</p>
             <p className="mt-1 text-sm text-royal/60 dark:text-slate-400">هذا هو المكان الوحيد فالطلب اللي كاين فيه تخفيض.</p>
             <button type="button" onClick={accept} className="btn-gold mt-5 w-full">

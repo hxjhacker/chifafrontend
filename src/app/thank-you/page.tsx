@@ -77,8 +77,8 @@ function ThanksInner() {
 
   const confirmWa = waLink(
     orderId
-      ? `Salam Chifaglow, bghit n2akd talab dyali (${orderId})`
-      : "Salam Chifaglow, bghit n2akd talab dyali",
+      ? `Salam Chifaglow Homme, bghit n2akd talab dyali (${orderId})`
+      : "Salam Chifaglow Homme, bghit n2akd talab dyali",
   );
 
   return (
