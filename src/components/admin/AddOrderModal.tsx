@@ -75,6 +75,7 @@ const ALL_STATUSES: { id: AdminStatus; label: string }[] = [
   { id: "confirmed", label: "🔵 تم التأكيد (Confirmed)" },
   { id: "new", label: "🟡 جديدة (New)" },
   { id: "shipped", label: "🟣 قيد الشحن (Shipped)" },
+  { id: "out_of_zone", label: "🟠 خارج منطقة التوصيل (Out of zone)" },
   { id: "delivered", label: "🟢 تم التسليم (Delivered)" },
   { id: "returned", label: "🟠 مرتجع (Returned)" },
   { id: "cancelled", label: "🔴 ملغاة (Cancelled)" },

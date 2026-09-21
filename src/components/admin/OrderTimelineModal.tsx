@@ -70,10 +70,10 @@ function reached(order: AdminOrder, stage: (typeof STAGES)[number]["id"] | "canc
   if (stage === "created") return true;
   if (stage === "cancelled") return order.status === "cancelled";
   if (stage === "confirmed") {
-    return Boolean(order.confirmed_at) || ["confirmed", "shipped", "delivered", "returned"].includes(order.status);
+    return Boolean(order.confirmed_at) || ["confirmed", "shipped", "out_of_zone", "delivered", "returned"].includes(order.status);
   }
   if (stage === "shipped") {
-    return Boolean(order.shipped_at) || ["shipped", "delivered", "returned"].includes(order.status);
+    return Boolean(order.shipped_at) || ["shipped", "out_of_zone", "delivered", "returned"].includes(order.status);
   }
   return Boolean(order.delivered_at) || order.status === "delivered";
 }

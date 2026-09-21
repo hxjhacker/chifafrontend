@@ -78,6 +78,10 @@ export function markPixelsReady() {
 }
 
 function run(fn: () => void) {
+  if (typeof window === "undefined") {
+    queue.push(fn);
+    return;
+  }
   const w = window as PixelWindow;
   if (w.__chifaglowPixelsReady) fn();
   else queue.push(fn);

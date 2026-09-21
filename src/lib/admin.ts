@@ -1,4 +1,4 @@
-export type AdminStatus = "new" | "confirmed" | "shipped" | "delivered" | "returned" | "cancelled";
+export type AdminStatus = "new" | "confirmed" | "shipped" | "delivered" | "returned" | "cancelled" | "out_of_zone";
 
 export type AdminCarrier = "meta_livraison" | "quick_livraison" | "force_log";
 
@@ -119,6 +119,12 @@ export const ADMIN_STATUSES: {
     selectClass: "bg-purple-500/10 text-purple-500 border-purple-500/30",
   },
   {
+    id: "out_of_zone",
+    label: "خارج منطقة التوصيل",
+    tone: "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-400/15 dark:text-amber-200 dark:border-amber-400/40",
+    selectClass: "bg-amber-500/10 text-amber-500 border-amber-500/30",
+  },
+  {
     id: "delivered",
     label: "تم التسليم",
     tone: "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-400/15 dark:text-emerald-200 dark:border-emerald-400/40",
@@ -156,17 +162,25 @@ export const NEW_EQUIV = new Set(["pending", "upsell_accepted", "new"]);
 
 export const STATUS_TRANSITIONS: Record<AdminStatus, readonly AdminStatus[]> = {
   new: ["confirmed", "cancelled"],
-  confirmed: ["shipped", "cancelled"],
-  shipped: ["delivered", "returned", "cancelled"],
+  confirmed: ["shipped", "out_of_zone", "cancelled"],
+  shipped: ["delivered", "returned", "out_of_zone", "cancelled"],
   delivered: [],
   returned: [],
   cancelled: ["new", "confirmed"],
+  out_of_zone: ["shipped", "returned", "cancelled"],
 };
 
 export function displayStatus(raw: string): AdminStatus {
   if (NEW_EQUIV.has(raw) || raw === "new") return "new";
   if (raw === "in_shipping") return "shipped";
-  if (raw === "confirmed" || raw === "shipped" || raw === "delivered" || raw === "returned" || raw === "cancelled") {
+  if (
+    raw === "confirmed" ||
+    raw === "shipped" ||
+    raw === "delivered" ||
+    raw === "returned" ||
+    raw === "cancelled" ||
+    raw === "out_of_zone"
+  ) {
     return raw;
   }
   return "new";

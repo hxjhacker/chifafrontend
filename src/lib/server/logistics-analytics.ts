@@ -158,7 +158,7 @@ export async function logisticsAnalytics(): Promise<LogisticsAnalytics> {
         deliveredCount += 1;
         deliveredCents += amount;
         deliveryCosts += delivery;
-      } else if (status === "shipped") {
+      } else if (status === "shipped" || status === "out_of_zone") {
         inTransitCount += 1;
         inTransitCents += amount;
       } else if (status === "returned") {
@@ -179,7 +179,7 @@ export async function logisticsAnalytics(): Promise<LogisticsAnalytics> {
         bucket.returned += 1;
       } else if (status === "cancelled") {
         bucket.cancelled += 1;
-      } else if (status === "shipped") {
+      } else if (status === "shipped" || status === "out_of_zone") {
         bucket.in_transit += 1;
       }
       const cityName = (row.shipping_city || row.city || "").trim();

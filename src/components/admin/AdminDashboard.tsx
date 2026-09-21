@@ -98,6 +98,7 @@ const STATUS_OPTIONS: { id: AdminStatus; label: string }[] = [
   { id: "new", label: "🟡 جديدة" },
   { id: "confirmed", label: "🔵 تم التأكيد" },
   { id: "shipped", label: "🟣 قيد الشحن" },
+  { id: "out_of_zone", label: "🟠 خارج منطقة التوصيل" },
   { id: "delivered", label: "🟢 تم التسليم" },
   { id: "returned", label: "🟠 مرتجع" },
   { id: "cancelled", label: "🔴 ملغاة" },
@@ -190,7 +191,7 @@ function installOrderToasts() {
     name?: string;
     phone?: string;
     city?: string;
-  }) {
+  } = {}) {
     if (window.innerWidth < 640) return;
 
     const container = document.getElementById("toastContainer");
@@ -276,17 +277,6 @@ function installOrderToasts() {
   return () => {
     delete window.showOrderToast;
   };
-}
-
-declare global {
-  interface Window {
-    showOrderToast?: (input: {
-      isBlacklisted?: boolean;
-      name?: string;
-      phone?: string;
-      city?: string;
-    }) => void;
-  }
 }
 
 export function AdminDashboard() {
@@ -982,6 +972,7 @@ export function AdminDashboard() {
         n > 0 ? `تم تحديث ${n} طلبية` : "لا توجد حالات جديدة للتحديث",
       );
       await load();
+      await refreshStats();
     } catch (err) {
       notifyDashboard(err instanceof Error ? err.message : "تعذر تحديث التتبع. أعد المحاولة.", "error");
     } finally {

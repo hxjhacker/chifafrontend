@@ -1,7 +1,8 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import React, { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { notFound, redirect } from "next/navigation";
 import { ChevronLeft, ChevronRight, Flame, MessageCircle, ShieldCheck, Truck } from "lucide-react";
 import { getProduct } from "@/lib/products";
 import { TrackPageView } from "@/components/TrackPageView";
@@ -10,6 +11,16 @@ import { submitOrder } from "@/lib/api";
 import { digitsOnly, isTenDigitMaPhone } from "@/lib/phone";
 import { scrollToOrderFields } from "@/lib/scroll";
 import { waLink, WhatsAppIcon } from "@/components/Chrome";
+
+const LEGACY_SLUGS = ["quran", "kids", "music", "pack-royal-power"];
+
+export function ProductPage({ params }: { params: any }) {
+  const resolvedParams = React.use ? React.use(params) : params;
+  const slug = resolvedParams?.slug || "pack-royal";
+  if (LEGACY_SLUGS.includes(slug)) redirect("/");
+  if (!getProduct(slug)) notFound();
+  return <HommeProductPage slug={slug} />;
+}
 
 const PACK_IMAGES = [
   "/image/spack-royal/hero.jpg",
@@ -24,6 +35,7 @@ const PACK_IMAGES = [
 export function HommeProductPage({ slug }: { slug: string }) {
   const product = getProduct(slug);
   const initiated = useRef(false);
+  const [mounted, setMounted] = React.useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -32,19 +44,23 @@ export function HommeProductPage({ slug }: { slug: string }) {
   const [loading, setLoading] = useState(false);
 
   const images = product?.slug === "pack-royal" ? PACK_IMAGES : product ? [product.heroImage, ...product.gallery] : [];
-  const activeImage = images[currentImageIndex] ?? images[0];
+  const activeImage = images[currentImageIndex] || images[0];
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     setCurrentImageIndex(0);
   }, [slug]);
 
   useEffect(() => {
-    if (images.length < 2) return;
+    if (!mounted || images.length < 2) return;
     const interval = window.setInterval(() => {
       setCurrentImageIndex((index) => (index + 1) % images.length);
     }, 3000);
     return () => window.clearInterval(interval);
-  }, [images.length]);
+  }, [mounted, images.length]);
 
   const markCheckout = useCallback(() => {
     if (!product || initiated.current) return;
@@ -53,10 +69,12 @@ export function HommeProductPage({ slug }: { slug: string }) {
   }, [product]);
 
   useEffect(() => {
-    if (product) trackFunnel("ViewContent", { value: product.price, contentIds: [product.slug] });
-  }, [product]);
+    if (!mounted || !product) return;
+    trackFunnel("ViewContent", { value: product.price, contentIds: [product.slug] });
+  }, [mounted, product]);
 
   function changeImage(direction: -1 | 1) {
+    if (images.length < 1) return;
     setCurrentImageIndex((index) => (index + direction + images.length) % images.length);
   }
 
@@ -78,10 +96,12 @@ export function HommeProductPage({ slug }: { slug: string }) {
         product_slug: product.slug,
         tier_qty: 1,
         event_id: newEventId(),
-        landing_url: window.location.href,
+        landing_url: typeof window !== "undefined" ? window.location.href : "",
         ...clickIds(),
       });
-      window.location.assign(`/thank-you?order=${order.order_id}`);
+      if (typeof window !== "undefined") {
+        window.location.assign(`/thank-you?order=${order.order_id}`);
+      }
     } catch {
       setError("ما قدرناش نسجّلو الطلب. جرّب مرة أخرى أو تأكد من البيانات.");
     } finally {
@@ -93,7 +113,7 @@ export function HommeProductPage({ slug }: { slug: string }) {
 
   return (
     <div className="min-h-screen bg-[#060303] pb-28 text-[#FEE2E2]" dir="rtl">
-      <TrackPageView kind="product" productSlug={product.slug} />
+      {mounted ? <TrackPageView kind="product" productSlug={product.slug} /> : null}
       <main className="mx-auto max-w-7xl px-4 py-7 sm:px-6 sm:py-12">
         <section className="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:items-start">
           <div className="lg:sticky lg:top-28">
@@ -107,7 +127,7 @@ export function HommeProductPage({ slug }: { slug: string }) {
             </div>
             <div className="no-scrollbar mt-3 flex gap-2 overflow-x-auto pb-1" role="tablist" aria-label="صور المنتج">
               {images.map((image, index) => (
-                <button key={image} type="button" role="tab" aria-selected={currentImageIndex === index} onClick={() => setCurrentImageIndex(index)} className={`h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-black p-0.5 ${currentImageIndex === index ? "border-2 border-[#FF2E00]" : "border border-red-950"}`}>
+                <button key={`${image}-${index}`} type="button" role="tab" aria-selected={currentImageIndex === index} onClick={() => setCurrentImageIndex(index)} className={`h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-black p-0.5 ${currentImageIndex === index ? "border-2 border-[#FF2E00]" : "border border-red-950"}`}>
                   <img src={image} alt="" className="h-full w-full rounded-lg object-cover" />
                 </button>
               ))}
@@ -171,18 +191,23 @@ const VOICE_REVIEWS = [
   { name: "رشيد", city: "الدار البيضاء", src: "/odio/odio3.mp3", fallback: "/odio/odio3" },
 ] as const;
 
-function formatClock(seconds: number) {
-  if (!Number.isFinite(seconds) || seconds <= 0) return "0:00";
+function formatClock(seconds?: number) {
+  if (!Number.isFinite(seconds) || !seconds || seconds <= 0) return "0:00";
   const mins = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);
   return `${mins}:${String(secs).padStart(2, "0")}`;
 }
 
 function VoiceNoteReviews() {
+  const [mounted, setMounted] = useState(false);
   const [currentPlaying, setCurrentPlaying] = useState<number | null>(null);
   const [progress, setProgress] = useState<Record<number, number>>({ 0: 0, 1: 0, 2: 0 });
   const [durations, setDurations] = useState<Record<number, string>>({ 0: "0:00", 1: "0:00", 2: "0:00" });
   const audioRefs = useRef<(HTMLAudioElement | null)[]>([]);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -233,32 +258,37 @@ function VoiceNoteReviews() {
                 </div>
                 <span className="rounded-full bg-emerald-950/60 px-2.5 py-1 text-[10px] font-bold text-emerald-400">مشترٍ موثق ✓</span>
               </div>
-              <audio
-                ref={(el) => {
-                  audioRefs.current[index] = el;
-                }}
-                preload="metadata"
-                src={review.src}
-                onError={(event) => {
-                  const el = event.currentTarget;
-                  if (el.dataset.fallbackTried === "1") return;
-                  el.dataset.fallbackTried = "1";
-                  el.src = review.fallback;
-                }}
-                onLoadedMetadata={(event) => {
-                  setDurations((prev) => ({ ...prev, [index]: formatClock(event.currentTarget.duration) }));
-                }}
-                onTimeUpdate={(event) => {
-                  const el = event.currentTarget;
-                  const ratio = el.duration ? (el.currentTime / el.duration) * 100 : 0;
-                  setProgress((prev) => ({ ...prev, [index]: ratio }));
-                  setDurations((prev) => ({ ...prev, [index]: formatClock(el.duration - el.currentTime || el.duration) }));
-                }}
-                onEnded={() => {
-                  setCurrentPlaying((current) => (current === index ? null : current));
-                  setProgress((prev) => ({ ...prev, [index]: 0 }));
-                }}
-              />
+              {mounted ? (
+                <audio
+                  ref={(el) => {
+                    audioRefs.current[index] = el;
+                  }}
+                  preload="metadata"
+                  src={review.src}
+                  onError={(event) => {
+                    const el = event.currentTarget;
+                    if (!el || el.dataset.fallbackTried === "1") return;
+                    el.dataset.fallbackTried = "1";
+                    el.src = review.fallback;
+                  }}
+                  onLoadedMetadata={(event) => {
+                    const duration = event.currentTarget?.duration;
+                    setDurations((prev) => ({ ...prev, [index]: formatClock(duration) }));
+                  }}
+                  onTimeUpdate={(event) => {
+                    const el = event.currentTarget;
+                    if (!el) return;
+                    const { duration, currentTime } = el;
+                    const ratio = duration ? (currentTime / duration) * 100 : 0;
+                    setProgress((prev) => ({ ...prev, [index]: ratio }));
+                    setDurations((prev) => ({ ...prev, [index]: formatClock(duration - currentTime || duration) }));
+                  }}
+                  onEnded={() => {
+                    setCurrentPlaying((current) => (current === index ? null : current));
+                    setProgress((prev) => ({ ...prev, [index]: 0 }));
+                  }}
+                />
+              ) : null}
               <button
                 type="button"
                 onClick={() => togglePlay(index)}

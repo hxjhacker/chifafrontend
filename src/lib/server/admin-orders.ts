@@ -52,7 +52,7 @@ const CATALOG_BY_SLUG: Record<string, { code: string; quick_product_id: number |
   "pack-royal-power": { code: "PACK_ROYAL", quick_product_id: null, is_quick_stock: false },
 };
 
-const ALLOWED: AdminStatus[] = ["new", "confirmed", "shipped", "delivered", "returned", "cancelled"];
+const ALLOWED: AdminStatus[] = ["new", "confirmed", "shipped", "delivered", "returned", "cancelled", "out_of_zone"];
 const WINDOWS: DeliveryWindow[] = ["anytime", "morning", "afternoon", "weekend"];
 const ORDER_COLS = `id, full_name, phone, phone_national, city, address, quartier, street, building, landmark,
       delivery_window, courier_notes, region_id, bundle_enabled, secondary_qty,
@@ -105,17 +105,17 @@ function stampFragment(cols: Set<string>, param: string) {
   const parts: string[] = [];
   if (cols.has("confirmed_at")) {
     parts.push(
-      `confirmed_at = CASE WHEN ${status} = 'new' THEN NULL WHEN ${status} IN ('confirmed','shipped','delivered','returned') THEN COALESCE(confirmed_at, now()) ELSE confirmed_at END`,
+      `confirmed_at = CASE WHEN ${status} = 'new' THEN NULL WHEN ${status} IN ('confirmed','shipped','delivered','returned','out_of_zone') THEN COALESCE(confirmed_at, now()) ELSE confirmed_at END`,
     );
   }
   if (cols.has("shipped_at")) {
     parts.push(
-      `shipped_at = CASE WHEN ${status} IN ('new','confirmed') THEN NULL WHEN ${status} IN ('shipped','delivered','returned') THEN COALESCE(shipped_at, now()) ELSE shipped_at END`,
+      `shipped_at = CASE WHEN ${status} IN ('new','confirmed') THEN NULL WHEN ${status} IN ('shipped','delivered','returned','out_of_zone') THEN COALESCE(shipped_at, now()) ELSE shipped_at END`,
     );
   }
   if (cols.has("delivered_at")) {
     parts.push(
-      `delivered_at = CASE WHEN ${status} IN ('new','confirmed','shipped','returned') THEN NULL WHEN ${status} = 'delivered' THEN COALESCE(delivered_at, now()) ELSE delivered_at END`,
+      `delivered_at = CASE WHEN ${status} IN ('new','confirmed','shipped','returned','out_of_zone') THEN NULL WHEN ${status} = 'delivered' THEN COALESCE(delivered_at, now()) ELSE delivered_at END`,
     );
   }
   if (cols.has("cancelled_at")) {
@@ -146,8 +146,17 @@ function serialize(row: OrderRow): AdminOrder {
   const status = displayStatus(row.status);
   const created = iso(row.created_at);
   const updated = iso(row.updated_at) || created;
-  const pastConfirmed = status === "confirmed" || status === "shipped" || status === "delivered" || status === "returned";
-  const pastShipped = status === "shipped" || status === "delivered" || status === "returned";
+  const pastConfirmed =
+    status === "confirmed" ||
+    status === "shipped" ||
+    status === "delivered" ||
+    status === "returned" ||
+    status === "out_of_zone";
+  const pastShipped =
+    status === "shipped" ||
+    status === "delivered" ||
+    status === "returned" ||
+    status === "out_of_zone";
   const slug = row.product_slug || "quran";
   const catalog = CATALOG_BY_SLUG[slug];
   const carrier = row.carrier === "quick_livraison" || row.carrier === "force_log" ? row.carrier : "meta_livraison";
@@ -330,7 +339,7 @@ export async function adminStats(): Promise<AdminStats> {
       const status = displayStatus(row.status || "pending");
       if (status === "new") newOrders += 1;
       else if (status === "confirmed") confirmed += 1;
-      else if (status === "shipped") shipped += 1;
+      else if (status === "shipped" || status === "out_of_zone") shipped += 1;
       else if (status === "delivered") delivered += 1;
       else if (status === "cancelled") cancelled += 1;
       if (status !== "cancelled" && status !== "returned") revenueCents += Number(row.total_cents || 0);
@@ -439,7 +448,11 @@ async function stampStatusColumns(
     assignments.push(
       status === "new"
         ? "confirmed_at = NULL"
-        : status === "confirmed" || status === "shipped" || status === "delivered" || status === "returned"
+        : status === "confirmed" ||
+            status === "shipped" ||
+            status === "delivered" ||
+            status === "returned" ||
+            status === "out_of_zone"
           ? "confirmed_at = COALESCE(confirmed_at, now())"
           : "confirmed_at = confirmed_at",
     );
@@ -448,7 +461,7 @@ async function stampStatusColumns(
     assignments.push(
       status === "new" || status === "confirmed"
         ? "shipped_at = NULL"
-        : status === "shipped" || status === "delivered" || status === "returned"
+        : status === "shipped" || status === "delivered" || status === "returned" || status === "out_of_zone"
           ? "shipped_at = COALESCE(shipped_at, now())"
           : "shipped_at = shipped_at",
     );
@@ -746,7 +759,15 @@ export async function updateAdminOrder(orderId: string, patch: OrderPatch): Prom
       }
     }
 
-    if ((status === "confirmed" || status === "shipped" || status === "delivered" || status === "returned" || status === "cancelled") && saved) {
+    if (
+      (status === "confirmed" ||
+        status === "shipped" ||
+        status === "delivered" ||
+        status === "returned" ||
+        status === "out_of_zone" ||
+        status === "cancelled") &&
+      saved
+    ) {
       saved = await stampStatusColumns(client, orderId, status, cols, saved);
     }
 
