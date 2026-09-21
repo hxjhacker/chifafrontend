@@ -1,8 +1,10 @@
-/** Public Meta Pixel ID. Env wins at build time; fallback so Easypanel rebuilds still ship the snippet. */
+/** Public Meta Pixel / Dataset ID. Env wins at build time; fallback so Easypanel rebuilds still ship the snippet. */
 export const PIXELS_ENABLED = process.env.NEXT_PUBLIC_ENABLE_PIXELS !== "false";
 
 export const FB_PIXEL_ID = PIXELS_ENABLED
-  ? process.env.NEXT_PUBLIC_FB_PIXEL_ID || "1614387763571020"
+  ? process.env.NEXT_PUBLIC_FB_PIXEL_ID ||
+    process.env.NEXT_PUBLIC_FACEBOOK_PIXEL_ID ||
+    "1380665090820653"
   : "";
 
 export const TIKTOK_PIXEL_ID = PIXELS_ENABLED
