@@ -347,6 +347,49 @@ export function AdminDashboard() {
   }, [orders, setDashboardOrders]);
 
   useEffect(() => {
+    function normalizeReference(value: unknown) {
+      return String(value ?? "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+    }
+
+    function onOpenOrderDetails(event: Event) {
+      const detail = (event as CustomEvent<{
+        orderId?: string;
+        trackingCode?: string;
+        phone?: string;
+        order?: Record<string, unknown>;
+      }>).detail;
+      if (!detail) return;
+
+      const orderId = normalizeReference(detail.orderId);
+      const trackingCode = normalizeReference(detail.trackingCode);
+      const phoneDigits = String(detail.phone ?? "").replace(/\D/g, "");
+      const phoneLast9 = phoneDigits.length >= 9 ? phoneDigits.slice(-9) : "";
+      const embeddedOrderId = normalizeReference(detail.order?.order_id || detail.order?.id);
+
+      const matched = orders.find((order) => {
+        if (embeddedOrderId && normalizeReference(order.order_id) === embeddedOrderId) return true;
+
+        const references = [
+          order.order_id,
+          order.meta_livraison_code,
+          order.tracking_number,
+          order.code_envoi,
+        ].map(normalizeReference);
+        if (orderId && references.some((reference) => reference === orderId || reference.includes(orderId) || orderId.includes(reference))) return true;
+        if (trackingCode && references.some((reference) => reference === trackingCode || reference.includes(trackingCode) || trackingCode.includes(reference))) return true;
+
+        const orderPhone = String(order.phone || order.phone_national || "").replace(/\D/g, "");
+        return Boolean(phoneLast9 && orderPhone.length >= 9 && orderPhone.endsWith(phoneLast9));
+      });
+
+      if (matched) setViewingId(matched.order_id);
+    }
+
+    window.addEventListener("open-order-details", onOpenOrderDetails);
+    return () => window.removeEventListener("open-order-details", onOpenOrderDetails);
+  }, [orders]);
+
+  useEffect(() => {
     setPrefs(readPrefs());
     setStoreName(readStorage(STORE_NAME_KEY)?.trim() || DEFAULT_STORE_NAME);
     setDarkMode(resolveIsDark());

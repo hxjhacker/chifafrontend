@@ -10,6 +10,8 @@ const TEXT_KEY = "chifaglow_notes_text";
 const IMAGE_KEY = "chifaglow_notes_img";
 const AUDIO_KEY = "chifaglow_notes_audio";
 
+type DashboardOrder = Record<string, unknown>;
+
 export interface OrderMatch {
   orderId: string;
   trackingCode?: string;
@@ -17,9 +19,10 @@ export interface OrderMatch {
   city?: string;
   product?: string;
   status?: string;
+  phone?: string;
+  order?: DashboardOrder;
 }
 
-type DashboardOrder = Record<string, unknown>;
 type DashboardOrdersContextValue = {
   orders: DashboardOrder[];
   setOrders: Dispatch<SetStateAction<DashboardOrder[]>>;
@@ -121,6 +124,8 @@ export function findMatchingOrder(query: string, propOrders: DashboardOrder[] = 
       city: field(found, "city", "ville"),
       product: field(found, "product", "item", "product_slug"),
       status: field(found, "status") || "قيد الشحن",
+      phone: field(found, "phone", "customer_phone", "telephone", "phone_national"),
+      order: found,
     };
   }
 
@@ -268,6 +273,21 @@ export function StickyNotesWidget({ orders = [] }: StickyNotesWidgetProps) {
     window.setTimeout(() => setCopied(""), 1200);
   }
 
+  function handleOpenExistingOrderModal(matchedOrder: OrderMatch) {
+    window.dispatchEvent(
+      new CustomEvent("open-order-details", {
+        detail: {
+          orderId: matchedOrder.orderId || field(matchedOrder.order || {}, "id", "order_id", "ref", "code"),
+          trackingCode:
+            matchedOrder.trackingCode ||
+            field(matchedOrder.order || {}, "tracking_number", "tracking_code", "awb", "meta_livraison_code"),
+          phone: matchedOrder.phone || field(matchedOrder.order || {}, "phone", "customer_phone", "telephone", "phone_national"),
+          order: matchedOrder.order,
+        },
+      }),
+    );
+  }
+
   return (
     <div className="fixed bottom-4 right-3 z-50 select-none sm:bottom-6 sm:right-6" dir="rtl">
       {open ? (
@@ -297,7 +317,7 @@ export function StickyNotesWidget({ orders = [] }: StickyNotesWidgetProps) {
                     <div className="flex shrink-0 items-center gap-1.5">
                       {detection.kind === "phone" ? <a href={phoneHref(detection.value)} className="rounded-lg bg-[#111927] px-2.5 py-1.5 text-[10px] font-bold text-sky-400">اتصال</a> : null}
                       {detection.kind === "phone" ? <a href={whatsappHref(detection.value)} target="_blank" rel="noreferrer" className="rounded-lg bg-emerald-500/20 px-2.5 py-1.5 text-[10px] font-bold text-emerald-400">واتساب</a> : null}
-                      {trackingTarget ? <a href={`https://chifaglow.com/track?awb=${encodeURIComponent(trackingTarget)}`} target="_blank" rel="noreferrer" className="rounded-lg bg-cyan-500/20 px-2.5 py-1.5 text-[10px] font-bold text-cyan-300">تتبع الطلب</a> : null}
+                      {trackingTarget && order ? <button type="button" onClick={() => handleOpenExistingOrderModal(order)} className="rounded-lg bg-cyan-500/20 px-2.5 py-1.5 text-[10px] font-bold text-cyan-300">تتبع الطلب</button> : null}
                       <button type="button" onClick={() => void copy(detection.value)} className="rounded-lg bg-[#111927] px-2 py-1.5 text-[10px] font-bold text-slate-300">{copied === detection.value ? "تم!" : "نسخ"}</button>
                     </div>
                   </div>
