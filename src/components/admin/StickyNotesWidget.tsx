@@ -155,6 +155,7 @@ export function StickyNotesWidget({ orders = [] }: StickyNotesWidgetProps) {
   const [detectedTrackings, setDetectedTrackings] = useState<string[]>([]);
   const [image, setImage] = useState("");
   const [audio, setAudio] = useState("");
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [recording, setRecording] = useState(false);
   const [saved, setSaved] = useState(false);
   const [copied, setCopied] = useState("");
@@ -338,8 +339,81 @@ export function StickyNotesWidget({ orders = [] }: StickyNotesWidgetProps) {
             </button>
           </div>
 
-          {image ? <div className="relative overflow-hidden rounded-xl border border-slate-800 bg-[#070b12] p-1.5"><img src={image} alt="صورة الملاحظة" className="h-36 w-full rounded-lg object-cover" /><button type="button" onClick={() => setImage("")} className="absolute left-2.5 top-2.5 rounded-lg bg-rose-600/90 px-2 py-0.5 text-xs font-bold text-white">حذف</button></div> : null}
-          {audio ? <audio src={audio} controls className="mt-2 h-8 w-full" /> : null}
+          {image ? (
+            <div className="group relative mt-2 overflow-hidden rounded-xl border border-slate-800 bg-[#070b12] p-1.5">
+              <img
+                src={image}
+                alt="صورة الملاحظة"
+                onClick={() => setIsImageModalOpen(true)}
+                className="h-36 w-full cursor-pointer rounded-lg object-cover transition hover:opacity-90"
+                title="انقر لتكبير الصورة"
+              />
+              <div className="absolute left-2.5 top-2.5 flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setIsImageModalOpen(true)}
+                  className="flex items-center gap-1 rounded-lg border border-cyan-500/30 bg-slate-900/80 px-2 py-1 text-xs font-bold text-cyan-300 shadow transition hover:bg-slate-800 active:scale-95"
+                  title="عرض بالحجم الكامل"
+                >
+                  <span>تكبير</span>
+                  <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setImage("");
+                    setIsImageModalOpen(false);
+                    window.localStorage.removeItem(IMAGE_KEY);
+                  }}
+                  className="rounded-lg bg-rose-600/90 px-2 py-1 text-xs font-bold text-white shadow transition hover:bg-rose-500 active:scale-95"
+                >
+                  حذف ✕
+                </button>
+              </div>
+            </div>
+          ) : null}
+          {isImageModalOpen && image ? (
+            <div
+              className="fixed inset-0 z-[99999] flex select-none items-center justify-center bg-black/90 p-3 backdrop-blur-md"
+              onClick={() => setIsImageModalOpen(false)}
+            >
+              <button
+                type="button"
+                onClick={() => setIsImageModalOpen(false)}
+                className="absolute left-4 top-4 flex h-10 w-10 items-center justify-center rounded-full border border-slate-700 bg-slate-800 text-lg font-bold text-white transition hover:bg-slate-700 sm:left-6 sm:top-6"
+                aria-label="إغلاق عرض الصورة"
+              >
+                ✕
+              </button>
+              <img
+                src={image}
+                alt="عرض الصورة بالحجم الكامل"
+                className="max-h-[90vh] max-w-[95vw] rounded-2xl object-contain shadow-2xl"
+                onClick={(event) => event.stopPropagation()}
+              />
+            </div>
+          ) : null}
+          {audio ? (
+            <div className="mt-2 flex items-center gap-2 rounded-xl border border-slate-800 bg-[#070b12] p-2">
+              <audio src={audio} controls className="h-8 w-full flex-1 outline-none" />
+              <button
+                type="button"
+                onClick={() => {
+                  setAudio("");
+                  window.localStorage.removeItem(AUDIO_KEY);
+                }}
+                className="flex shrink-0 items-center justify-center rounded-lg border border-rose-500/30 bg-rose-500/10 p-2 text-xs font-bold text-rose-400 transition hover:bg-rose-500/20 active:scale-95"
+                title="حذف التسجيل الصوتي"
+                aria-label="حذف التسجيل الصوتي"
+              >
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            </div>
+          ) : null}
           <div className="mt-2 flex items-center justify-between border-t border-slate-800/80 pt-2.5 text-[11px] text-slate-500">
             <span>{saved ? "تم الحفظ!" : "حفظ تلقائي"}</span>
             <span className="font-mono font-bold text-amber-400">{text.length} حرف</span>
