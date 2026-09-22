@@ -52,6 +52,7 @@ import { OrderAlertsBell, OverdueOrdersBanner } from "@/components/admin/OrderAl
 import { OrderDesktopRow, OrderMobileCard } from "@/components/admin/OrderRow";
 import { OrderTimelineModal } from "@/components/admin/OrderTimelineModal";
 import { QuickWhatsAppOrderModal } from "@/components/admin/QuickWhatsAppOrderModal";
+import { useDashboardOrders } from "@/components/admin/StickyNotesWidget";
 import { ViewsObservatory } from "@/components/admin/ViewsObservatory";
 import {
   ADMIN_STATUSES,
@@ -284,6 +285,7 @@ export function AdminDashboard() {
   const [stats, setStats] = useState<AdminStats>(EMPTY_STATS);
   const [logistics, setLogistics] = useState<LogisticsAnalytics>(EMPTY_LOGISTICS);
   const [orders, setOrders] = useState<AdminOrder[]>([]);
+  const { setOrders: setDashboardOrders } = useDashboardOrders();
   const [username, setUsername] = useState("");
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("all");
@@ -339,6 +341,10 @@ export function AdminDashboard() {
   useEffect(() => {
     return installOrderToasts();
   }, []);
+
+  useEffect(() => {
+    setDashboardOrders(orders);
+  }, [orders, setDashboardOrders]);
 
   useEffect(() => {
     setPrefs(readPrefs());
