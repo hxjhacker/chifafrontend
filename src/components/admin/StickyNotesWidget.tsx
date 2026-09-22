@@ -1,15 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, Copy, ImagePlus, Mic, Paperclip, Phone, StopCircle, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import type { ChangeEvent } from "react";
+import { Copy, ImagePlus, Mic, StopCircle, X } from "lucide-react";
 import { WhatsAppIcon } from "@/components/Chrome";
 import { cn } from "@/lib/cn";
 
 const TEXT_KEY = "chifaglow_notes_text";
 const IMAGE_KEY = "chifaglow_notes_img";
 const AUDIO_KEY = "chifaglow_notes_audio";
-
-type Detection = { value: string; kind: "phone" | "tracking"; order?: { name?: string; city?: string; tracking?: string } };
 
 function readLocal(key: string) {
   try {
@@ -37,21 +36,6 @@ function whatsappHref(phone: string) {
   return `https://wa.me/${intl}`;
 }
 
-function detectEntities(text: string): Detection[] {
-  const phones: string[] = text.match(/(?:(?:\+|00)212|0)[5-7]\d{8}/g) || [];
-  const trackings: string[] =
-    text.match(/\b(?:AWB[-_]?[A-Z0-9]+|GLW[-_]?[A-Z0-9]+|QK[-_]?[A-Z0-9]+|[A-Z]{2}\d{7,10}[A-Z]{0,2}|\d{8,14})\b/gi) || [];
-  const unique = new Set<string>();
-  const result: Detection[] = [];
-  for (const value of [...phones, ...trackings]) {
-    const key = value.replace(/\s/g, "").toLowerCase();
-    if (unique.has(key) || (trackings.includes(value) && /^(05|06|07)/.test(value))) continue;
-    unique.add(key);
-    result.push({ value, kind: phones.includes(value) ? "phone" : "tracking" });
-  }
-  return result;
-}
-
 function findStoredOrder(value: string) {
   try {
     const raw = window.localStorage.getItem("chifaglow_orders") || window.localStorage.getItem("orders") || "[]";
@@ -69,6 +53,8 @@ function findStoredOrder(value: string) {
 export function StickyNotesWidget() {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
+  const [detectedPhones, setDetectedPhones] = useState<string[]>([]);
+  const [detectedTrackings, setDetectedTrackings] = useState<string[]>([]);
   const [image, setImage] = useState("");
   const [audio, setAudio] = useState("");
   const [recording, setRecording] = useState(false);
@@ -77,8 +63,29 @@ export function StickyNotesWidget() {
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
 
+  function parseNoteEntities(noteText: string) {
+    const phoneRegex = /(?:(?:\+|00)212|0)[5-7]\d{8}/g;
+    const trackingRegex = /\b(?:CFG[-_]?[A-Za-z0-9]+|GLW[-_]?[A-Za-z0-9]+|QK[-_]?[A-Za-z0-9]+|[A-Za-z]{2}\d{7,10}[A-Za-z]{0,2}|\d{8,14})\b/gi;
+
+    const foundPhones = Array.from(new Set(noteText.match(phoneRegex) || []));
+    let foundTrackings = Array.from(new Set(noteText.match(trackingRegex) || []));
+    foundTrackings = foundTrackings.filter((tracking) => !foundPhones.includes(tracking) && !/^0[5-7]/.test(tracking));
+
+    setDetectedPhones(foundPhones);
+    setDetectedTrackings(foundTrackings);
+  }
+
+  function handleTextChange(event: ChangeEvent<HTMLTextAreaElement>) {
+    const value = event.target.value;
+    setText(value);
+    writeLocal(TEXT_KEY, value);
+    parseNoteEntities(value);
+  }
+
   useEffect(() => {
-    setText(readLocal(TEXT_KEY));
+    const initialText = readLocal(TEXT_KEY);
+    setText(initialText);
+    parseNoteEntities(initialText);
     setImage(readLocal(IMAGE_KEY));
     setAudio(readLocal(AUDIO_KEY));
   }, []);
@@ -99,7 +106,10 @@ export function StickyNotesWidget() {
     return () => document.removeEventListener("keydown", closeOnEscape);
   }, []);
 
-  const detections = useMemo(() => detectEntities(text), [text]);
+  const detections = [
+    ...detectedPhones.map((value) => ({ value, kind: "phone" as const })),
+    ...detectedTrackings.map((value) => ({ value, kind: "tracking" as const })),
+  ];
   const hasNotes = Boolean(text.trim() || image || audio);
 
   function saveImage(file: File | null) {
@@ -145,6 +155,8 @@ export function StickyNotesWidget() {
 
   function clearAll() {
     setText("");
+    setDetectedPhones([]);
+    setDetectedTrackings([]);
     setImage("");
     setAudio("");
     [TEXT_KEY, IMAGE_KEY, AUDIO_KEY].forEach((key) => {
@@ -198,7 +210,7 @@ export function StickyNotesWidget() {
             </div>
           ) : null}
 
-          <textarea value={text} onChange={(event) => setText(event.target.value)} rows={5} placeholder="سجّل ملاحظاتك، رقم هاتف، أو كود تتبع..." className="my-2 w-full resize-none rounded-xl border border-slate-800 bg-[#070b12]/95 p-3 text-xs leading-relaxed text-slate-100 outline-none placeholder:text-slate-500 focus:border-amber-500" />
+          <textarea value={text} onChange={handleTextChange} rows={5} placeholder="سجّل ملاحظاتك، رقم هاتف، أو كود تتبع..." className="my-2 w-full resize-none rounded-xl border border-slate-800 bg-[#070b12]/95 p-3 text-xs leading-relaxed text-slate-100 outline-none placeholder:text-slate-500 focus:border-amber-500" />
 
           <div className="flex items-center gap-2 border-t border-slate-800/80 py-2">
             <label className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-slate-800 bg-[#111927] px-2.5 py-2 text-xs font-bold text-slate-200 transition hover:bg-[#162134]">
@@ -221,7 +233,9 @@ export function StickyNotesWidget() {
 
       <button type="button" onClick={() => setOpen((value) => !value)} className="group relative flex h-12 w-12 items-center justify-center rounded-xl border border-amber-500/40 bg-[#0c1322] text-amber-400 shadow-2xl shadow-amber-950/20 transition hover:scale-105 hover:border-amber-500 active:scale-95" title="ملاحظات سريعة" aria-label="ملاحظات سريعة">
         {hasNotes ? <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-amber-400 ring-2 ring-[#070b12]" /> : null}
-        {open ? <Check className="h-5 w-5" /> : <Paperclip className="h-5 w-5 transition group-hover:rotate-6" />}
+        <svg className="h-6 w-6 transition group-hover:rotate-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+        </svg>
       </button>
     </div>
   );
