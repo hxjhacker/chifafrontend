@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { DashboardShield } from "@/components/admin/DashboardShield";
+import { StickyNotesWidget } from "@/components/admin/StickyNotesWidget";
 
 export const metadata: Metadata = {
   title: {
@@ -28,5 +29,10 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  return <DashboardShield>{children}</DashboardShield>;
+  return (
+    <DashboardShield>
+      {children}
+      <StickyNotesWidget />
+    </DashboardShield>
+  );
 }

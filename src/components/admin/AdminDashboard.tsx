@@ -9,6 +9,7 @@ import {
   Download,
   Eye,
   EyeOff,
+  ExternalLink,
   FileSpreadsheet,
   Loader2,
   LogOut,
@@ -1419,6 +1420,14 @@ export function AdminDashboard() {
                   <Scale className="h-4 w-4" />
                   مقارنة الأسعار
                 </Link>
+                <Link
+                  href={`${DASHBOARD_HOME}/links`}
+                  aria-label="مركز الروابط"
+                  className={`${DESKTOP_CHIP} border border-slate-700/80 bg-[#111927] text-slate-300 hover:border-amber-500/50 hover:bg-[#162134] hover:text-amber-400`}
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  مركز الروابط
+                </Link>
                 <button
                   type="button"
                   aria-label="تصدير Excel"
@@ -1561,6 +1570,14 @@ export function AdminDashboard() {
               >
                 <Scale className="h-4 w-4" />
                 <span>مقارنة الأسعار</span>
+              </Link>
+              <Link
+                href={`${DASHBOARD_HOME}/links`}
+                onClick={() => setMenuOpen(false)}
+                className="flex w-full items-center justify-between rounded-xl border border-slate-700/80 bg-[#111927] px-3.5 py-2.5 text-xs font-semibold text-slate-300 transition hover:border-amber-500/50 hover:bg-[#162134] hover:text-amber-400"
+              >
+                <ExternalLink className="h-4 w-4" />
+                <span>مركز الروابط</span>
               </Link>
               <button
                 type="button"
