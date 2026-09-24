@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { CheckCircle2, Layers, MessageCircle, Pencil, X } from "lucide-react";
+import { dispatchDashboardSound } from "@/components/admin/DashboardSoundEngine";
 import { MetaCityCombobox } from "@/components/admin/MetaCityCombobox";
 import { isOfficialMetaCity } from "@/lib/meta-livraison-cities";
 import { matchOfficialMetaCity } from "@/lib/match-meta-city";
@@ -179,6 +180,7 @@ export function CompleteDetailsModal({ open, order, onClose, onSaved }: Props) {
         throw new Error((map[raw] || "تعذر حفظ وتأكيد المعلومات.") + hint);
       }
       onSaved((await res.json()) as AdminOrder);
+      dispatchDashboardSound("success");
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "تعذر حفظ وتأكيد المعلومات.");

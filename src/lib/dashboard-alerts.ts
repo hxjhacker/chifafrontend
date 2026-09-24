@@ -120,6 +120,13 @@ export function showDashboardToast(input: DashboardToastInput) {
   if (!item.title) return item.id;
   toasts = [...toasts.slice(-4), item];
   emit();
+  if (typeof window !== "undefined" && (tone === "success" || tone === "warning" || tone === "error")) {
+    window.dispatchEvent(
+      new CustomEvent("chifaglow-dashboard-sound", {
+        detail: { kind: tone === "success" ? "success" : "error" },
+      }),
+    );
+  }
   if (typeof window !== "undefined" && item.duration > 0) {
     window.setTimeout(() => dismissDashboardToast(item.id), item.duration);
   }

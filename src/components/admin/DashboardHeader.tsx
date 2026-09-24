@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Bell, ExternalLink, Menu, Scale, X } from "lucide-react";
 import { ThemeToggle, WhatsAppIcon } from "@/components/Chrome";
+import { DashboardSoundToggle } from "@/components/admin/DashboardSoundEngine";
 import { DASHBOARD_HOME } from "@/lib/admin-paths";
 import { cn } from "@/lib/cn";
 
@@ -34,6 +35,7 @@ export function DashboardHeader() {
         </div>
         <div className="flex items-center gap-2">
           <ThemeToggle className="border-slate-800 bg-slate-900/90" />
+          <DashboardSoundToggle className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-800 bg-slate-900/90 text-slate-400 transition hover:border-slate-700 hover:text-white" />
           <Link href={`${DASHBOARD_HOME}#orders`} className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-amber-500/40 bg-amber-500/10 text-amber-400 transition hover:bg-amber-500/20" aria-label="إشعارات الطلبات" title="إشعارات الطلبات">
             <Bell className="h-4 w-4" />
           </Link>

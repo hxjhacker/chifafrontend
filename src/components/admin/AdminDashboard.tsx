@@ -52,6 +52,7 @@ import { OrderAlertsBell, OverdueOrdersBanner } from "@/components/admin/OrderAl
 import { OrderDesktopRow, OrderMobileCard } from "@/components/admin/OrderRow";
 import { OrderTimelineModal } from "@/components/admin/OrderTimelineModal";
 import { QuickWhatsAppOrderModal } from "@/components/admin/QuickWhatsAppOrderModal";
+import { DashboardSoundToggle, dispatchDashboardSound } from "@/components/admin/DashboardSoundEngine";
 import { useDashboardOrders } from "@/components/admin/StickyNotesWidget";
 import { ViewsObservatory } from "@/components/admin/ViewsObservatory";
 import {
@@ -589,6 +590,7 @@ export function AdminDashboard() {
       const updated = (await res.json()) as AdminOrder;
       setOrders((list) => list.map((o) => (o.order_id === order.order_id ? updated : o)));
       await refreshStats();
+      dispatchDashboardSound(next === "cancelled" ? "error" : "success");
     } catch (err) {
       setOrders((list) => list.map((o) => (o.order_id === order.order_id ? { ...o, status: prev } : o)));
       const msg = err instanceof Error && err.message !== "fail" ? err.message : "فشل تحديث الحالة. أعد المحاولة.";
@@ -1043,6 +1045,7 @@ export function AdminDashboard() {
       setOrders((list) => list.filter((o) => o.order_id !== deleteTarget.order_id));
       setDeleteTarget(null);
       await refreshStats();
+      dispatchDashboardSound("error");
     } catch {
       const msg = "فشل حذف الطلبية. أعد المحاولة.";
       setError(msg);
@@ -1380,6 +1383,7 @@ export function AdminDashboard() {
             <ThemeToggle
               className={`${ICON_BTN} border-slate-800 bg-slate-900/90 text-amber-400 hover:scale-100 hover:border-slate-700 hover:text-white`}
             />
+            <DashboardSoundToggle className={`${ICON_BTN} border-slate-800 bg-slate-900/90 text-slate-400 hover:border-slate-700 hover:text-white`} />
             <OrderAlertsBell
               variant="icon"
               className="h-10 w-10 border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-400 dark:hover:bg-amber-500/20"
