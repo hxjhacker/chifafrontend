@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Sparkles, X } from "lucide-react";
+import { dispatchDashboardSound } from "@/components/admin/DashboardSoundEngine";
 import { regionIdForCity } from "@/lib/admin-geo";
 import { fetchAdminProducts, type AdminProduct } from "@/lib/admin-products";
 import type { AdminOrder } from "@/lib/admin";
@@ -74,19 +75,27 @@ export function QuickWhatsAppOrderModal({ open, onClose, onCreated, onWarning }:
   const [products, setProducts] = useState<AdminProduct[]>([]);
   const [quickStock, setQuickStock] = useState(true);
   const [productSlug, setProductSlug] = useState("");
+  const [productError, setProductError] = useState(false);
   const [selectOpen, setSelectOpen] = useState(false);
   const selectRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   useLockBodyScroll(open);
 
   const catalog = useMemo(() => whatsappCatalog(products, quickStock), [products, quickStock]);
-  const selected = catalog.find((row) => row.slug === productSlug) || catalog[0] || null;
+  const selected = catalog.find((row) => row.slug === productSlug) || null;
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setProductSlug("");
+      setProductError(false);
+      setSelectOpen(false);
+      return;
+    }
     setRaw("");
     setError("");
     setSaving(false);
+    setProductSlug("");
+    setProductError(false);
     setQuickStock(true);
     setSelectOpen(false);
     void fetchAdminProducts()
@@ -97,12 +106,8 @@ export function QuickWhatsAppOrderModal({ open, onClose, onCreated, onWarning }:
   }, [open]);
 
   useEffect(() => {
-    if (!catalog.length) {
+    if (productSlug && !catalog.some((row) => row.slug === productSlug)) {
       setProductSlug("");
-      return;
-    }
-    if (!catalog.some((row) => row.slug === productSlug)) {
-      setProductSlug(catalog[0].slug);
     }
   }, [catalog, productSlug]);
 
@@ -133,9 +138,10 @@ export function QuickWhatsAppOrderModal({ open, onClose, onCreated, onWarning }:
     if (saving) return;
     const parsed = parseWhatsAppOrderText(raw);
     if (!selected) {
-      const message = "اختر المنتج من القائمة.";
+      const message = "يرجى تحديد المنتج أولاً قبل المتابعة";
       setError(message);
-      onWarning(message);
+      setProductError(true);
+      dispatchDashboardSound("error");
       return;
     }
     if (parsed.missing.length) {
@@ -192,6 +198,8 @@ export function QuickWhatsAppOrderModal({ open, onClose, onCreated, onWarning }:
         throw new Error(map[body.detail || ""] || "تعذر حفظ الطلبية.");
       }
       onCreated((await res.json()) as AdminOrder);
+      setProductSlug("");
+      setProductError(false);
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "تعذر حفظ الطلبية.");
@@ -312,7 +320,11 @@ export function QuickWhatsAppOrderModal({ open, onClose, onCreated, onWarning }:
               onClick={() => setSelectOpen((openNow) => !openNow)}
               className={cn(
                 "flex min-h-11 w-full items-center justify-between gap-2.5 rounded-[10px] border bg-[#050a14] px-3.5 py-2.5 text-white",
-                selectOpen ? "border-blue-500" : "border-[#1e2d4a]",
+                productError
+                  ? "border-red-500 shadow-[0_0_0_3px_rgba(239,68,68,0.18)] [animation:quick-product-shake_350ms_ease-in-out]"
+                  : selectOpen
+                    ? "border-blue-500"
+                    : "border-[#1e2d4a]",
               )}
             >
               {selected ? (
@@ -320,7 +332,7 @@ export function QuickWhatsAppOrderModal({ open, onClose, onCreated, onWarning }:
                   <ProductRow product={selected} />
                 </div>
               ) : (
-                <span className="text-slate-500">لا توجد منتجات</span>
+                <span className="text-slate-500">-- اختر المنتج المطلوب --</span>
               )}
               <span className={cn("text-[0.7rem] text-slate-400 transition", selectOpen && "rotate-180")}>▼</span>
             </button>
@@ -329,6 +341,23 @@ export function QuickWhatsAppOrderModal({ open, onClose, onCreated, onWarning }:
                 role="listbox"
                 className="absolute inset-x-0 bottom-[calc(100%+6px)] z-50 flex max-h-[260px] flex-col gap-1 overflow-y-auto rounded-xl border border-[#1e2d4a] bg-[#0d1527] p-1.5 shadow-[0_16px_32px_rgba(0,0,0,0.6)]"
               >
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={!selected}
+                  onClick={() => {
+                    setProductSlug("");
+                    setProductError(false);
+                    setError("");
+                    setSelectOpen(false);
+                  }}
+                  className={cn(
+                    "rounded-lg px-3 py-2 text-right text-sm text-slate-400",
+                    !selected ? "border border-blue-500/30 bg-blue-500/18" : "hover:bg-blue-500/12",
+                  )}
+                >
+                  -- اختر المنتج المطلوب --
+                </button>
                 {catalog.map((product) => {
                   const active = product.slug === selected?.slug;
                   return (
@@ -339,6 +368,8 @@ export function QuickWhatsAppOrderModal({ open, onClose, onCreated, onWarning }:
                       aria-selected={active}
                       onClick={() => {
                         setProductSlug(product.slug);
+                        setProductError(false);
+                        setError("");
                         setSelectOpen(false);
                       }}
                       className={cn(
@@ -355,7 +386,14 @@ export function QuickWhatsAppOrderModal({ open, onClose, onCreated, onWarning }:
           </div>
 
           {error ? (
-            <p className="mb-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs font-bold text-amber-200">
+            <p
+              className={cn(
+                "mb-3 rounded-xl px-3 py-2 text-xs font-bold",
+                productError
+                  ? "border border-red-500/40 bg-red-500/10 text-red-200"
+                  : "border border-amber-500/30 bg-amber-500/10 text-amber-200",
+              )}
+            >
               {error}
             </p>
           ) : null}
@@ -370,6 +408,20 @@ export function QuickWhatsAppOrderModal({ open, onClose, onCreated, onWarning }:
           </button>
         </form>
       </div>
+      <style jsx global>{`
+        @keyframes quick-product-shake {
+          0%,
+          100% {
+            transform: translateX(0);
+          }
+          25% {
+            transform: translateX(-4px);
+          }
+          75% {
+            transform: translateX(4px);
+          }
+        }
+      `}</style>
     </div>
   );
 }
