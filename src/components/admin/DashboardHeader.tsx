@@ -6,14 +6,23 @@ import { usePathname } from "next/navigation";
 import { Bell, ExternalLink, Menu, Scale, X } from "lucide-react";
 import { ThemeToggle, WhatsAppIcon } from "@/components/Chrome";
 import { DashboardSoundToggle } from "@/components/admin/DashboardSoundEngine";
-import { DASHBOARD_HOME } from "@/lib/admin-paths";
+import { DASHBOARD_HOME, DASHBOARD_LOGIN } from "@/lib/admin-paths";
 import { cn } from "@/lib/cn";
 
 export function DashboardHeader() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
 
-  if (pathname === DASHBOARD_HOME || pathname === `${DASHBOARD_HOME}/`) return null;
+  if (
+    pathname === DASHBOARD_HOME ||
+    pathname === `${DASHBOARD_HOME}/` ||
+    pathname === DASHBOARD_LOGIN ||
+    pathname === `${DASHBOARD_LOGIN}/` ||
+    pathname === "/login" ||
+    pathname === "/login/"
+  ) {
+    return null;
+  }
 
   return (
     <header dir="ltr" className="sticky top-0 z-40 w-full">

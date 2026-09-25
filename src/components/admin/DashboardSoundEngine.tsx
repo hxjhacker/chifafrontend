@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { Volume2, VolumeX } from "lucide-react";
+import { DASHBOARD_LOGIN } from "@/lib/admin-paths";
 
 const MUTE_STORAGE_KEY = "chifaglow_dashboard_sounds_muted";
 const SOUND_EVENT = "chifaglow-dashboard-sound";
@@ -39,7 +41,18 @@ export function dispatchDashboardSound(kind: DashboardSoundKind) {
 }
 
 export function DashboardSoundEngine() {
+  const pathname = usePathname();
+
   useEffect(() => {
+    if (
+      pathname === DASHBOARD_LOGIN ||
+      pathname === `${DASHBOARD_LOGIN}/` ||
+      pathname === "/login" ||
+      pathname === "/login/"
+    ) {
+      return;
+    }
+
     let muted = readMuted();
     let audioContext: AudioContext | null = null;
 
@@ -153,7 +166,7 @@ export function DashboardSoundEngine() {
       window.removeEventListener(MUTE_EVENT, onMute);
       void audioContext?.close();
     };
-  }, []);
+  }, [pathname]);
 
   return null;
 }

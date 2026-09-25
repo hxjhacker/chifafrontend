@@ -3,7 +3,9 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import type { ChangeEvent, Dispatch, ReactNode, SetStateAction } from "react";
 import { Copy, ImagePlus, Mic, StopCircle, X } from "lucide-react";
+import { usePathname } from "next/navigation";
 import { WhatsAppIcon } from "@/components/Chrome";
+import { DASHBOARD_LOGIN } from "@/lib/admin-paths";
 import { cn } from "@/lib/cn";
 
 const TEXT_KEY = "chifaglow_notes_text";
@@ -148,6 +150,7 @@ type StickyNotesWidgetProps = {
 };
 
 export function StickyNotesWidget({ orders = [] }: StickyNotesWidgetProps) {
+  const pathname = usePathname();
   const { orders: dashboardOrders } = useDashboardOrders();
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
@@ -272,6 +275,15 @@ export function StickyNotesWidget({ orders = [] }: StickyNotesWidgetProps) {
     await navigator.clipboard.writeText(value);
     setCopied(value);
     window.setTimeout(() => setCopied(""), 1200);
+  }
+
+  if (
+    pathname === DASHBOARD_LOGIN ||
+    pathname === `${DASHBOARD_LOGIN}/` ||
+    pathname === "/login" ||
+    pathname === "/login/"
+  ) {
+    return null;
   }
 
   function handleOpenExistingOrderModal(matchedOrder: OrderMatch) {
