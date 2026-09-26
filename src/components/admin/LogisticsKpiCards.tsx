@@ -1,6 +1,7 @@
 "use client";
 
 import { Banknote, Percent, Truck, Wallet } from "lucide-react";
+import { LogisticsStatusDoughnut } from "@/components/admin/LogisticsStatusDoughnut";
 import { formatMad } from "@/lib/admin";
 import type { LogisticsAnalytics } from "@/lib/logistics";
 import { cn } from "@/lib/cn";
@@ -111,6 +112,7 @@ export function LogisticsKpiCards({ data, hidden, onToggleNumbers }: Props) {
           );
         })}
       </div>
+      <LogisticsStatusDoughnut data={data} />
     </div>
   );
 }

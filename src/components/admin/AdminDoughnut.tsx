@@ -10,13 +10,14 @@ type Props = {
   values: number[];
   colors: string[];
   cutout?: string;
+  showPercentage?: boolean;
 };
 
-export function AdminDoughnut({ labels, values, colors, cutout = "70%" }: Props) {
+export function AdminDoughnut({ labels, values, colors, cutout = "70%", showPercentage = false }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const chartRef = useRef<Chart<"doughnut"> | null>(null);
 
-  const key = JSON.stringify({ labels, values, colors, cutout });
+  const key = JSON.stringify({ labels, values, colors, cutout, showPercentage });
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -26,6 +27,7 @@ export function AdminDoughnut({ labels, values, colors, cutout = "70%" }: Props)
       parsed.values && parsed.values.length
         ? parsed
         : { labels: ["—"], values: [1], colors: ["#e5e7eb"], cutout: parsed.cutout };
+    const total = payload.values.reduce((sum, value) => sum + value, 0);
     const border = document.documentElement.classList.contains("dark") ? "#0F1E33" : "#FFFFFF";
     chartRef.current?.destroy();
     chartRef.current = new Chart(canvas, {
@@ -52,7 +54,9 @@ export function AdminDoughnut({ labels, values, colors, cutout = "70%" }: Props)
             rtl: true,
             callbacks: {
               label(context) {
-                return ` ${context.label}: ${context.parsed}`;
+                const value = Number(context.parsed);
+                const percentage = total ? ((value / total) * 100).toFixed(1) : "0.0";
+                return ` ${context.label}: ${value}${parsed.showPercentage ? ` (${percentage}%)` : ""}`;
               },
             },
           },
