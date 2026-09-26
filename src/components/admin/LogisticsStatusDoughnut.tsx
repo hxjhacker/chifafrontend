@@ -2,17 +2,19 @@
 
 import { PieChart } from "lucide-react";
 import { AdminDoughnut } from "@/components/admin/AdminDoughnut";
-import type { LogisticsAnalytics } from "@/lib/logistics";
+import { EMPTY_LOGISTICS, type LogisticsAnalytics } from "@/lib/logistics";
 import { cn } from "@/lib/cn";
 
 type Props = {
-  data: LogisticsAnalytics;
+  data?: LogisticsAnalytics;
 };
 
 export function LogisticsStatusDoughnut({ data }: Props) {
-  const delivered = data.financial.delivered_count;
-  const inTransit = data.financial.in_transit_count;
-  const refusedOrCancelled = data.financial.returned_count + data.financial.cancelled_count;
+  const safeData = data ?? EMPTY_LOGISTICS;
+  const financial = safeData.financial ?? EMPTY_LOGISTICS.financial;
+  const delivered = financial.delivered_count || 0;
+  const inTransit = financial.in_transit_count || 0;
+  const refusedOrCancelled = (financial.returned_count || 0) + (financial.cancelled_count || 0);
   const total = delivered + inTransit + refusedOrCancelled;
   const labels = ["مسلّم (Livré)", "قيد الشحن (In Transit)", "ملغي / راجع (Refused/Canceled)"];
   const values = [delivered, inTransit, refusedOrCancelled];
@@ -43,7 +45,7 @@ export function LogisticsStatusDoughnut({ data }: Props) {
             <span className="text-[10px] font-bold text-royal/50 dark:text-slate-400">إجمالي الطرود</span>
             <span className="text-xl font-black text-royal dark:text-gold">{total}</span>
             <span className="text-[10px] font-bold text-royal/50 dark:text-slate-400">
-              نسبة التسليم {data.delivery_rate.toFixed(1)}%
+              نسبة التسليم {Number(safeData.delivery_rate || 0).toFixed(1)}%
             </span>
           </div>
         </div>
@@ -58,7 +60,7 @@ export function LogisticsStatusDoughnut({ data }: Props) {
               <span className={cn("font-mono text-xs font-black text-royal dark:text-slate-200", !total && "text-slate-500")}>
                 {values[index]}{" "}
                 <small className="mr-1 font-bold text-emeraldCustom">
-                  ({total ? ((values[index] / total) * 100).toFixed(1) : "0.0"}%)
+                  ({total > 0 ? ((values[index] / total) * 100).toFixed(1) : "0.0"}%)
                 </small>
               </span>
             </div>

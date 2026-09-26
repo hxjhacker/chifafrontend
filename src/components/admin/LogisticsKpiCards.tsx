@@ -1,29 +1,32 @@
 "use client";
 
+import { useMemo } from "react";
 import { Banknote, Package, Percent, Trophy, Truck, Wallet } from "lucide-react";
 import { LogisticsStatusDoughnut } from "@/components/admin/LogisticsStatusDoughnut";
 import { PACK_NAMES, formatMad, type AdminOrder } from "@/lib/admin";
-import type { LogisticsAnalytics } from "@/lib/logistics";
+import { EMPTY_LOGISTICS, type LogisticsAnalytics } from "@/lib/logistics";
 import { PRODUCTS } from "@/lib/products";
 import { cn } from "@/lib/cn";
 
 type Props = {
-  data: LogisticsAnalytics;
-  orders: AdminOrder[];
+  data?: LogisticsAnalytics;
+  orders?: AdminOrder[];
   hidden: boolean;
   onToggleNumbers: () => void;
 };
 
-function money(value: number, hidden: boolean) {
+const EMPTY_ORDERS: AdminOrder[] = [];
+
+function money(value: number | null | undefined, hidden: boolean) {
   return (
     <span className={cn("mt-1 block text-2xl font-black tabular-nums", hidden && "blurred-number")}>
-      {formatMad(value)}
+      {formatMad(Number(value || 0))}
     </span>
   );
 }
 
-function orderDate(order: AdminOrder) {
-  return order.delivered_at || order.updated_at || order.created_at;
+function orderDate(order: AdminOrder | null | undefined) {
+  return order?.delivered_at || order?.updated_at || order?.created_at;
 }
 
 function monthKey(value: string | null | undefined) {
@@ -36,14 +39,16 @@ function monthKey(value: string | null | undefined) {
 function monthLabel(key: string) {
   if (!key) return "لا توجد بيانات";
   const [year, month] = key.split("-").map(Number);
+  if (!Number.isFinite(year) || !Number.isFinite(month)) return "لا توجد بيانات";
   const date = new Date(year, (month || 1) - 1, 1);
+  if (Number.isNaN(date.getTime())) return "لا توجد بيانات";
   return new Intl.DateTimeFormat("ar-MA", { month: "short", year: "numeric" }).format(date);
 }
 
-function deliveredMonthStats(orders: AdminOrder[]) {
+function deliveredMonthStats(orders: AdminOrder[] | undefined) {
   const buckets = new Map<string, number>();
-  for (const order of orders) {
-    if (order.status !== "delivered") continue;
+  for (const order of orders || []) {
+    if (!order || order.status !== "delivered") continue;
     const key = monthKey(orderDate(order));
     if (!key) continue;
     buckets.set(key, (buckets.get(key) || 0) + 1);
@@ -64,7 +69,7 @@ function deliveredMonthStats(orders: AdminOrder[]) {
 }
 
 function productVisual(slug: string) {
-  const product = PRODUCTS.find((item) => item.slug === slug);
+  const product = (PRODUCTS || []).find((item) => item.slug === slug);
   return {
     title: PACK_NAMES[slug] || product?.nameAr || slug || "منتج غير محدد",
     image: product?.image || product?.heroImage || "",
@@ -72,11 +77,14 @@ function productVisual(slug: string) {
   };
 }
 
-function productRows(orders: AdminOrder[]) {
+function productRows(orders: AdminOrder[] | undefined) {
   const rows = new Map<string, { slug: string; total: number; delivered: number }>();
 
-  for (const order of orders) {
-    const slugs = [order.product_slug, order.cross_sell_slug, order.upsell_slug].filter(Boolean) as string[];
+  for (const order of orders || []) {
+    if (!order) continue;
+    const slugs = [order.product_slug, order.cross_sell_slug, order.upsell_slug].filter(
+      (slug): slug is string => Boolean(slug),
+    );
     for (const slug of new Set(slugs)) {
       const row = rows.get(slug) || { slug, total: 0, delivered: 0 };
       row.total += 1;
@@ -86,13 +94,20 @@ function productRows(orders: AdminOrder[]) {
   }
 
   return [...rows.values()]
-    .map((row) => ({ ...row, rate: row.total ? Math.round((row.delivered / row.total) * 1000) / 10 : 0, ...productVisual(row.slug) }))
+    .map((row) => ({
+      ...row,
+      rate: row.total > 0 ? Math.round((row.delivered / row.total) * 1000) / 10 : 0,
+      ...productVisual(row.slug),
+    }))
     .sort((a, b) => b.total - a.total || b.rate - a.rate)
     .slice(0, 6);
 }
 
 function DeliveredRecordGauge({ orders, hidden }: { orders: AdminOrder[]; hidden: boolean }) {
-  const stats = deliveredMonthStats(orders);
+  const stats = useMemo(
+    () => deliveredMonthStats(orders || []) || { currentKey: "", currentCount: 0, peakKey: "", peakCount: 0, gauge: 0 },
+    [orders],
+  );
   const stroke = stats.gauge >= 75 ? "#10B981" : stats.gauge >= 45 ? "#F59E0B" : "#E11D48";
 
   return (
@@ -147,7 +162,7 @@ function DeliveredRecordGauge({ orders, hidden }: { orders: AdminOrder[]; hidden
 }
 
 function ProductPerformanceBreakdown({ orders, hidden }: { orders: AdminOrder[]; hidden: boolean }) {
-  const rows = productRows(orders);
+  const rows = useMemo(() => productRows(orders || []) || [], [orders]);
 
   return (
     <section className="h-full rounded-2xl border border-gold/10 bg-cream/70 p-4 shadow-[0_0_32px_-24px_rgba(251,191,36,0.8)] dark:border-slate-800/80 dark:bg-brandDark/70">
@@ -204,8 +219,11 @@ function ProductPerformanceBreakdown({ orders, hidden }: { orders: AdminOrder[];
 }
 
 export function LogisticsKpiCards({ data, orders, hidden, onToggleNumbers }: Props) {
-  const fin = data.financial;
-  const closed = data.delivery_rate_denominator;
+  const safeData = data ?? EMPTY_LOGISTICS;
+  const safeOrders = orders ?? EMPTY_ORDERS;
+  const fin = safeData.financial ?? EMPTY_LOGISTICS.financial;
+  const closed = safeData.delivery_rate_denominator || 0;
+  const deliveryRate = Number(safeData.delivery_rate || 0);
   const cards = [
     {
       key: "collected",
@@ -232,11 +250,11 @@ export function LogisticsKpiCards({ data, orders, hidden, onToggleNumbers }: Pro
       label: "نسبة التوصيل الحقيقية",
       hint: "Delivery Rate",
       icon: Percent,
-      tone: data.delivery_rate >= 75 ? "text-emeraldCustom" : data.delivery_rate >= 55 ? "text-amber-500" : "text-rose-500",
-      chip: data.delivery_rate >= 75 ? "bg-emeraldCustom/15 text-emeraldCustom" : data.delivery_rate >= 55 ? "bg-amber-500/15 text-amber-500" : "bg-rose-500/15 text-rose-500",
+      tone: deliveryRate >= 75 ? "text-emeraldCustom" : deliveryRate >= 55 ? "text-amber-500" : "text-rose-500",
+      chip: deliveryRate >= 75 ? "bg-emeraldCustom/15 text-emeraldCustom" : deliveryRate >= 55 ? "bg-amber-500/15 text-amber-500" : "bg-rose-500/15 text-rose-500",
       value: (
         <span className={cn("mt-1 block text-2xl font-black tabular-nums", hidden && "blurred-number")}>
-          {data.delivery_rate.toFixed(1)}%
+          {deliveryRate.toFixed(1)}%
         </span>
       ),
       meta: closed ? `${fin.delivered_count} مسلّم / ${closed} مغلق` : "لا توجد طلبيات مغلقة بعد",
@@ -259,7 +277,7 @@ export function LogisticsKpiCards({ data, orders, hidden, onToggleNumbers }: Pro
         <div>
           <h3 className="text-base font-black text-royal dark:text-white">التحصيل والتوصيل</h3>
           <p className="text-[11px] text-royal/60 dark:text-slate-400">
-            تسوية COD حسب تعريفة الناقل لكل مدينة (كويك أو ميتا). عند غياب التسعيرة: توصيل {data.delivery_fee} / رفض {data.refusal_fee ?? 10} / إرجاع {data.return_fee} درهم
+            تسوية COD حسب تعريفة الناقل لكل مدينة (كويك أو ميتا). عند غياب التسعيرة: توصيل {safeData.delivery_fee} / رفض {safeData.refusal_fee ?? 10} / إرجاع {safeData.return_fee} درهم
           </p>
         </div>
         <button
@@ -296,9 +314,9 @@ export function LogisticsKpiCards({ data, orders, hidden, onToggleNumbers }: Pro
         })}
       </div>
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3" dir="rtl">
-        <LogisticsStatusDoughnut data={data} />
-        <DeliveredRecordGauge orders={orders} hidden={hidden} />
-        <ProductPerformanceBreakdown orders={orders} hidden={hidden} />
+        <LogisticsStatusDoughnut data={safeData} />
+        <DeliveredRecordGauge orders={safeOrders} hidden={hidden} />
+        <ProductPerformanceBreakdown orders={safeOrders} hidden={hidden} />
       </div>
     </div>
   );
