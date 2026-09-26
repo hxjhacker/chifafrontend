@@ -7,10 +7,9 @@ import { cn } from "@/lib/cn";
 
 type Props = {
   data: LogisticsAnalytics;
-  className?: string;
 };
 
-export function LogisticsStatusDoughnut({ data, className }: Props) {
+export function LogisticsStatusDoughnut({ data }: Props) {
   const delivered = data.financial.delivered_count;
   const inTransit = data.financial.in_transit_count;
   const refusedOrCancelled = data.financial.returned_count + data.financial.cancelled_count;
@@ -20,12 +19,7 @@ export function LogisticsStatusDoughnut({ data, className }: Props) {
   const colors = ["#10B981", "#6366F1", "#E11D48"];
 
   return (
-    <section
-      className={cn(
-        "h-full rounded-2xl border border-gold/10 bg-cream/70 p-4 shadow-[0_0_32px_-24px_rgba(251,191,36,0.8)] dark:border-slate-800/80 dark:bg-brandDark/70",
-        className,
-      )}
-    >
+    <section className="mt-4 rounded-2xl border border-gold/10 bg-cream/70 p-4 dark:bg-brandDark/70">
       <div className="mb-3 flex items-center gap-2.5">
         <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gold/10 text-gold">
           <PieChart className="h-4 w-4" />

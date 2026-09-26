@@ -1694,7 +1694,6 @@ export function AdminDashboard() {
         {prefs.logistics ? (
           <LogisticsKpiCards
             data={logistics}
-            orders={orders}
             hidden={hideLogisticsNums}
             onToggleNumbers={() => setHideLogistics((v) => !v)}
           />
