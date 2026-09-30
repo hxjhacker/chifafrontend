@@ -183,7 +183,7 @@ export function MoroccoMap({ regions, hideNumbers, onToggleNumbers, className }:
                   y={region.labelY}
                   className={cn("region-count-label", hideNumbers && "blurred-number")}
                 >
-                  {stat?.total_orders ?? 0}
+                  {stat?.delivered ?? 0} / {stat?.total_orders ?? 0}
                 </text>
               );
             })}
