@@ -26,7 +26,16 @@ export const CITIES: City[] = [
   { ar: "برشيد", fr: "Berrechid", aliases: ["berrechid"] },
   { ar: "تازة", fr: "Taza", aliases: ["taza"] },
   { ar: "العرائش", fr: "Larache", aliases: ["larache"] },
-  { ar: "القصر الكبير", fr: "Ksar El Kebir", aliases: ["ksar"] },
+  {
+    ar: "القصر الصغير",
+    fr: "Ksar Sghir",
+    aliases: ["ksar sghir", "ksar seghir", "ksar es sghir", "قصر الصغير"],
+  },
+  {
+    ar: "القصر الكبير",
+    fr: "Ksar El Kebir",
+    aliases: ["ksar el kebir", "ksar kebir", "ksar lkebir", "قصر الكبير"],
+  },
   { ar: "الحسيمة", fr: "Al Hoceima", aliases: ["hoceima"] },
   { ar: "الرشيدية", fr: "Errachidia", aliases: ["errachidia"] },
   { ar: "ورزازات", fr: "Ouarzazate", aliases: ["ouarzazate"] },
@@ -97,10 +106,16 @@ export const CITIES: City[] = [
 
 function norm(value: string) {
   return (value || "")
+    .normalize("NFKC")
     .trim()
     .toLowerCase()
+    .replace(/[\u064B-\u065F\u0670]/g, "")
+    .replace(/[أإآٱ]/g, "ا")
+    .replace(/ى/g, "ي")
     .replace(/[éè]/g, "e")
     .replace(/[âà]/g, "a")
+    .replace(/[‐‑‒–—-]/g, " ")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
     .replace(/\s+/g, " ");
 }
 
@@ -109,6 +124,8 @@ export function resolveCity(raw: string): { ar: string; fr: string } {
   const fallback = { ar: raw.trim(), fr: raw.trim() };
   if (!needle) return fallback;
 
+  // Exact normalized matches always win. This prevents shared roots such as
+  // "القصر" from sending Ksar Sghir to Ksar El Kebir (or vice versa).
   for (const city of CITIES) {
     const hay = [norm(city.ar), norm(city.fr), ...city.aliases.map(norm)];
     if (hay.includes(needle)) return { ar: city.ar, fr: city.fr };

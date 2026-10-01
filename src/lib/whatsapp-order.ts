@@ -1,5 +1,6 @@
 import { digitsOnly, isTenDigitMaPhone } from "@/lib/phone";
 import type { AdminProduct } from "@/lib/admin-products";
+import { resolveCity } from "@/lib/cities";
 
 export type WhatsAppStockTone = "green" | "amber" | "blue";
 
@@ -181,7 +182,8 @@ export function parseWhatsAppOrderText(raw: string): ParsedWhatsAppOrder {
     .filter(Boolean);
 
   const customerName = lines[0] || "";
-  const city = lines[1] || "";
+  const cityInput = lines[1] || "";
+  const city = resolveCity(cityInput).ar || cityInput;
   const address = lines[2] || "";
   const phone = nationalTenDigits(lines[3] || "");
   const price = parsePrice(lines[4] || "");
