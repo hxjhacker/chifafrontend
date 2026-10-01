@@ -274,6 +274,7 @@ html.dark body {
     height: 100mm !important;
     margin: 0 !important;
     box-sizing: border-box !important;
+    font-family: var(--font-cairo), "Cairo", "Noto Sans Arabic", Arial, Helvetica, Tahoma, sans-serif !important;
     box-shadow: none !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;

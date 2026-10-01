@@ -16,6 +16,7 @@ export function LoginForm() {
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [successNotice, setSuccessNotice] = useState("");
   const [spot, setSpot] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
@@ -32,6 +33,15 @@ export function LoginForm() {
         } catch {
           /* ignore */
         }
+      }
+      try {
+        const notice = sessionStorage.getItem("cg_admin_login_notice");
+        if (notice) {
+          setSuccessNotice(notice);
+          sessionStorage.removeItem("cg_admin_login_notice");
+        }
+      } catch {
+        /* ignore unavailable browser storage */
       }
   }, []);
 
@@ -197,6 +207,18 @@ export function LoginForm() {
           </div>
 
           <AnimatePresence>
+            {successNotice ? (
+              <motion.div
+                key={successNotice}
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-3.5 text-center text-xs font-bold text-emerald-300 shadow-lg"
+                role="status"
+              >
+                {successNotice}
+              </motion.div>
+            ) : null}
             {error ? (
               <motion.div
                 key={error}

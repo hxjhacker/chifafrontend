@@ -15,7 +15,7 @@ import {
   parcelOrderCode,
 } from "@/lib/label-hub";
 import { buildTarifIndex, findCityTarif, hubCode, loadAdminCityTarifs } from "@/lib/city-tarifs";
-import { hair, thick, ticketBox } from "@/components/admin/labels/ticketStyles";
+import { hair, thick, ticketBox, TICKET_FONT } from "@/components/admin/labels/ticketStyles";
 
 function MetaLogo() {
   return (
@@ -85,7 +85,7 @@ export function MetaLivraisonLabel({ order }: { order: AdminOrder }) {
         <MetaLogo />
         <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.05 }}>
           <span style={{ fontSize: "13px", fontWeight: 900, letterSpacing: "-0.4px" }}>metalivraison</span>
-          <span dir="rtl" style={{ fontSize: "7px", fontWeight: 700, fontFamily: "Tahoma, Arial, sans-serif" }}>
+          <span dir="rtl" style={{ fontSize: "7px", fontWeight: 700, fontFamily: TICKET_FONT }}>
             بإرادتنا حلمكم يوصل
           </span>
         </div>
@@ -226,7 +226,7 @@ export function MetaLivraisonLabel({ order }: { order: AdminOrder }) {
             fontWeight: 900,
             letterSpacing: "0.3px",
             padding: "1.2mm 0.6mm",
-            fontFamily: "Tahoma, Arial, sans-serif",
+            fontFamily: TICKET_FONT,
           }}
         >
           {allowed ? "مسموح فتح الطلبية" : "ممنوع فتح الطلبية"}

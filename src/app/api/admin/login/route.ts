@@ -4,8 +4,8 @@ import {
   recordLoginFailure,
   recordLoginSuccess,
   requestIp,
-  verifyAdminPassword,
 } from "@/lib/admin-auth";
+import { adminCredentialsConfigured, verifyStoredAdminCredentials } from "@/lib/server/admin-credentials";
 import { adminAuthConfigured, ADMIN_COOKIE, authCookieOptions, signAdminToken } from "@/lib/admin-jwt";
 
 export const runtime = "nodejs";
@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     );
   }
 
-  if (!adminAuthConfigured()) {
+  if (!adminAuthConfigured() && !(await adminCredentialsConfigured())) {
     return NextResponse.json({ detail: "admin_not_configured" }, { status: 503 });
   }
 
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ detail: "invalid_credentials" }, { status: 401 });
   }
 
-  const ok = await verifyAdminPassword(username, password);
+  const ok = await verifyStoredAdminCredentials(username, password);
   if (!ok) {
     const locked = recordLoginFailure(ip);
     return NextResponse.json(

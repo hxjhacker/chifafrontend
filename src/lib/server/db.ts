@@ -43,6 +43,13 @@ CREATE TABLE IF NOT EXISTS products (
 CREATE UNIQUE INDEX IF NOT EXISTS ix_products_slug ON products (slug);
 CREATE UNIQUE INDEX IF NOT EXISTS ix_products_code ON products (code);
 
+CREATE TABLE IF NOT EXISTS admin_credentials (
+  id smallint PRIMARY KEY CHECK (id = 1),
+  username varchar(120) NOT NULL,
+  password_hash text NOT NULL,
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS orders (
   id uuid PRIMARY KEY,
   full_name varchar(120) NOT NULL,

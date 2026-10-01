@@ -3,7 +3,7 @@
 import type { CSSProperties } from "react";
 
 export const TICKET_FONT =
-  "Arial, Helvetica, Tahoma, 'Segoe UI', 'Noto Sans Arabic', 'Cairo', sans-serif";
+  "var(--font-cairo), 'Cairo', 'Noto Sans Arabic', Arial, Helvetica, Tahoma, 'Segoe UI', sans-serif";
 
 export const ticketBox: CSSProperties = {
   width: "100mm",
