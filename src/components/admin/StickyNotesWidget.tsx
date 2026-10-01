@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import type { ChangeEvent, Dispatch, ReactNode, SetStateAction } from "react";
-import { Copy, ImagePlus, Mic, StopCircle, X } from "lucide-react";
+import { ArrowRight, Bookmark, Clock3, Copy, ImagePlus, Mic, RotateCcw, StopCircle, Trash2, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { WhatsAppIcon } from "@/components/Chrome";
 import { DASHBOARD_LOGIN } from "@/lib/admin-paths";
@@ -11,6 +11,13 @@ import { cn } from "@/lib/cn";
 const TEXT_KEY = "chifaglow_notes_text";
 const IMAGE_KEY = "chifaglow_notes_img";
 const AUDIO_KEY = "chifaglow_notes_audio";
+const HISTORY_KEY = "chifaglow_notes_history";
+
+type SavedNote = {
+  id: string;
+  text: string;
+  savedAt: string;
+};
 
 type DashboardOrder = Record<string, unknown>;
 
@@ -60,6 +67,34 @@ function writeLocal(key: string, value: string) {
   } catch {
     /* Storage can be unavailable in private browsing. */
   }
+}
+
+function readSavedNotes(): SavedNote[] {
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(HISTORY_KEY) || "[]");
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (note): note is SavedNote =>
+        Boolean(
+          note &&
+            typeof note === "object" &&
+            typeof note.id === "string" &&
+            typeof note.text === "string" &&
+            typeof note.savedAt === "string",
+        ),
+    );
+  } catch {
+    return [];
+  }
+}
+
+function formatSavedNoteDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "تاريخ غير معروف";
+  return new Intl.DateTimeFormat("ar-MA", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
 }
 
 function phoneHref(phone: string) {
@@ -162,6 +197,9 @@ export function StickyNotesWidget({ orders = [] }: StickyNotesWidgetProps) {
   const [recording, setRecording] = useState(false);
   const [saved, setSaved] = useState(false);
   const [copied, setCopied] = useState("");
+  const [savedNotes, setSavedNotes] = useState<SavedNote[]>([]);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [saveFlash, setSaveFlash] = useState(false);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
 
@@ -190,6 +228,7 @@ export function StickyNotesWidget({ orders = [] }: StickyNotesWidgetProps) {
     parseNoteEntities(initialText);
     setImage(readLocal(IMAGE_KEY));
     setAudio(readLocal(AUDIO_KEY));
+    setSavedNotes(readSavedNotes());
   }, []);
 
   useEffect(() => {
@@ -199,6 +238,10 @@ export function StickyNotesWidget({ orders = [] }: StickyNotesWidgetProps) {
     const timer = window.setTimeout(() => setSaved(false), 900);
     return () => window.clearTimeout(timer);
   }, [text, image, audio]);
+
+  useEffect(() => {
+    if (!open) setHistoryOpen(false);
+  }, [open]);
 
   useEffect(() => {
     function closeOnEscape(event: KeyboardEvent) {
@@ -277,6 +320,34 @@ export function StickyNotesWidget({ orders = [] }: StickyNotesWidgetProps) {
     window.setTimeout(() => setCopied(""), 1200);
   }
 
+  function saveNoteToHistory() {
+    const noteText = text.trim();
+    if (!noteText) return;
+    const note: SavedNote = {
+      id: window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      text: noteText,
+      savedAt: new Date().toISOString(),
+    };
+    const next = [note, ...savedNotes].slice(0, 50);
+    setSavedNotes(next);
+    writeLocal(HISTORY_KEY, JSON.stringify(next));
+    setSaveFlash(true);
+    window.setTimeout(() => setSaveFlash(false), 900);
+  }
+
+  function deleteSavedNote(id: string) {
+    const next = savedNotes.filter((note) => note.id !== id);
+    setSavedNotes(next);
+    writeLocal(HISTORY_KEY, JSON.stringify(next));
+  }
+
+  function restoreSavedNote(note: SavedNote) {
+    setText(note.text);
+    writeLocal(TEXT_KEY, note.text);
+    parseNoteEntities(note.text);
+    setHistoryOpen(false);
+  }
+
   if (
     pathname === DASHBOARD_LOGIN ||
     pathname === `${DASHBOARD_LOGIN}/` ||
@@ -312,6 +383,64 @@ export function StickyNotesWidget({ orders = [] }: StickyNotesWidgetProps) {
               <button type="button" onClick={() => setOpen(false)} className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#111927] text-slate-400 transition hover:text-white" aria-label="تصغير"><X className="h-3.5 w-3.5" /></button>
             </div>
           </div>
+
+          {historyOpen ? (
+            <div className="absolute inset-0 z-30 flex flex-col overflow-y-auto rounded-2xl bg-[#0c1322]/[.99] p-4 backdrop-blur-2xl">
+              <div className="mb-3 flex items-center justify-between border-b border-slate-800/80 pb-3">
+                <div className="flex items-center gap-2 text-xs font-black text-white">
+                  <Clock3 className="h-4 w-4 text-amber-400" />
+                  سجل الملاحظات المسجلة
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setHistoryOpen(false)}
+                  className="flex items-center gap-1 rounded-lg bg-[#111927] px-2.5 py-1.5 text-[11px] font-bold text-slate-300 transition hover:text-white"
+                  aria-label="العودة إلى محرر الملاحظات"
+                >
+                  <ArrowRight className="h-3.5 w-3.5" />
+                  رجوع
+                </button>
+              </div>
+
+              {savedNotes.length ? (
+                <div className="space-y-2.5">
+                  {savedNotes.map((note) => (
+                    <article key={note.id} className="rounded-xl border border-slate-800 bg-[#070b12] p-3">
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        <time className="text-[10px] font-bold text-amber-400" dateTime={note.savedAt}>
+                          {formatSavedNoteDate(note.savedAt)}
+                        </time>
+                        <button
+                          type="button"
+                          onClick={() => deleteSavedNote(note.id)}
+                          className="flex items-center gap-1 rounded-lg border border-rose-500/30 bg-rose-500/10 px-2 py-1 text-[10px] font-bold text-rose-400 transition hover:bg-rose-500/20"
+                          aria-label="حذف الملاحظة المحفوظة"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                          حذف
+                        </button>
+                      </div>
+                      <p className="mb-2.5 whitespace-pre-wrap break-words text-xs leading-5 text-slate-300">
+                        {note.text.length > 180 ? `${note.text.slice(0, 180)}…` : note.text}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => restoreSavedNote(note)}
+                        className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1.5 text-[10px] font-bold text-emerald-400 transition hover:bg-emerald-500/20"
+                      >
+                        <RotateCcw className="h-3 w-3" />
+                        استرجاع الملاحظة
+                      </button>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-1 items-center justify-center py-12 text-center text-xs font-bold text-slate-500">
+                  لا توجد ملاحظات مسجلة بعد.
+                </div>
+              )}
+            </div>
+          ) : null}
 
           {detections.length ? (
             <div className="my-2.5 space-y-2">
@@ -428,7 +557,37 @@ export function StickyNotesWidget({ orders = [] }: StickyNotesWidgetProps) {
           ) : null}
           <div className="mt-2 flex items-center justify-between border-t border-slate-800/80 pt-2.5 text-[11px] text-slate-500">
             <span>{saved ? "تم الحفظ!" : "حفظ تلقائي"}</span>
-            <span className="font-mono font-bold text-amber-400">{text.length} حرف</span>
+            <div className="flex items-center gap-2">
+              <span className="font-mono font-bold text-amber-400">{text.length} حرف</span>
+              <button
+                type="button"
+                onClick={saveNoteToHistory}
+                className={cn(
+                  "flex h-7 w-7 items-center justify-center rounded-lg border transition active:scale-95",
+                  saveFlash
+                    ? "border-emerald-500/50 bg-emerald-500/20 text-emerald-400"
+                    : "border-slate-800 bg-[#111927] text-slate-400 hover:text-emerald-400",
+                )}
+                title="حفظ الملاحظة"
+                aria-label="حفظ الملاحظة"
+              >
+                <Bookmark className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setHistoryOpen(true)}
+                className="relative flex h-7 w-7 items-center justify-center rounded-lg border border-slate-800 bg-[#111927] text-slate-400 transition hover:text-amber-400 active:scale-95"
+                title="سجل الملاحظات المسجلة"
+                aria-label="سجل الملاحظات المسجلة"
+              >
+                <Clock3 className="h-3.5 w-3.5" />
+                {savedNotes.length ? (
+                  <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[9px] font-black text-[#070b12]">
+                    {savedNotes.length > 99 ? "99+" : savedNotes.length}
+                  </span>
+                ) : null}
+              </button>
+            </div>
           </div>
         </div>
       ) : null}
