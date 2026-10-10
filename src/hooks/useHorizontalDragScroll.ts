@@ -6,8 +6,9 @@ export function useHorizontalDragScroll<T extends HTMLElement>() {
   const ref = useRef<T | null>(null);
 
   useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
+    const element = ref.current as T | null;
+    if (element === null) return;
+    const scrollElement: T = element;
 
     let dragging = false;
     let startX = 0;
@@ -22,40 +23,40 @@ export function useHorizontalDragScroll<T extends HTMLElement>() {
       if (isInteractive(e.target)) return;
       dragging = true;
       startX = e.pageX;
-      startScroll = el.scrollLeft;
-      el.classList.add("cursor-grabbing");
-      el.setPointerCapture(e.pointerId);
+      startScroll = scrollElement.scrollLeft;
+      scrollElement.classList.add("cursor-grabbing");
+      scrollElement.setPointerCapture(e.pointerId);
     }
 
     function onPointerMove(e: PointerEvent) {
       if (!dragging) return;
       e.preventDefault();
-      el.scrollLeft = startScroll - (e.pageX - startX) * 1.5;
+      scrollElement.scrollLeft = startScroll - (e.pageX - startX) * 1.5;
     }
 
     function onPointerUp(e: PointerEvent) {
       dragging = false;
-      el.classList.remove("cursor-grabbing");
-      if (el.hasPointerCapture(e.pointerId)) el.releasePointerCapture(e.pointerId);
+      scrollElement.classList.remove("cursor-grabbing");
+      if (scrollElement.hasPointerCapture(e.pointerId)) scrollElement.releasePointerCapture(e.pointerId);
     }
 
     function onWheel(e: WheelEvent) {
       if (e.deltaY === 0) return;
       e.preventDefault();
-      el.scrollLeft += e.deltaY;
+      scrollElement.scrollLeft += e.deltaY;
     }
 
-    el.addEventListener("pointerdown", onPointerDown);
-    el.addEventListener("pointermove", onPointerMove);
-    el.addEventListener("pointerup", onPointerUp);
-    el.addEventListener("pointercancel", onPointerUp);
-    el.addEventListener("wheel", onWheel, { passive: false });
+    scrollElement.addEventListener("pointerdown", onPointerDown);
+    scrollElement.addEventListener("pointermove", onPointerMove);
+    scrollElement.addEventListener("pointerup", onPointerUp);
+    scrollElement.addEventListener("pointercancel", onPointerUp);
+    scrollElement.addEventListener("wheel", onWheel, { passive: false });
     return () => {
-      el.removeEventListener("pointerdown", onPointerDown);
-      el.removeEventListener("pointermove", onPointerMove);
-      el.removeEventListener("pointerup", onPointerUp);
-      el.removeEventListener("pointercancel", onPointerUp);
-      el.removeEventListener("wheel", onWheel);
+      scrollElement.removeEventListener("pointerdown", onPointerDown);
+      scrollElement.removeEventListener("pointermove", onPointerMove);
+      scrollElement.removeEventListener("pointerup", onPointerUp);
+      scrollElement.removeEventListener("pointercancel", onPointerUp);
+      scrollElement.removeEventListener("wheel", onWheel);
     };
   }, []);
 

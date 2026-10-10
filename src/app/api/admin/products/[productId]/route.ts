@@ -13,7 +13,7 @@ export async function PATCH(request: NextRequest, ctx: Ctx) {
   if (denied instanceof NextResponse) return denied;
   const { productId } = await ctx.params;
   try {
-    const proxied = await proxyAdminRequest(request.clone(), `/api/admin/products/${productId}`, "PATCH");
+    const proxied = await proxyAdminRequest(request, `/api/admin/products/${productId}`, "PATCH");
     if (proxied.status < 500 && proxied.status !== 404) return proxied;
   } catch {
     // FastAPI unavailable
@@ -43,7 +43,7 @@ export async function DELETE(request: NextRequest, ctx: Ctx) {
   if (denied instanceof NextResponse) return denied;
   const { productId } = await ctx.params;
   try {
-    const proxied = await proxyAdminRequest(request.clone(), `/api/admin/products/${productId}`, "DELETE");
+    const proxied = await proxyAdminRequest(request, `/api/admin/products/${productId}`, "DELETE");
     if (proxied.status < 500 && proxied.status !== 404) return proxied;
   } catch {
     // FastAPI unavailable

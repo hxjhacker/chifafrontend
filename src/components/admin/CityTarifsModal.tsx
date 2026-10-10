@@ -56,8 +56,7 @@ function parseRows(payload: unknown): CityTarifLookup[] {
     : payload && typeof payload === "object" && Array.isArray((payload as { tarifs?: unknown }).tarifs)
       ? (payload as { tarifs: unknown[] }).tarifs
       : [];
-  return list
-    .map((row) => {
+  const parsed = list.map((row): CityTarifLookup | null => {
       if (!row || typeof row !== "object") return null;
       const item = row as Record<string, unknown>;
       const name = String(item.city_name || "").trim();
@@ -84,8 +83,8 @@ function parseRows(payload: unknown): CityTarifLookup[] {
         quick_covered: quickCovered,
         meta_covered: metaCovered,
       };
-    })
-    .filter((row): row is CityTarifLookup => Boolean(row));
+    });
+  return parsed.filter((row): row is CityTarifLookup => row !== null);
 }
 
 export function CityTarifsModal({ open, onClose }: Props) {

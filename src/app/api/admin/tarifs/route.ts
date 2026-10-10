@@ -132,8 +132,8 @@ async function localTarifs(search: string, limit: number) {
         refusal_fee: 10,
         return_fee: 0,
         quick_delivery_price: Number(row.quick_delivery_price) || 0,
-        meta_delivery_fee: metaFee,
-        competitor_delivery_price: metaFee,
+        meta_delivery_fee: metaFee ?? 0,
+        competitor_delivery_price: metaFee ?? 0,
         quick_covered: true,
         meta_covered: metaFee != null,
       });

@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { Bell, ExternalLink, Menu, Scale, X } from "lucide-react";
 import { ThemeToggle, WhatsAppIcon } from "@/components/Chrome";
 import { DashboardSoundToggle } from "@/components/admin/DashboardSoundEngine";
+import { TeamMembersMenu } from "@/components/admin/TeamMembersMenu";
 import {
   AccountPopover,
   DEFAULT_PROFILE_EMAIL,
@@ -94,6 +95,7 @@ export function DashboardHeader() {
             </span>
             <span className="hidden text-xs font-black text-white lg:block">لوحة التحكم</span>
           </Link>
+          <TeamMembersMenu />
           <span className="mx-1 h-6 w-px bg-slate-800" aria-hidden />
           <Link href={`${DASHBOARD_HOME}/pricing-comparison`} className="inline-flex items-center gap-1.5 rounded-xl border border-cyan-500/40 bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-400 transition hover:bg-cyan-500/20">
             <Scale className="h-3.5 w-3.5" /> مقارنة الأسعار

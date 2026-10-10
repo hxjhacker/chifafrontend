@@ -939,7 +939,8 @@ export async function createAdminOrder(input: {
     }
     const saved = inserted.rows[0];
     if (!saved) throw new Error("create_failed");
-    const stamped = await stampStatusColumns(client, orderId, input.status, cols.size ? cols : columnsOf(inserted), saved);
+    const savedColumns = new Set(Object.keys(saved).map((column) => column.toLowerCase()));
+    const stamped = await stampStatusColumns(client, orderId, input.status, cols.size ? cols : savedColumns, saved);
     try {
       await client.query(
         `INSERT INTO order_items (id, order_id, product_slug, role, quantity, unit_price_cents, line_total_cents)

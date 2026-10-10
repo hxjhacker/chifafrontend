@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
   const denied = await requireAdmin(request);
   if (denied instanceof NextResponse) return denied;
   try {
-    const proxied = await proxyAdminJson(request.clone(), "/api/admin/products");
+    const proxied = await proxyAdminJson(request, "/api/admin/products");
     if (proxied.status < 500 && proxied.status !== 404) return proxied;
   } catch {
     // FastAPI unavailable

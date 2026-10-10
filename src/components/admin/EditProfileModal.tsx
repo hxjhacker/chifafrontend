@@ -8,6 +8,12 @@ export const STORE_NAME_KEY = "cg_admin_store_name";
 export const DEFAULT_STORE_NAME = "CHIFA GLOW";
 export const DEFAULT_PROFILE_EMAIL = "manager@chifa.com";
 
+export type PasswordUpdate = {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+};
+
 export function storeInitials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length >= 2) return `${parts[0][0] || ""}${parts[1][0] || ""}`.toUpperCase();
@@ -84,13 +90,14 @@ export function EditProfileModal({
   storeName: string;
   email: string;
   onClose: () => void;
-  onSave: (name: string) => void;
+  onSave: (name: string, password?: PasswordUpdate) => void | Promise<void>;
 }) {
   const [draftName, setDraftName] = useState(storeName);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -101,8 +108,9 @@ export function EditProfileModal({
     setError("");
   }, [open, storeName]);
 
-  function submit(e: FormEvent) {
+  async function submit(e: FormEvent) {
     e.preventDefault();
+    if (saving) return;
     const name = draftName.trim();
     if (name.length < 2) {
       setError("كتبي اسم المتجر (حرفين على الأقل).");
@@ -123,8 +131,16 @@ export function EditProfileModal({
         return;
       }
     }
-    onSave(name);
-    onClose();
+    setSaving(true);
+    try {
+      const password = changingPassword ? { currentPassword, newPassword, confirmPassword } : undefined;
+      await onSave(name, password);
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "تعذر حفظ التعديلات.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   if (!open) return null;
@@ -270,9 +286,10 @@ export function EditProfileModal({
             </button>
             <button
               type="submit"
+              disabled={saving}
               className="rounded-xl bg-amber-500 px-5 py-2 font-bold text-slate-950 shadow-md shadow-amber-500/10 transition hover:bg-amber-400"
             >
-              حفظ التعديلات
+              {saving ? "جاري الحفظ…" : "حفظ التعديلات"}
             </button>
           </div>
         </form>

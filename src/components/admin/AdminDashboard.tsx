@@ -53,6 +53,7 @@ import { OrderDesktopRow, OrderMobileCard } from "@/components/admin/OrderRow";
 import { OrderTimelineModal } from "@/components/admin/OrderTimelineModal";
 import { QuickWhatsAppOrderModal } from "@/components/admin/QuickWhatsAppOrderModal";
 import { DashboardSoundToggle, dispatchDashboardSound } from "@/components/admin/DashboardSoundEngine";
+import { TeamMembersMenu } from "@/components/admin/TeamMembersMenu";
 import { useDashboardOrders } from "@/components/admin/StickyNotesWidget";
 import { ViewsObservatory } from "@/components/admin/ViewsObservatory";
 import {
@@ -327,6 +328,7 @@ export function AdminDashboard() {
   const [actionsOpen, setActionsOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [teamFilterId, setTeamFilterId] = useState<string | null>(null);
   const [storeName, setStoreName] = useState(DEFAULT_STORE_NAME);
   const [darkMode, setDarkMode] = useState(false);
   const selectAllRef = useRef<HTMLInputElement>(null);
@@ -389,6 +391,16 @@ export function AdminDashboard() {
     window.addEventListener("open-order-details", onOpenOrderDetails);
     return () => window.removeEventListener("open-order-details", onOpenOrderDetails);
   }, [orders]);
+
+  useEffect(() => {
+    function onTeamFilter(event: Event) {
+      const memberId = (event as CustomEvent<{ memberId?: string | null }>).detail?.memberId;
+      setTeamFilterId(memberId || null);
+      setPage(1);
+    }
+    window.addEventListener("dashboard-team-filter", onTeamFilter);
+    return () => window.removeEventListener("dashboard-team-filter", onTeamFilter);
+  }, []);
 
   useEffect(() => {
     setPrefs(readPrefs());
@@ -1073,11 +1085,12 @@ export function AdminDashboard() {
       const hay = `${order.full_name} ${order.phone} ${order.phone_national} ${order.city} ${order.pack_label} ${order.order_id}`.toLowerCase();
       const matchesSearch = !needle || hay.includes(needle);
       const matchesStatus = status === "all" || order.status === status;
+      const matchesTeam = !teamFilterId || (order.assigned_team_member_id || "mohammed") === teamFilterId;
       const matchesUndispatched =
         !undispatchedOnly || (!hasTracking(order) && (order.status === "confirmed" || order.status === "new"));
-      return matchesSearch && matchesStatus && matchesUndispatched;
+      return matchesSearch && matchesStatus && matchesTeam && matchesUndispatched;
     });
-  }, [orders, q, status, undispatchedOnly]);
+  }, [orders, q, status, teamFilterId, undispatchedOnly]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
   const currentPage = Math.min(page, totalPages);
@@ -1349,7 +1362,11 @@ export function AdminDashboard() {
             />
           </div>
 
-          <div className="relative z-30" ref={mobileAccountRef}>
+          <div className="relative z-30 flex items-center gap-2" ref={mobileAccountRef}>
+            <Link href={DASHBOARD_HOME} className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-amber-600/70 bg-[#181615] text-sm font-extrabold tracking-wider text-amber-500" aria-label="لوحة التحكم">
+              CG
+            </Link>
+            <TeamMembersMenu />
             <button
               type="button"
               aria-label="معلومات الحساب"
@@ -1505,8 +1522,12 @@ export function AdminDashboard() {
 
           <div
             ref={accountRef}
-            className="relative z-30 shrink-0 bg-[#0b101b] py-1 pl-1 pr-3 shadow-[-20px_0_20px_#0b101b]"
+            className="relative z-30 flex shrink-0 items-center gap-2 bg-[#0b101b] py-1 pl-1 pr-3 shadow-[-20px_0_20px_#0b101b]"
           >
+            <Link href={DASHBOARD_HOME} className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-amber-600/70 bg-[#181615] text-sm font-extrabold tracking-wider text-amber-500" aria-label="لوحة التحكم">
+              CG
+            </Link>
+            <TeamMembersMenu />
             <button
               type="button"
               aria-label="معلومات الحساب"

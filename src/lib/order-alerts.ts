@@ -45,8 +45,7 @@ export function parseUndispatchedSummary(payload: unknown): UndispatchedSummary 
   const data = payload && typeof payload === "object" ? (payload as Record<string, unknown>) : {};
   const asItems = (value: unknown): UndispatchedItem[] => {
     if (!Array.isArray(value)) return [];
-    return value
-      .map((row) => {
+    const parsed = value.map((row): UndispatchedItem | null => {
         if (!row || typeof row !== "object") return null;
         const item = row as Record<string, unknown>;
         const id = String(item.order_id || item.id || "").trim();
@@ -68,11 +67,12 @@ export function parseUndispatchedSummary(payload: unknown): UndispatchedSummary 
           hours_ago: Math.max(0, Number(item.hours_ago) || Number(item.hours_delayed) || 0),
           is_blacklisted: Boolean(item.is_blacklisted || item.blacklisted || item.is_blocked),
         };
-      })
-      .filter((row): row is UndispatchedItem => Boolean(row));
+      });
+    return parsed.filter((row): row is UndispatchedItem => row !== null);
   };
   const newItems = asItems(data.new_items);
-  const overdueItems = asItems(data.overdue_items?.length ? data.overdue_items : data.items);
+  const overdueSource = Array.isArray(data.overdue_items) && data.overdue_items.length ? data.overdue_items : data.items;
+  const overdueItems = asItems(overdueSource);
   const newCount = Number(data.new_orders_count);
   const overdueCount = Number(data.overdue_orders_count);
   return {

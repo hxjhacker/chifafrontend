@@ -14,7 +14,7 @@ export async function PATCH(request: NextRequest, ctx: Ctx) {
   if (denied instanceof NextResponse) return denied;
   const { cityId } = await ctx.params;
   try {
-    const proxied = await proxyAdminRequest(request.clone(), `/api/admin/pricing-comparison/${cityId}`, "PATCH");
+    const proxied = await proxyAdminRequest(request, `/api/admin/pricing-comparison/${cityId}`, "PATCH");
     if (proxied.status < 500 && proxied.status !== 404) return proxied;
   } catch {
     // FastAPI unavailable
