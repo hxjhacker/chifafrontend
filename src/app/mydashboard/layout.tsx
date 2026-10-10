@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { DashboardShield } from "@/components/admin/DashboardShield";
 import { DashboardHeader } from "@/components/admin/DashboardHeader";
 import { DashboardSoundEngine } from "@/components/admin/DashboardSoundEngine";
+import { CalculatorWidget } from "@/components/admin/CalculatorWidget";
 import { DashboardOrdersProvider, StickyNotesWidget } from "@/components/admin/StickyNotesWidget";
 
 export const metadata: Metadata = {
@@ -37,6 +38,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <DashboardSoundEngine />
         <DashboardHeader />
         {children}
+        <CalculatorWidget />
         <StickyNotesWidget />
       </DashboardShield>
     </DashboardOrdersProvider>
