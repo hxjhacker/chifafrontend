@@ -20,9 +20,23 @@ export async function POST(request: Request) {
   const denied = await requireAdmin(request);
   if (denied instanceof NextResponse) return denied;
   try {
-    const body = (await request.json()) as { name_ar?: string; avatar_color?: string };
+    const body = (await request.json()) as {
+      name_ar?: string;
+      avatar_color?: string;
+      payout_method?: "percentage" | "fixed" | "formula";
+      payout_percentage?: number | null;
+      payout_fixed_amount?: number | null;
+      payout_loss_deduction?: number | null;
+      payout_min_order_target?: number | null;
+    };
     return NextResponse.json(
-      await createTeamMember(String(body.name_ar || ""), String(body.avatar_color || "#38bdf8")),
+      await createTeamMember(String(body.name_ar || ""), String(body.avatar_color || "#38bdf8"), {
+        payout_method: body.payout_method,
+        payout_percentage: body.payout_percentage == null ? null : Number(body.payout_percentage),
+        payout_fixed_amount: body.payout_fixed_amount == null ? null : Number(body.payout_fixed_amount),
+        payout_loss_deduction: body.payout_loss_deduction == null ? null : Number(body.payout_loss_deduction),
+        payout_min_order_target: body.payout_min_order_target == null ? null : Number(body.payout_min_order_target),
+      }),
       { status: 201 },
     );
   } catch (error) {

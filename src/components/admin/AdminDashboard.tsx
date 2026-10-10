@@ -152,6 +152,104 @@ function serverErrorMessage(status: number, detail?: string, fallback = "تعذ�
   return fallback;
 }
 
+function buildMemberLogistics(orders: AdminOrder[], base: LogisticsAnalytics): LogisticsAnalytics {
+  const regions = base.regions.map((region) => ({
+    ...region,
+    total_orders: 0,
+    delivered: 0,
+    returned: 0,
+    cancelled: 0,
+    in_transit: 0,
+    delivery_rate: 0,
+    cod_generated: 0,
+    top_cities: [] as { city: string; count: number }[],
+  }));
+  const regionById = new Map(regions.map((region) => [region.region_id, region]));
+  const unmapped = {
+    ...base.unmapped,
+    total_orders: 0,
+    delivered: 0,
+    returned: 0,
+    cancelled: 0,
+    in_transit: 0,
+    delivery_rate: 0,
+    cod_generated: 0,
+    top_cities: [] as { city: string; count: number }[],
+  };
+  const cityCounts = new Map<string, Map<string, number>>();
+  let deliveredAmount = 0;
+  let inTransitAmount = 0;
+  let deliveredCount = 0;
+  let inTransitCount = 0;
+  let returnedCount = 0;
+  let cancelledCount = 0;
+  let deliveryCosts = 0;
+  let refusalCosts = 0;
+  let returnCosts = 0;
+
+  for (const order of orders || []) {
+    const amount = Number(order.total || order.total_price || 0);
+    const region = (order.region_id && regionById.get(order.region_id)) || unmapped;
+    const city = String(order.shipping_city || order.city || "").trim();
+    const cityMap = cityCounts.get(region.region_id) || new Map<string, number>();
+    if (city) cityMap.set(city, (cityMap.get(city) || 0) + 1);
+    cityCounts.set(region.region_id, cityMap);
+    region.total_orders += 1;
+    region.cod_generated += amount;
+
+    if (order.status === "delivered") {
+      deliveredCount += 1;
+      deliveredAmount += amount;
+      deliveryCosts += Number(base.delivery_fee || 0);
+      region.delivered += 1;
+    } else if (order.status === "returned") {
+      returnedCount += 1;
+      returnCosts += Number(base.return_fee || 0);
+      region.returned += 1;
+    } else if (order.status === "cancelled") {
+      cancelledCount += 1;
+      refusalCosts += Number(base.refusal_fee || 0);
+      region.cancelled += 1;
+    } else if (order.status === "shipped" || order.status === "out_of_zone") {
+      inTransitCount += 1;
+      inTransitAmount += amount;
+      region.in_transit += 1;
+    }
+  }
+
+  for (const region of [...regions, unmapped]) {
+    const closed = region.delivered + region.returned + region.cancelled;
+    region.delivery_rate = closed ? Math.round((region.delivered / closed) * 1000) / 10 : 0;
+    const cityMap = cityCounts.get(region.region_id);
+    region.top_cities = cityMap
+      ? [...cityMap.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([city, count]) => ({ city, count }))
+      : [];
+  }
+
+  const closed = deliveredCount + returnedCount + cancelledCount;
+  return {
+    ...base,
+    delivery_rate: closed ? Math.round((deliveredCount / closed) * 1000) / 10 : 0,
+    delivery_rate_denominator: closed,
+    financial: {
+      ...base.financial,
+      total_delivered_amount: deliveredAmount,
+      in_transit_amount: inTransitAmount,
+      delivered_count: deliveredCount,
+      in_transit_count: inTransitCount,
+      returned_count: returnedCount,
+      cancelled_count: cancelledCount,
+      delivery_costs: deliveryCosts,
+      refusal_costs: refusalCosts,
+      return_costs: returnCosts,
+      estimated_shipping_costs: deliveryCosts + refusalCosts + returnCosts,
+      net_cash_due: deliveredAmount - deliveryCosts - refusalCosts - returnCosts,
+    },
+    regions,
+    unmapped,
+  };
+}
+
 function readPrefs(): SectionPrefs {
   const raw = readStorage(PREFS_KEY) || readStorage(LEGACY_PREFS_KEY);
   if (!raw) return DEFAULT_PREFS;
@@ -1067,14 +1165,48 @@ export function AdminDashboard() {
     }
   }
 
-  const confirmedWon = stats.confirmed_orders + stats.shipped_orders + stats.delivered_orders;
+  const teamOrders = useMemo(
+    () => (teamFilterId ? orders.filter((order) => (order.assigned_team_member_id || "mohammed") === teamFilterId) : orders),
+    [orders, teamFilterId],
+  );
+  const dashboardStats = useMemo<AdminStats>(() => {
+    if (!teamFilterId) return stats;
+    const counts = { new_orders: 0, confirmed_orders: 0, shipped_orders: 0, delivered_orders: 0, cancelled_orders: 0 };
+    const cities = new Map<string, number>();
+    let revenue = 0;
+    for (const order of teamOrders) {
+      const city = String(order.shipping_city || order.city || "").trim();
+      if (city) cities.set(city, (cities.get(city) || 0) + 1);
+      if (order.status === "new") counts.new_orders += 1;
+      else if (order.status === "confirmed") counts.confirmed_orders += 1;
+      else if (order.status === "shipped" || order.status === "out_of_zone") counts.shipped_orders += 1;
+      else if (order.status === "delivered") counts.delivered_orders += 1;
+      else if (order.status === "cancelled") counts.cancelled_orders += 1;
+      if (order.status !== "cancelled" && order.status !== "returned") revenue += Number(order.total || order.total_price || 0);
+    }
+    const won = counts.confirmed_orders + counts.shipped_orders + counts.delivered_orders;
+    const processed = won + counts.cancelled_orders;
+    return {
+      revenue,
+      currency: "MAD",
+      ...counts,
+      confirmation_rate: processed > 0 ? Math.round((won / processed) * 1000) / 10 : 0,
+      total_orders: teamOrders.length,
+      city_breakdown: [...cities.entries()].sort((a, b) => b[1] - a[1]).map(([city, count]) => ({ city, count })),
+    };
+  }, [stats, teamFilterId, teamOrders]);
+  const dashboardLogistics = useMemo(
+    () => (teamFilterId ? buildMemberLogistics(teamOrders, logistics) : logistics),
+    [logistics, teamFilterId, teamOrders],
+  );
+  const confirmedWon = dashboardStats.confirmed_orders + dashboardStats.shipped_orders + dashboardStats.delivered_orders;
   const hideOverviewNums = hideAll || hideOverview;
   const hideLogisticsNums = hideAll || hideLogistics;
   const hideCityNums = hideAll || hideCity;
   const hideMapNums = hideAll || hideMap;
   const hideTableNums = hideAll;
 
-  const cityRows = stats.city_breakdown || [];
+  const cityRows = dashboardStats.city_breakdown || [];
   const cityTotal = cityRows.reduce((sum, row) => sum + row.count, 0);
   const topCity = cityRows[0];
   const visibleCities = showAllCities ? cityRows : cityRows.slice(0, 8);
@@ -1363,10 +1495,6 @@ export function AdminDashboard() {
           </div>
 
           <div className="relative z-30 flex items-center gap-2" ref={mobileAccountRef}>
-            <Link href={DASHBOARD_HOME} className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-amber-600/70 bg-[#181615] text-sm font-extrabold tracking-wider text-amber-500" aria-label="لوحة التحكم">
-              CG
-            </Link>
-            <TeamMembersMenu />
             <button
               type="button"
               aria-label="معلومات الحساب"
@@ -1389,6 +1517,10 @@ export function AdminDashboard() {
                 onOpenProfile={openProfileEditor}
               />
             ) : null}
+            <TeamMembersMenu />
+            <Link href={DASHBOARD_HOME} className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-amber-600/70 bg-[#181615] text-sm font-extrabold tracking-wider text-amber-500" aria-label="لوحة التحكم">
+              CG
+            </Link>
           </div>
         </div>
 
@@ -1521,6 +1653,7 @@ export function AdminDashboard() {
           </div>
 
           <div
+            dir="ltr"
             ref={accountRef}
             className="relative z-30 flex shrink-0 items-center gap-2 bg-[#0b101b] py-1 pl-1 pr-3 shadow-[-20px_0_20px_#0b101b]"
           >
@@ -1714,7 +1847,8 @@ export function AdminDashboard() {
         ) : null}
         {prefs.logistics ? (
           <LogisticsKpiCards
-            data={logistics}
+            data={dashboardLogistics}
+            orders={teamOrders}
             hidden={hideLogisticsNums}
             onToggleNumbers={() => setHideLogistics((v) => !v)}
           />
@@ -1746,24 +1880,24 @@ export function AdminDashboard() {
               <div className="relative h-44 w-44">
                 <AdminDoughnut
                   labels={["مؤكدة", "جديدة", "غير مؤكدة / ملغاة"]}
-                  values={[confirmedWon, stats.new_orders, stats.cancelled_orders]}
+                  values={[confirmedWon, dashboardStats.new_orders, dashboardStats.cancelled_orders]}
                   colors={["#10B981", "#F59E0B", "#E11D48"]}
                   cutout="70%"
                 />
                 <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
                   <span className="text-[10px] font-bold text-royal/50 dark:text-slate-400">المجموع</span>
                   <span className={cn("text-sm font-black text-royal dark:text-gold", hideOverviewNums && "blurred-number")}>
-                    {stats.total_orders} طلب
+                    {dashboardStats.total_orders} طلب
                   </span>
                 </div>
               </div>
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:col-span-8">
-              <KpiCard label="مجموع الطلبيات" value={stats.total_orders} percent="100%" color="bg-[#0A192F] dark:bg-gold" valueClass="text-royal dark:text-white" percentClass="text-royal/60 dark:text-slate-400" hidden={hideOverviewNums} />
-              <KpiCard label="الطلبيات الجديدة" value={stats.new_orders} percent={pct(stats.new_orders, stats.total_orders)} color="bg-[#F59E0B]" valueClass="text-amber-500" percentClass="text-amber-500" hidden={hideOverviewNums} />
-              <KpiCard label="الطلبيات المؤكدة" value={confirmedWon} percent={pct(confirmedWon, stats.total_orders)} color="bg-[#10B981]" valueClass="text-emeraldCustom" percentClass="text-emeraldCustom" hidden={hideOverviewNums} />
-              <KpiCard label="الطلبيات غير المؤكدة" value={stats.cancelled_orders} percent={pct(stats.cancelled_orders, stats.total_orders)} color="bg-[#E11D48]" valueClass="text-rose-500" percentClass="text-rose-500" hidden={hideOverviewNums} />
+              <KpiCard label="مجموع الطلبيات" value={dashboardStats.total_orders} percent="100%" color="bg-[#0A192F] dark:bg-gold" valueClass="text-royal dark:text-white" percentClass="text-royal/60 dark:text-slate-400" hidden={hideOverviewNums} />
+              <KpiCard label="الطلبيات الجديدة" value={dashboardStats.new_orders} percent={pct(dashboardStats.new_orders, dashboardStats.total_orders)} color="bg-[#F59E0B]" valueClass="text-amber-500" percentClass="text-amber-500" hidden={hideOverviewNums} />
+              <KpiCard label="الطلبيات المؤكدة" value={confirmedWon} percent={pct(confirmedWon, dashboardStats.total_orders)} color="bg-[#10B981]" valueClass="text-emeraldCustom" percentClass="text-emeraldCustom" hidden={hideOverviewNums} />
+              <KpiCard label="الطلبيات غير المؤكدة" value={dashboardStats.cancelled_orders} percent={pct(dashboardStats.cancelled_orders, dashboardStats.total_orders)} color="bg-[#E11D48]" valueClass="text-rose-500" percentClass="text-rose-500" hidden={hideOverviewNums} />
             </div>
           </div>
         </div>

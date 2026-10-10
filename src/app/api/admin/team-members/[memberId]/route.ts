@@ -10,7 +10,16 @@ export async function PATCH(request: Request, context: { params: Promise<{ membe
   if (denied instanceof NextResponse) return denied;
   try {
     const { memberId } = await context.params;
-    const body = (await request.json()) as { name_ar?: string; avatar_color?: string; is_active?: boolean };
+    const body = (await request.json()) as {
+      name_ar?: string;
+      avatar_color?: string;
+      is_active?: boolean;
+      payout_method?: "percentage" | "fixed" | "formula";
+      payout_percentage?: number | null;
+      payout_fixed_amount?: number | null;
+      payout_loss_deduction?: number | null;
+      payout_min_order_target?: number | null;
+    };
     const member = await updateTeamMember(memberId, body);
     if (!member) return NextResponse.json({ detail: "team_member_not_found" }, { status: 404 });
     return NextResponse.json(member);

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, Pencil, Plus, UserCog, X } from "lucide-react";
+import { AddTeamMemberModal, type NewTeamMemberValues } from "@/components/admin/AddTeamMemberModal";
 import type { TeamMemberOption } from "@/components/admin/TeamMemberSelect";
 
 const COLORS = ["#38bdf8", "#a78bfa", "#34d399", "#f59e0b", "#fb7185", "#f472b6"];
@@ -19,6 +20,7 @@ export function TeamMembersMenu() {
   const [draftColor, setDraftColor] = useState(COLORS[0]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [addModalOpen, setAddModalOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   async function loadMembers() {
@@ -71,8 +73,7 @@ export function TeamMembersMenu() {
     }
   }
 
-  async function addMember() {
-    if (!draftName.trim()) return;
+  async function saveNewMember(values: NewTeamMemberValues) {
     setBusy(true);
     setError("");
     try {
@@ -80,14 +81,16 @@ export function TeamMembersMenu() {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name_ar: draftName, avatar_color: draftColor }),
+        body: JSON.stringify(values),
       });
       if (!response.ok) throw new Error("تعذر إضافة عضو الفريق.");
+      const member = (await response.json()) as TeamMemberOption;
       await loadMembers();
-      setEditingId("");
-      setDraftName("");
+      setActiveId(member.id);
+      dispatchTeamFilter(member.id);
+      setOpen(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "تعذر إضافة عضو الفريق.");
+      throw new Error(err instanceof Error ? err.message : "تعذر إضافة عضو الفريق.");
     } finally {
       setBusy(false);
     }
@@ -106,7 +109,7 @@ export function TeamMembersMenu() {
         <UserCog className="h-4 w-4" />
       </button>
       {open ? (
-        <div dir="rtl" className="absolute right-0 top-full z-[90] mt-2 w-72 rounded-2xl border border-slate-700 bg-[#0c1322] p-2 shadow-2xl">
+        <div dir="rtl" className="absolute right-0 top-full z-50 mt-2 max-h-[min(70vh,30rem)] w-72 max-w-[calc(100vw-1.5rem)] overflow-y-auto rounded-2xl border border-slate-700 bg-[#0c1322] p-2 shadow-2xl">
           <div className="mb-1 flex items-center justify-between border-b border-slate-800 px-2 pb-2">
             <span className="text-xs font-black text-white">قائمة أعضاء الفريق</span>
             <button type="button" onClick={() => setOpen(false)} className="text-slate-500 hover:text-white" aria-label="إغلاق"><X className="h-3.5 w-3.5" /></button>
@@ -121,7 +124,7 @@ export function TeamMembersMenu() {
             className="flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-right text-xs font-bold text-slate-200 transition hover:bg-white/5"
           >
             <span className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-700 text-[10px] font-black text-white">∑</span>
-            <span className="flex-1">إختيار الكل</span>
+            <span className="flex-1">إختيار الكل (الإجمالي)</span>
             <span className="font-mono text-[10px] text-slate-500">({totalOrders})</span>
             {activeId === null ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : null}
           </button>
@@ -160,23 +163,25 @@ export function TeamMembersMenu() {
               ) : null}
             </div>
           ))}
-          {editingId === "__new__" ? (
-            <div className="mt-1 space-y-1.5 rounded-xl border border-cyan-500/30 bg-cyan-500/5 p-2">
-              <input value={draftName} onChange={(event) => setDraftName(event.target.value)} placeholder="اسم العضو الجديد" className="w-full rounded-lg border border-slate-700 bg-[#0c1322] px-2 py-1.5 text-xs text-white outline-none focus:border-cyan-400" autoFocus />
-              <div className="flex items-center gap-1">
-                {COLORS.map((color) => <button key={color} type="button" onClick={() => setDraftColor(color)} className={`h-4 w-4 rounded-full border-2 ${draftColor === color ? "border-white" : "border-transparent"}`} style={{ backgroundColor: color }} aria-label="اختيار لون العضو" />)}
-                <button type="button" onClick={() => setEditingId("")} className="mr-auto text-[10px] text-slate-500">إلغاء</button>
-                <button type="button" disabled={busy} onClick={() => void addMember()} className="rounded-md bg-cyan-500/20 px-2 py-1 text-[10px] font-bold text-cyan-300 disabled:opacity-50">إضافة</button>
-              </div>
-            </div>
-          ) : (
-            <button type="button" onClick={() => { setEditingId("__new__"); setDraftName(""); setDraftColor(COLORS[members.length % COLORS.length]); setError(""); }} className="mt-1 flex w-full items-center justify-center gap-1 rounded-xl border border-dashed border-slate-700 px-2 py-2 text-[10px] font-bold text-cyan-300 hover:bg-cyan-500/10">
-              <Plus className="h-3 w-3" /> إضافة شخص جديد
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              setAddModalOpen(true);
+            }}
+            className="mt-1 flex w-full items-center justify-center gap-1 rounded-xl border border-dashed border-slate-700 px-2 py-2 text-[10px] font-bold text-cyan-300 hover:bg-cyan-500/10"
+          >
+            <Plus className="h-3 w-3" /> إضافة شخص جديد
+          </button>
           {error ? <p className="px-2 pt-1 text-[10px] font-bold text-rose-400">{error}</p> : null}
         </div>
       ) : null}
+      <AddTeamMemberModal
+        open={addModalOpen}
+        color={COLORS[members.length % COLORS.length]}
+        onClose={() => setAddModalOpen(false)}
+        onSave={saveNewMember}
+      />
     </div>
   );
 }

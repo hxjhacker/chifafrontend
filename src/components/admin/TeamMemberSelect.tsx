@@ -8,6 +8,11 @@ export type TeamMemberOption = {
   id: string;
   name_ar: string;
   avatar_color: string;
+  payout_method?: "percentage" | "fixed" | "formula";
+  payout_percentage?: number | null;
+  payout_fixed_amount?: number | null;
+  payout_loss_deduction?: number | null;
+  payout_min_order_target?: number | null;
   is_active: boolean;
   order_count?: number;
 };

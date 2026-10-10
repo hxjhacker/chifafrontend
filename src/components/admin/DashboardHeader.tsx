@@ -88,7 +88,7 @@ export function DashboardHeader() {
   return (
     <header dir="ltr" className="sticky top-0 z-40 w-full">
       <div dir="rtl" className="hidden items-center justify-between gap-3 border-b border-slate-800/80 bg-[#0b101b] px-4 py-2.5 sm:flex lg:px-8">
-        <div className="flex items-center gap-2">
+        <div dir="ltr" className="flex items-center gap-2">
           <Link href={DASHBOARD_HOME} className="group flex items-center gap-2" aria-label="لوحة التحكم">
             <span className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-amber-600/70 bg-[#181615] text-sm font-extrabold tracking-wider text-amber-500 shadow-md shadow-amber-500/10 transition group-hover:border-amber-500">
               CG

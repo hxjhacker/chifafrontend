@@ -54,10 +54,20 @@ CREATE TABLE IF NOT EXISTS team_members (
   id varchar(64) PRIMARY KEY,
   name_ar varchar(120) NOT NULL,
   avatar_color varchar(32) NOT NULL DEFAULT '#38bdf8',
+  payout_method varchar(20) NOT NULL DEFAULT 'percentage',
+  payout_percentage numeric(8,2),
+  payout_fixed_amount numeric(12,2),
+  payout_loss_deduction numeric(12,2),
+  payout_min_order_target numeric(12,2),
   is_active boolean NOT NULL DEFAULT true,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
+ALTER TABLE team_members ADD COLUMN IF NOT EXISTS payout_method varchar(20) NOT NULL DEFAULT 'percentage';
+ALTER TABLE team_members ADD COLUMN IF NOT EXISTS payout_percentage numeric(8,2);
+ALTER TABLE team_members ADD COLUMN IF NOT EXISTS payout_fixed_amount numeric(12,2);
+ALTER TABLE team_members ADD COLUMN IF NOT EXISTS payout_loss_deduction numeric(12,2);
+ALTER TABLE team_members ADD COLUMN IF NOT EXISTS payout_min_order_target numeric(12,2);
 INSERT INTO team_members (id, name_ar, avatar_color)
 VALUES
   ('mohammed', 'محمد', '#38bdf8'),
