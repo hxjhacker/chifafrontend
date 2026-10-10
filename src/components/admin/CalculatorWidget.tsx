@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Calculator, Delete, Equal, X } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -115,6 +115,44 @@ export function CalculatorWidget() {
     setExpression(next);
     setDisplay(next);
   }
+
+  useEffect(() => {
+    if (!open) return;
+
+    function handleKeyDown(event: KeyboardEvent) {
+      const numpadKey =
+        event.code === "NumpadDecimal"
+          ? "."
+          : event.code === "NumpadAdd"
+            ? "+"
+            : event.code === "NumpadSubtract"
+              ? "-"
+              : event.code === "NumpadMultiply"
+                ? "*"
+                : event.code === "NumpadDivide"
+                  ? "/"
+                  : event.key;
+      const key = numpadKey === "Enter" ? "=" : numpadKey;
+
+      if (key === "Escape") {
+        event.preventDefault();
+        setOpen(false);
+        return;
+      }
+      if (key === "Backspace" || key === "Delete") {
+        event.preventDefault();
+        press("⌫");
+        return;
+      }
+      if (/^[0-9]$/.test(key) || OPERATORS.has(key) || key === "." || key === "=") {
+        event.preventDefault();
+        press(key);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [open, expression]);
 
   return (
     <div className="fixed bottom-4 left-3 z-50 select-none sm:bottom-6 sm:left-6" dir="rtl">
