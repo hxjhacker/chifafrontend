@@ -30,13 +30,11 @@ export function DashboardHeader() {
   const accountRef = useRef<HTMLDivElement>(null);
   const mobileAccountRef = useRef<HTMLDivElement>(null);
 
+  const normalizedPath = pathname ? pathname.replace(/\/+$/, "") || "/" : DASHBOARD_HOME;
   const isHidden =
-    pathname === DASHBOARD_HOME ||
-    pathname === `${DASHBOARD_HOME}/` ||
-    pathname === DASHBOARD_LOGIN ||
-    pathname === `${DASHBOARD_LOGIN}/` ||
-    pathname === "/login" ||
-    pathname === "/login/";
+    normalizedPath === DASHBOARD_HOME ||
+    normalizedPath === DASHBOARD_LOGIN ||
+    normalizedPath === "/login";
 
   useEffect(() => {
     setStoreName(readStorage(STORE_NAME_KEY)?.trim() || DEFAULT_STORE_NAME);

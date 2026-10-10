@@ -109,7 +109,7 @@ export function TeamMembersMenu() {
         <UserCog className="h-4 w-4" />
       </button>
       {open ? (
-        <div dir="rtl" className="absolute right-0 top-full z-50 mt-2 max-h-[min(70vh,30rem)] w-72 max-w-[calc(100vw-1.5rem)] overflow-y-auto rounded-2xl border border-slate-700 bg-[#0c1322] p-2 shadow-2xl">
+        <div dir="rtl" className="absolute left-0 right-auto top-full z-50 mt-2 max-h-[min(70vh,30rem)] w-72 max-w-[calc(100vw-1.5rem)] overflow-y-auto rounded-2xl border border-slate-700 bg-[#0c1322] p-2 shadow-2xl">
           <div className="mb-1 flex items-center justify-between border-b border-slate-800 px-2 pb-2">
             <span className="text-xs font-black text-white">قائمة أعضاء الفريق</span>
             <button type="button" onClick={() => setOpen(false)} className="text-slate-500 hover:text-white" aria-label="إغلاق"><X className="h-3.5 w-3.5" /></button>
