@@ -54,6 +54,7 @@ import { OrderTimelineModal } from "@/components/admin/OrderTimelineModal";
 import { QuickWhatsAppOrderModal } from "@/components/admin/QuickWhatsAppOrderModal";
 import { DashboardSoundToggle, dispatchDashboardSound } from "@/components/admin/DashboardSoundEngine";
 import { TeamMembersMenu } from "@/components/admin/TeamMembersMenu";
+import type { TeamMemberOption } from "@/components/admin/TeamMemberSelect";
 import { useDashboardOrders } from "@/components/admin/StickyNotesWidget";
 import { ViewsObservatory } from "@/components/admin/ViewsObservatory";
 import {
@@ -427,6 +428,7 @@ export function AdminDashboard() {
   const [accountOpen, setAccountOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [teamFilterId, setTeamFilterId] = useState<string | null>(null);
+  const [teamMembers, setTeamMembers] = useState<TeamMemberOption[]>([]);
   const [storeName, setStoreName] = useState(DEFAULT_STORE_NAME);
   const [darkMode, setDarkMode] = useState(false);
   const selectAllRef = useRef<HTMLInputElement>(null);
@@ -498,6 +500,29 @@ export function AdminDashboard() {
     }
     window.addEventListener("dashboard-team-filter", onTeamFilter);
     return () => window.removeEventListener("dashboard-team-filter", onTeamFilter);
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    async function loadTeamMembers() {
+      try {
+        const response = await fetch("/api/admin/team-members", { credentials: "include", cache: "no-store" });
+        if (!response.ok) return;
+        const body = (await response.json()) as { members?: TeamMemberOption[] };
+        if (active) setTeamMembers((body.members || []).filter((member) => member.is_active));
+      } catch {
+        /* Order rows use a safe default avatar when the team list is unavailable. */
+      }
+    }
+    void loadTeamMembers();
+    function onTeamMembersUpdated() {
+      void loadTeamMembers();
+    }
+    window.addEventListener("dashboard-team-members-updated", onTeamMembersUpdated);
+    return () => {
+      active = false;
+      window.removeEventListener("dashboard-team-members-updated", onTeamMembersUpdated);
+    };
   }, []);
 
   useEffect(() => {
@@ -1246,9 +1271,24 @@ export function AdminDashboard() {
     box.indeterminate = selectedOnPage > 0 && !allPageSelected;
   }, [selectedOnPage, allPageSelected]);
 
+  const teamMemberById = useMemo(() => new Map(teamMembers.map((member) => [member.id, member])), [teamMembers]);
+
+  function assignedMemberFor(order: AdminOrder): TeamMemberOption {
+    const id = order.assigned_team_member_id || "mohammed";
+    return (
+      teamMemberById.get(id) || {
+        id,
+        name_ar: id === "store" ? "المتجر" : id === "mohammed" ? "محمد" : id,
+        avatar_color: id === "store" ? "#a78bfa" : id === "mohammed" ? "#38bdf8" : "#34d399",
+        is_active: true,
+      }
+    );
+  }
+
   function orderRowProps(order: AdminOrder) {
     return {
       order,
+      assignedMember: assignedMemberFor(order),
       selected: selectedIds.includes(order.order_id),
       onToggleSelected: (on: boolean) => toggleSelected(order.order_id, on),
       shipping: shippingId === order.order_id,
@@ -1518,9 +1558,6 @@ export function AdminDashboard() {
               />
             ) : null}
             <TeamMembersMenu />
-            <Link href={DASHBOARD_HOME} className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-amber-600/70 bg-[#181615] text-sm font-extrabold tracking-wider text-amber-500" aria-label="لوحة التحكم">
-              CG
-            </Link>
           </div>
         </div>
 
@@ -1657,9 +1694,6 @@ export function AdminDashboard() {
             ref={accountRef}
             className="relative z-30 flex shrink-0 items-center gap-2 bg-[#0b101b] py-1 pl-1 pr-3 shadow-[-20px_0_20px_#0b101b]"
           >
-            <Link href={DASHBOARD_HOME} className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-amber-600/70 bg-[#181615] text-sm font-extrabold tracking-wider text-amber-500" aria-label="لوحة التحكم">
-              CG
-            </Link>
             <TeamMembersMenu />
             <button
               type="button"

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Check, Copy, ExternalLink, Loader2, Phone, Printer } from "lucide-react";
 import { WhatsAppIcon } from "@/components/Chrome";
 import { OrderActionsMenu } from "@/components/admin/OrderActionsMenu";
+import type { TeamMemberOption } from "@/components/admin/TeamMemberSelect";
 import { useLongPress } from "@/hooks/useLongPress";
 import {
   allowedNextStatuses,
@@ -45,14 +46,30 @@ export type OrderRowProps = {
   onView: (order: AdminOrder) => void;
   onDuplicate: (order: AdminOrder) => void;
   onDelete: (order: AdminOrder) => void;
+  assignedMember?: TeamMemberOption;
 };
+
+function MemberAvatar({ member }: { member?: TeamMemberOption }) {
+  if (!member) return null;
+  return (
+    <span
+      className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-black text-[#07111f] ring-1 ring-white/10"
+      style={{ backgroundColor: member.avatar_color }}
+      title={member.name_ar}
+      aria-label={`المسؤول: ${member.name_ar}`}
+    >
+      {member.name_ar.slice(0, 1)}
+    </span>
+  );
+}
 
 function StatusSelect({
   order,
   saving,
   statusOptions,
   onStatusSelect,
-}: Pick<OrderRowProps, "order" | "saving" | "statusOptions" | "onStatusSelect">) {
+  assignedMember,
+}: Pick<OrderRowProps, "order" | "saving" | "statusOptions" | "onStatusSelect" | "assignedMember">) {
   const meta = statusMeta(order.status);
   return (
     <div className="inline-flex items-center gap-1.5">
@@ -68,6 +85,7 @@ function StatusSelect({
           </option>
         ))}
       </select>
+      <MemberAvatar member={assignedMember} />
       {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin text-gold" /> : null}
     </div>
   );
@@ -275,6 +293,7 @@ export function OrderDesktopRow(props: OrderRowProps) {
           saving={props.saving}
           statusOptions={props.statusOptions}
           onStatusSelect={props.onStatusSelect}
+          assignedMember={props.assignedMember}
         />
       </td>
     </tr>
@@ -315,6 +334,7 @@ export function OrderMobileCard(props: OrderRowProps) {
           saving={props.saving}
           statusOptions={props.statusOptions}
           onStatusSelect={props.onStatusSelect}
+          assignedMember={props.assignedMember}
         />
       </div>
 

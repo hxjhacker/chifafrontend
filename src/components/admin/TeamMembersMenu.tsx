@@ -65,6 +65,7 @@ export function TeamMembersMenu() {
       });
       if (!response.ok) throw new Error("تعذر حفظ عضو الفريق.");
       await loadMembers();
+      window.dispatchEvent(new Event("dashboard-team-members-updated"));
       setEditingId("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "تعذر حفظ عضو الفريق.");
@@ -86,6 +87,7 @@ export function TeamMembersMenu() {
       if (!response.ok) throw new Error("تعذر إضافة عضو الفريق.");
       const member = (await response.json()) as TeamMemberOption;
       await loadMembers();
+      window.dispatchEvent(new Event("dashboard-team-members-updated"));
       setActiveId(member.id);
       dispatchTeamFilter(member.id);
       setOpen(false);
