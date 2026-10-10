@@ -8,8 +8,10 @@ import { DASHBOARD_LOGIN } from "@/lib/admin-paths";
 const MUTE_STORAGE_KEY = "chifaglow_dashboard_sounds_muted";
 const SOUND_EVENT = "chifaglow-dashboard-sound";
 const MUTE_EVENT = "chifaglow-dashboard-sound-mute";
+const ALARM_EVENT = "chifaglow-dashboard-alarm";
 
 export type DashboardSoundKind = "keypress" | "success" | "error";
+export type DashboardAlarmAction = "start" | "stop";
 
 type SoundEventDetail = {
   kind?: DashboardSoundKind;
@@ -40,6 +42,11 @@ export function dispatchDashboardSound(kind: DashboardSoundKind) {
   window.dispatchEvent(new CustomEvent<SoundEventDetail>(SOUND_EVENT, { detail: { kind } }));
 }
 
+export function dispatchDashboardAlarm(action: DashboardAlarmAction) {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent<{ action: DashboardAlarmAction }>(ALARM_EVENT, { detail: { action } }));
+}
+
 export function DashboardSoundEngine() {
   const pathname = usePathname();
 
@@ -55,6 +62,9 @@ export function DashboardSoundEngine() {
 
     let muted = readMuted();
     let audioContext: AudioContext | null = null;
+    let alarmTimer: number | null = null;
+    let alarmOscillator: OscillatorNode | null = null;
+    let alarmGain: GainNode | null = null;
 
     function getAudioContext() {
       if (!audioContext) {
@@ -141,6 +151,52 @@ export function DashboardSoundEngine() {
       else playError();
     }
 
+    function stopAlarm() {
+      if (alarmTimer !== null) {
+        window.clearTimeout(alarmTimer);
+        alarmTimer = null;
+      }
+      try {
+        alarmGain?.gain.cancelScheduledValues(audioContext?.currentTime || 0);
+        alarmGain?.gain.setTargetAtTime(0.0001, audioContext?.currentTime || 0, 0.03);
+        alarmOscillator?.stop((audioContext?.currentTime || 0) + 0.06);
+      } catch {
+        /* The oscillator may already have stopped between alarm pulses. */
+      }
+      alarmOscillator = null;
+      alarmGain = null;
+    }
+
+    function ringAlarm() {
+      if (muted || !isDesktopPc()) return;
+      const context = getAudioContext();
+      if (!context) return;
+      stopAlarm();
+
+      const pulse = () => {
+        if (muted || !isDesktopPc()) return;
+        const now = context.currentTime;
+        const oscillator = context.createOscillator();
+        const gain = context.createGain();
+        oscillator.type = "sine";
+        oscillator.frequency.setValueAtTime(660, now);
+        oscillator.frequency.setValueAtTime(880, now + 0.18);
+        oscillator.frequency.setValueAtTime(660, now + 0.36);
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(0.11, now + 0.025);
+        gain.gain.setValueAtTime(0.11, now + 0.36);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.48);
+        oscillator.connect(gain);
+        gain.connect(context.destination);
+        oscillator.start(now);
+        oscillator.stop(now + 0.5);
+        alarmOscillator = oscillator;
+        alarmGain = gain;
+        alarmTimer = window.setTimeout(pulse, 650);
+      };
+      pulse();
+    }
+
     function onSound(event: Event) {
       const kind = (event as CustomEvent<SoundEventDetail>).detail?.kind;
       if (kind) play(kind);
@@ -148,6 +204,13 @@ export function DashboardSoundEngine() {
 
     function onMute(event: Event) {
       muted = Boolean((event as CustomEvent<{ muted?: boolean }>).detail?.muted);
+      if (muted) stopAlarm();
+    }
+
+    function onAlarm(event: Event) {
+      const action = (event as CustomEvent<{ action?: DashboardAlarmAction }>).detail?.action;
+      if (action === "start") ringAlarm();
+      if (action === "stop") stopAlarm();
     }
 
     function onClick(event: MouseEvent) {
@@ -160,10 +223,13 @@ export function DashboardSoundEngine() {
     document.addEventListener("click", onClick, true);
     window.addEventListener(SOUND_EVENT, onSound);
     window.addEventListener(MUTE_EVENT, onMute);
+    window.addEventListener(ALARM_EVENT, onAlarm);
     return () => {
       document.removeEventListener("click", onClick, true);
       window.removeEventListener(SOUND_EVENT, onSound);
       window.removeEventListener(MUTE_EVENT, onMute);
+      window.removeEventListener(ALARM_EVENT, onAlarm);
+      stopAlarm();
       void audioContext?.close();
     };
   }, [pathname]);

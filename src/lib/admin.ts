@@ -60,6 +60,7 @@ export type AdminOrder = {
   driver_comment: string | null;
   total_price: number;
   source: string | null;
+  assigned_team_member_id?: string | null;
   updated_at: string | null;
   confirmed_at: string | null;
   shipped_at: string | null;

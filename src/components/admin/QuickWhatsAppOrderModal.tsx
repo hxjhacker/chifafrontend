@@ -15,6 +15,7 @@ import {
 } from "@/lib/whatsapp-order";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import { cn } from "@/lib/cn";
+import { TeamMemberSelect } from "@/components/admin/TeamMemberSelect";
 
 type Props = {
   open: boolean;
@@ -77,6 +78,7 @@ export function QuickWhatsAppOrderModal({ open, onClose, onCreated, onWarning }:
   const [productSlug, setProductSlug] = useState("");
   const [productError, setProductError] = useState(false);
   const [selectOpen, setSelectOpen] = useState(false);
+  const [teamMemberId, setTeamMemberId] = useState("mohammed");
   const selectRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   useLockBodyScroll(open);
@@ -87,6 +89,7 @@ export function QuickWhatsAppOrderModal({ open, onClose, onCreated, onWarning }:
   useEffect(() => {
     if (!open) {
       setProductSlug("");
+      setTeamMemberId("mohammed");
       setProductError(false);
       setSelectOpen(false);
       return;
@@ -185,6 +188,7 @@ export function QuickWhatsAppOrderModal({ open, onClose, onCreated, onWarning }:
           tier_qty: parsed.qty,
           status: "new",
           region_id: regionIdForCity(parsed.city),
+          assigned_team_member_id: teamMemberId,
         }),
       });
       if (!res.ok) {
@@ -397,6 +401,8 @@ export function QuickWhatsAppOrderModal({ open, onClose, onCreated, onWarning }:
               {error}
             </p>
           ) : null}
+
+          <TeamMemberSelect value={teamMemberId} onChange={setTeamMemberId} />
 
           <button
             type="submit"

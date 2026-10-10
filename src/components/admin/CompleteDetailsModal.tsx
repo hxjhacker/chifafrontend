@@ -11,6 +11,7 @@ import { regionIdForCity } from "@/lib/admin-geo";
 import { IosSwitch } from "@/components/admin/IosSwitch";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import { cn } from "@/lib/cn";
+import { TeamMemberSelect } from "@/components/admin/TeamMemberSelect";
 
 type Props = {
   open: boolean;
@@ -52,6 +53,7 @@ export function CompleteDetailsModal({ open, order, onClose, onSaved }: Props) {
   const [price, setPrice] = useState(199);
   const [priceDirty, setPriceDirty] = useState(false);
   const [notes, setNotes] = useState("");
+  const [teamMemberId, setTeamMemberId] = useState("mohammed");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   useLockBodyScroll(open);
@@ -90,6 +92,7 @@ export function CompleteDetailsModal({ open, order, onClose, onSaved }: Props) {
     setSecondarySlug(SECONDARY_PRODUCTS.some((p) => p.slug === secondary) ? secondary : "extra");
     setSecondaryQty(Math.max(1, order.secondary_qty || 1));
     setPrice(Math.round(order.total ?? order.total_price) || 199);
+    setTeamMemberId(order.assigned_team_member_id || "mohammed");
     setPriceDirty(true);
   }, [open, order]);
 
@@ -132,6 +135,7 @@ export function CompleteDetailsModal({ open, order, onClose, onSaved }: Props) {
         total_mad: total,
         total_price: total,
         status: nextStatus,
+        assigned_team_member_id: teamMemberId,
       };
       const minimalPayload = {
         full_name: name.trim(),
@@ -144,6 +148,7 @@ export function CompleteDetailsModal({ open, order, onClose, onSaved }: Props) {
         tier_qty: qty,
         total_mad: total,
         status: nextStatus,
+        assigned_team_member_id: teamMemberId,
       };
 
       async function send(body: Record<string, unknown>) {
@@ -393,6 +398,8 @@ export function CompleteDetailsModal({ open, order, onClose, onSaved }: Props) {
               className={`${fieldClass} resize-none p-3 font-normal`}
             />
           </div>
+
+          <TeamMemberSelect value={teamMemberId} onChange={setTeamMemberId} />
 
           {error ? (
             <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 font-bold text-red-200">{error}</p>

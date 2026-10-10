@@ -20,6 +20,7 @@ type OrderRow = {
   created_at: Date;
   updated_at: Date | null;
   source: string | null;
+  assigned_team_member_id?: string | null;
   confirmed_at: Date | null;
   shipped_at: Date | null;
   delivered_at: Date | null;
@@ -211,6 +212,7 @@ function serialize(row: OrderRow): AdminOrder {
     shipped_at: stampReached(row.shipped_at, updated, pastShipped),
     delivered_at: stampReached(row.delivered_at, updated, status === "delivered"),
     cancelled_at: stampReached(row.cancelled_at, updated, status === "cancelled"),
+    assigned_team_member_id: row.assigned_team_member_id || "mohammed",
     meta_livraison_sent_at: iso(row.meta_livraison_sent_at || null),
     meta_livraison_ticket_url: row.meta_livraison_ticket_url || null,
     carrier,
@@ -401,6 +403,7 @@ type OrderPatch = {
   driver_comment?: string;
   total_price?: number;
   customer_name?: string;
+  assigned_team_member_id?: string | null;
 };
 
 type SetItem = { column: string; value?: unknown; expr?: "now" | "coalesce" };
@@ -570,6 +573,7 @@ export async function updateAdminOrder(orderId: string, patch: OrderPatch): Prom
     let crossCents: number | null = null;
     let bundleEnabled = Boolean(row.bundle_enabled || row.cross_sell_slug);
     let secondaryQty = Math.max(1, Number(row.secondary_qty) || 1);
+    let assignedTeamMemberId = row.assigned_team_member_id || "mohammed";
 
     if (patch.full_name != null) {
       fullName = String(patch.full_name).trim().slice(0, 120);
@@ -661,6 +665,10 @@ export async function updateAdminOrder(orderId: string, patch: OrderPatch): Prom
       if (!Number.isFinite(next) || next < 1 || next > 20) throw new Error("invalid_qty");
       secondaryQty = next;
     }
+    if (patch.assigned_team_member_id !== undefined) {
+      const { ensureTeamMemberId } = await import("@/lib/server/team-members");
+      assignedTeamMemberId = await ensureTeamMemberId(patch.assigned_team_member_id);
+    }
     if (!bundleEnabled) {
       crossSlug = null;
       crossCents = 0;
@@ -700,6 +708,7 @@ export async function updateAdminOrder(orderId: string, patch: OrderPatch): Prom
       ["shipping_city", shippingCity],
       ["tier_price_cents", cents],
       ["subtotal_cents", cents],
+      ["assigned_team_member_id", assignedTeamMemberId],
     ];
 
     const run = async (sql: string, values: unknown[]) => client.query<OrderRow>(sql, values);
@@ -828,6 +837,7 @@ export async function createAdminOrder(input: {
   cross_sell_slug?: string | null;
   bundle_enabled?: boolean;
   secondary_qty?: number;
+  assigned_team_member_id?: string | null;
 }): Promise<AdminOrder> {
   if (!ALLOWED.includes(input.status)) throw new Error("invalid_status");
   const fullName = input.full_name.trim().slice(0, 120);
@@ -861,6 +871,8 @@ export async function createAdminOrder(input: {
   const crossSlug = input.cross_sell_slug && allowedCross.includes(input.cross_sell_slug) ? input.cross_sell_slug : null;
   const bundleEnabled = Boolean(input.bundle_enabled && crossSlug);
   const secondaryQty = Math.min(20, Math.max(1, Math.round(Number(input.secondary_qty) || 1)));
+  const { ensureTeamMemberId } = await import("@/lib/server/team-members");
+  const assignedTeamMemberId = await ensureTeamMemberId(input.assigned_team_member_id);
   let regionId: string | null = null;
   if (officialShipping) {
     const { regionIdForCity } = await import("@/lib/admin-geo");
@@ -897,6 +909,7 @@ export async function createAdminOrder(input: {
       payment_method: "COD",
       event_id: eventId,
       source: "admin",
+      assigned_team_member_id: assignedTeamMemberId,
       address,
       quartier: String(input.quartier || "").trim() || null,
       street: String(input.street || "").trim() || null,

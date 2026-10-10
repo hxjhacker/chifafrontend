@@ -11,6 +11,7 @@ import { allowedNextStatuses, canTransitionStatus, copyablePhone, needsConfirmMo
 import { digitsOnly, isTenDigitMaPhone } from "@/lib/phone";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import { cn } from "@/lib/cn";
+import { TeamMemberSelect } from "@/components/admin/TeamMemberSelect";
 
 type CatalogProduct = {
   id: string;
@@ -97,6 +98,7 @@ export function AddOrderModal({ open, editing, onClose, onCreated, onUpdated }: 
   const [catalog, setCatalog] = useState<CatalogProduct[]>(fallbackCatalog);
   const [price, setPrice] = useState(199);
   const [status, setStatus] = useState<AdminStatus>("confirmed");
+  const [teamMemberId, setTeamMemberId] = useState("mohammed");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [phoneTouched, setPhoneTouched] = useState(false);
@@ -144,6 +146,7 @@ export function AddOrderModal({ open, editing, onClose, onCreated, onUpdated }: 
       setProductId(matched.id);
       setPrice(Math.round(editing.total));
       setStatus(editing.status);
+      setTeamMemberId(editing.assigned_team_member_id || "mohammed");
     } else {
       setName("");
       setPhone("");
@@ -152,6 +155,7 @@ export function AddOrderModal({ open, editing, onClose, onCreated, onUpdated }: 
       setProductId("quran");
       setPrice(199);
       setStatus("confirmed");
+      setTeamMemberId("mohammed");
     }
     return () => {
       cancelled = true;
@@ -196,6 +200,7 @@ export function AddOrderModal({ open, editing, onClose, onCreated, onUpdated }: 
         tier_qty: product.qty,
         total_mad: Number(price),
         status,
+        assigned_team_member_id: teamMemberId,
       };
       const res = await fetch(isEdit ? `/api/admin/orders/${editing!.order_id}` : "/api/admin/orders", {
         method: isEdit ? "PATCH" : "POST",
@@ -382,6 +387,8 @@ export function AddOrderModal({ open, editing, onClose, onCreated, onUpdated }: 
               ))}
             </select>
           </div>
+
+          <TeamMemberSelect value={teamMemberId} onChange={setTeamMemberId} dark={false} />
 
           {error ? (
             <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 font-bold text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200">

@@ -50,6 +50,20 @@ CREATE TABLE IF NOT EXISTS admin_credentials (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS team_members (
+  id varchar(64) PRIMARY KEY,
+  name_ar varchar(120) NOT NULL,
+  avatar_color varchar(32) NOT NULL DEFAULT '#38bdf8',
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+INSERT INTO team_members (id, name_ar, avatar_color)
+VALUES
+  ('mohammed', 'محمد', '#38bdf8'),
+  ('store', 'المتجر', '#a78bfa')
+ON CONFLICT (id) DO NOTHING;
+
 CREATE TABLE IF NOT EXISTS orders (
   id uuid PRIMARY KEY,
   full_name varchar(120) NOT NULL,
@@ -96,7 +110,8 @@ CREATE TABLE IF NOT EXISTS orders (
   meta_livraison_code varchar(80),
   meta_livraison_sent_at timestamptz,
   meta_livraison_ticket_url text,
-  carrier varchar(50) DEFAULT 'meta_livraison'
+  carrier varchar(50) DEFAULT 'meta_livraison',
+  assigned_team_member_id varchar(64) NOT NULL DEFAULT 'mohammed'
 );
 CREATE INDEX IF NOT EXISTS ix_orders_phone ON orders (phone);
 CREATE INDEX IF NOT EXISTS ix_orders_status ON orders (status);
@@ -184,6 +199,9 @@ const SCHEMA_ALTERS = [
   `ALTER TABLE orders ADD COLUMN IF NOT EXISTS meta_livraison_ticket_url text`,
   `ALTER TABLE orders ADD COLUMN IF NOT EXISTS shipping_city varchar(160)`,
   `ALTER TABLE orders ADD COLUMN IF NOT EXISTS carrier varchar(50) DEFAULT 'meta_livraison'`,
+  `ALTER TABLE orders ADD COLUMN IF NOT EXISTS assigned_team_member_id varchar(64) DEFAULT 'mohammed'`,
+  `UPDATE orders SET assigned_team_member_id = 'mohammed' WHERE assigned_team_member_id IS NULL OR BTRIM(assigned_team_member_id) = ''`,
+  `CREATE INDEX IF NOT EXISTS ix_orders_assigned_team_member_id ON orders (assigned_team_member_id)`,
   `CREATE INDEX IF NOT EXISTS ix_orders_carrier ON orders (carrier)`,
   `CREATE TABLE IF NOT EXISTS page_views (
     id uuid PRIMARY KEY,

@@ -55,6 +55,7 @@ export async function POST(request: Request) {
     cross_sell_slug?: string | null;
     bundle_enabled?: boolean;
     secondary_qty?: number;
+    assigned_team_member_id?: string | null;
   };
   try {
     body = (await request.json()) as typeof body;
@@ -81,6 +82,7 @@ export async function POST(request: Request) {
       cross_sell_slug: body.cross_sell_slug,
       bundle_enabled: body.bundle_enabled,
       secondary_qty: body.secondary_qty,
+      assigned_team_member_id: body.assigned_team_member_id,
     });
     return NextResponse.json(order, { status: 201 });
   } catch (err) {

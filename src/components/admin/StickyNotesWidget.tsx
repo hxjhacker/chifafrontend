@@ -2,21 +2,31 @@
 
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import type { ChangeEvent, Dispatch, ReactNode, SetStateAction } from "react";
-import { ArrowRight, Bookmark, Clock3, Copy, ImagePlus, Mic, RotateCcw, StopCircle, Trash2, X } from "lucide-react";
+import { AlarmClock, ArrowRight, BellRing, Bookmark, Clock3, Copy, ImagePlus, Mic, RotateCcw, StopCircle, Trash2, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { WhatsAppIcon } from "@/components/Chrome";
 import { DASHBOARD_LOGIN } from "@/lib/admin-paths";
 import { cn } from "@/lib/cn";
+import { dispatchDashboardAlarm } from "@/components/admin/DashboardSoundEngine";
 
 const TEXT_KEY = "chifaglow_notes_text";
 const IMAGE_KEY = "chifaglow_notes_img";
 const AUDIO_KEY = "chifaglow_notes_audio";
 const HISTORY_KEY = "chifaglow_notes_history";
+const REMINDERS_KEY = "chifaglow_notes_reminders";
 
 type SavedNote = {
   id: string;
   text: string;
   savedAt: string;
+};
+
+type NoteReminder = {
+  id: string;
+  noteId: string;
+  noteText: string;
+  remindAt: string;
+  status: "pending" | "ringing";
 };
 
 type DashboardOrder = Record<string, unknown>;
@@ -86,6 +96,44 @@ function readSavedNotes(): SavedNote[] {
   } catch {
     return [];
   }
+}
+
+function readNoteReminders(): NoteReminder[] {
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(REMINDERS_KEY) || "[]");
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (reminder): reminder is NoteReminder =>
+        Boolean(
+          reminder &&
+            typeof reminder === "object" &&
+            typeof reminder.id === "string" &&
+            typeof reminder.noteId === "string" &&
+            typeof reminder.noteText === "string" &&
+            typeof reminder.remindAt === "string" &&
+            (reminder.status === "pending" || reminder.status === "ringing"),
+        ),
+    );
+  } catch {
+    return [];
+  }
+}
+
+function localDateValue(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function localReminderParts(value?: string) {
+  const date = value ? new Date(value) : new Date(Date.now() + 10 * 60 * 1000);
+  const safeDate = Number.isNaN(date.getTime()) ? new Date(Date.now() + 10 * 60 * 1000) : date;
+  return {
+    date: localDateValue(safeDate),
+    hour: String(safeDate.getHours()).padStart(2, "0"),
+    minute: String(safeDate.getMinutes()).padStart(2, "0"),
+  };
 }
 
 function formatSavedNoteDate(value: string) {
@@ -200,8 +248,17 @@ export function StickyNotesWidget({ orders = [] }: StickyNotesWidgetProps) {
   const [savedNotes, setSavedNotes] = useState<SavedNote[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [saveFlash, setSaveFlash] = useState(false);
+  const [reminders, setReminders] = useState<NoteReminder[]>([]);
+  const [reminderEditorNoteId, setReminderEditorNoteId] = useState("");
+  const [reminderDate, setReminderDate] = useState("");
+  const [reminderHour, setReminderHour] = useState("12");
+  const [reminderMinute, setReminderMinute] = useState("00");
+  const [reminderError, setReminderError] = useState("");
+  const [activeReminder, setActiveReminder] = useState<NoteReminder | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const remindersRef = useRef<NoteReminder[]>([]);
+  const activeReminderRef = useRef<NoteReminder | null>(null);
 
   function parseNoteEntities(noteText: string) {
     const phoneRegex = /(?:(?:\+|00)212|0)[5-7]\d{8}/g;
@@ -229,6 +286,9 @@ export function StickyNotesWidget({ orders = [] }: StickyNotesWidgetProps) {
     setImage(readLocal(IMAGE_KEY));
     setAudio(readLocal(AUDIO_KEY));
     setSavedNotes(readSavedNotes());
+    const storedReminders = readNoteReminders();
+    remindersRef.current = storedReminders;
+    setReminders(storedReminders);
   }, []);
 
   useEffect(() => {
@@ -242,6 +302,28 @@ export function StickyNotesWidget({ orders = [] }: StickyNotesWidgetProps) {
   useEffect(() => {
     if (!open) setHistoryOpen(false);
   }, [open]);
+
+  useEffect(() => {
+    const checkReminders = () => {
+      if (activeReminderRef.current) return;
+      const now = Date.now();
+      const due = remindersRef.current.find((reminder) => new Date(reminder.remindAt).getTime() <= now);
+      if (!due) return;
+
+      const ringing = { ...due, status: "ringing" as const };
+      const next = remindersRef.current.map((reminder) => (reminder.id === due.id ? ringing : reminder));
+      remindersRef.current = next;
+      setReminders(next);
+      writeLocal(REMINDERS_KEY, JSON.stringify(next));
+      activeReminderRef.current = ringing;
+      setActiveReminder(ringing);
+      dispatchDashboardAlarm("start");
+    };
+
+    checkReminders();
+    const timer = window.setInterval(checkReminders, 500);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     function closeOnEscape(event: KeyboardEvent) {
@@ -335,10 +417,79 @@ export function StickyNotesWidget({ orders = [] }: StickyNotesWidgetProps) {
     window.setTimeout(() => setSaveFlash(false), 900);
   }
 
+  function persistReminderList(next: NoteReminder[]) {
+    remindersRef.current = next;
+    setReminders(next);
+    writeLocal(REMINDERS_KEY, JSON.stringify(next));
+  }
+
+  function openReminderEditor(note: SavedNote) {
+    const existing = remindersRef.current.find((reminder) => reminder.noteId === note.id);
+    const parts = localReminderParts(existing?.remindAt);
+    setReminderEditorNoteId(note.id);
+    setReminderDate(parts.date);
+    setReminderHour(parts.hour);
+    setReminderMinute(parts.minute);
+    setReminderError("");
+  }
+
+  function closeReminderEditor() {
+    setReminderEditorNoteId("");
+    setReminderError("");
+  }
+
+  function saveReminder(note: SavedNote) {
+    const [year, month, day] = reminderDate.split("-").map(Number);
+    const target = new Date(year, month - 1, day, Number(reminderHour), Number(reminderMinute), 0, 0);
+    if (!reminderDate || !Number.isFinite(target.getTime()) || target.getTime() <= Date.now()) {
+      setReminderError("اختر تاريخاً ووقتاً في المستقبل.");
+      return;
+    }
+
+    const existing = remindersRef.current.find((reminder) => reminder.noteId === note.id);
+    const reminder: NoteReminder = {
+      id: existing?.id || `${note.id}-${Date.now()}`,
+      noteId: note.id,
+      noteText: note.text,
+      remindAt: target.toISOString(),
+      status: "pending",
+    };
+    persistReminderList([
+      reminder,
+      ...remindersRef.current.filter((item) => item.noteId !== note.id && item.id !== reminder.id),
+    ]);
+    closeReminderEditor();
+  }
+
+  function dismissReminder() {
+    const reminder = activeReminderRef.current;
+    dispatchDashboardAlarm("stop");
+    activeReminderRef.current = null;
+    setActiveReminder(null);
+    if (reminder) persistReminderList(remindersRef.current.filter((item) => item.id !== reminder.id));
+  }
+
+  function snoozeReminder() {
+    const reminder = activeReminderRef.current;
+    if (!reminder) return;
+    const snoozed: NoteReminder = {
+      ...reminder,
+      remindAt: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+      status: "pending",
+    };
+    dispatchDashboardAlarm("stop");
+    activeReminderRef.current = null;
+    setActiveReminder(null);
+    persistReminderList(remindersRef.current.map((item) => (item.id === reminder.id ? snoozed : item)));
+  }
+
   function deleteSavedNote(id: string) {
     const next = savedNotes.filter((note) => note.id !== id);
     setSavedNotes(next);
     writeLocal(HISTORY_KEY, JSON.stringify(next));
+    if (activeReminderRef.current?.noteId === id) dismissReminder();
+    persistReminderList(remindersRef.current.filter((reminder) => reminder.noteId !== id));
+    if (reminderEditorNoteId === id) closeReminderEditor();
   }
 
   function restoreSavedNote(note: SavedNote) {
@@ -431,6 +582,77 @@ export function StickyNotesWidget({ orders = [] }: StickyNotesWidgetProps) {
                         <RotateCcw className="h-3 w-3" />
                         استرجاع الملاحظة
                       </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          reminderEditorNoteId === note.id ? closeReminderEditor() : openReminderEditor(note)
+                        }
+                        className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 px-2.5 py-1.5 text-[10px] font-bold text-violet-300 transition hover:bg-violet-500/20"
+                      >
+                        <AlarmClock className="h-3 w-3" />
+                        {reminders.some((reminder) => reminder.noteId === note.id) ? "تعديل التذكير" : "تعيين تذكير"}
+                      </button>
+                      {reminderEditorNoteId === note.id ? (
+                        <div className="mt-2 rounded-lg border border-violet-500/25 bg-violet-500/5 p-2.5">
+                          <div className="mb-1.5 text-right text-[10px] font-bold text-violet-200">
+                            اختر وقت التنبيه بدقة
+                          </div>
+                          <div className="grid grid-cols-[1.2fr_0.9fr_0.9fr] gap-1.5">
+                            <label className="text-right text-[9px] font-bold text-slate-400">
+                              التاريخ
+                              <input
+                                type="date"
+                                value={reminderDate}
+                                onChange={(event) => setReminderDate(event.target.value)}
+                                className="mt-1 w-full rounded-md border border-slate-700 bg-[#070b12] px-1.5 py-1.5 text-[10px] text-white outline-none focus:border-violet-400"
+                              />
+                            </label>
+                            <label className="text-right text-[9px] font-bold text-slate-400">
+                              الساعة
+                              <select
+                                value={reminderHour}
+                                onChange={(event) => setReminderHour(event.target.value)}
+                                className="mt-1 w-full rounded-md border border-slate-700 bg-[#070b12] px-1.5 py-1.5 text-[10px] text-white outline-none focus:border-violet-400"
+                              >
+                                {Array.from({ length: 24 }, (_, hour) => {
+                                  const value = String(hour).padStart(2, "0");
+                                  return <option key={value} value={value}>{value}</option>;
+                                })}
+                              </select>
+                            </label>
+                            <label className="text-right text-[9px] font-bold text-slate-400">
+                              الدقيقة
+                              <select
+                                value={reminderMinute}
+                                onChange={(event) => setReminderMinute(event.target.value)}
+                                className="mt-1 w-full rounded-md border border-slate-700 bg-[#070b12] px-1.5 py-1.5 text-[10px] text-white outline-none focus:border-violet-400"
+                              >
+                                {Array.from({ length: 60 }, (_, minute) => {
+                                  const value = String(minute).padStart(2, "0");
+                                  return <option key={value} value={value}>{value}</option>;
+                                })}
+                              </select>
+                            </label>
+                          </div>
+                          {reminderError ? <p className="mt-1.5 text-right text-[10px] font-bold text-rose-300">{reminderError}</p> : null}
+                          <div className="mt-2 flex gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => saveReminder(note)}
+                              className="flex-1 rounded-md bg-violet-500/20 px-2 py-1.5 text-[10px] font-bold text-violet-200 transition hover:bg-violet-500/30"
+                            >
+                              حفظ التذكير
+                            </button>
+                            <button
+                              type="button"
+                              onClick={closeReminderEditor}
+                              className="rounded-md bg-slate-800 px-2.5 py-1.5 text-[10px] font-bold text-slate-300 transition hover:bg-slate-700"
+                            >
+                              إلغاء
+                            </button>
+                          </div>
+                        </div>
+                      ) : null}
                     </article>
                   ))}
                 </div>
@@ -588,6 +810,41 @@ export function StickyNotesWidget({ orders = [] }: StickyNotesWidgetProps) {
                 ) : null}
               </button>
             </div>
+          </div>
+        </div>
+      ) : null}
+
+      {activeReminder ? (
+        <div className="fixed bottom-5 left-1/2 z-[100] w-[calc(100vw-2rem)] max-w-md -translate-x-1/2 rounded-2xl border border-rose-400/70 bg-[#160b16]/[.98] p-4 text-white shadow-[0_0_35px_rgba(244,63,94,0.35)] backdrop-blur-xl">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-rose-400/40 bg-rose-500/15 text-rose-300">
+              <BellRing className="h-5 w-5 animate-pulse" />
+            </div>
+            <div className="min-w-0 flex-1 text-right">
+              <div className="text-sm font-black text-rose-200">حان وقت التذكير</div>
+              <div className="mt-1 whitespace-pre-wrap break-words text-xs leading-5 text-slate-200">
+                {activeReminder.noteText}
+              </div>
+              <div className="mt-1 text-[10px] font-bold text-slate-400">
+                {formatSavedNoteDate(activeReminder.remindAt)}
+              </div>
+            </div>
+          </div>
+          <div className="mt-3 flex gap-2">
+            <button
+              type="button"
+              onClick={dismissReminder}
+              className="flex-1 rounded-xl bg-emerald-500/20 px-3 py-2 text-xs font-black text-emerald-300 transition hover:bg-emerald-500/30"
+            >
+              توقف (تم)
+            </button>
+            <button
+              type="button"
+              onClick={snoozeReminder}
+              className="flex-1 rounded-xl bg-amber-500/20 px-3 py-2 text-xs font-black text-amber-200 transition hover:bg-amber-500/30"
+            >
+              تأجيل 10 دقائق
+            </button>
           </div>
         </div>
       ) : null}

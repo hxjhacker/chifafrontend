@@ -244,10 +244,10 @@ export async function createOrder(
          id, full_name, phone, phone_national, city, address, product_slug, tier_qty, tier_price_cents,
          cross_sell_slug, cross_sell_price_cents, upsell_slug, upsell_price_cents, subtotal_cents, total_cents,
          currency, status, payment_method, event_id, fbp, fbc, ttclid, sccid, client_ip, user_agent,
-         landing_url, source, created_at, updated_at
+         landing_url, source, assigned_team_member_id, created_at, updated_at
        ) VALUES (
          $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,NULL,0,$12,$12,'MAD','pending','COD',$13,$14,$15,$16,$17,$18,$19,$20,
-         'website', now(), now()
+         'website', 'store', now(), now()
        ) RETURNING *`,
       [
         orderId,

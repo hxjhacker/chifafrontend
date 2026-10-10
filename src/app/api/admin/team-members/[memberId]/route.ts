@@ -1,0 +1,21 @@
+import { NextResponse } from "next/server";
+import { requireAdmin } from "@/lib/admin-auth";
+import { updateTeamMember } from "@/lib/server/team-members";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+export async function PATCH(request: Request, context: { params: Promise<{ memberId: string }> }) {
+  const denied = await requireAdmin(request);
+  if (denied instanceof NextResponse) return denied;
+  try {
+    const { memberId } = await context.params;
+    const body = (await request.json()) as { name_ar?: string; avatar_color?: string; is_active?: boolean };
+    const member = await updateTeamMember(memberId, body);
+    if (!member) return NextResponse.json({ detail: "team_member_not_found" }, { status: 404 });
+    return NextResponse.json(member);
+  } catch (error) {
+    const detail = error instanceof Error && error.message === "invalid_team_member" ? error.message : "team_member_update_failed";
+    return NextResponse.json({ detail }, { status: detail === "invalid_team_member" ? 422 : 500 });
+  }
+}
