@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Check, ChevronDown, Pencil, Plus, Users, X } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -51,6 +52,13 @@ export function TeamMemberSelect({
   const [newName, setNewName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const selectorRef = useRef<HTMLButtonElement>(null);
+  const [menuPosition, setMenuPosition] = useState<{
+    left: number;
+    width: number;
+    top?: number;
+    bottom?: number;
+  } | null>(null);
 
   async function loadMembers() {
     try {
@@ -66,6 +74,36 @@ export function TeamMemberSelect({
   useEffect(() => {
     void loadMembers();
   }, []);
+
+  useEffect(() => {
+    if (!open) {
+      setMenuPosition(null);
+      return;
+    }
+
+    function updateMenuPosition() {
+      const button = selectorRef.current;
+      if (!button) return;
+      const rect = button.getBoundingClientRect();
+      const menuHeight = Math.min(360, window.innerHeight - 24);
+      const openUpward = window.innerHeight - rect.bottom < menuHeight + 12 && rect.top > menuHeight + 12;
+      const width = Math.max(rect.width, 250);
+      const left = Math.min(Math.max(12, rect.left), Math.max(12, window.innerWidth - width - 12));
+      setMenuPosition(
+        openUpward
+          ? { left, width, bottom: Math.max(12, window.innerHeight - rect.top + 8) }
+          : { left, width, top: Math.min(window.innerHeight - 12, rect.bottom + 8) },
+      );
+    }
+
+    updateMenuPosition();
+    window.addEventListener("resize", updateMenuPosition);
+    window.addEventListener("scroll", updateMenuPosition, true);
+    return () => {
+      window.removeEventListener("resize", updateMenuPosition);
+      window.removeEventListener("scroll", updateMenuPosition, true);
+    };
+  }, [open]);
 
   const selected = useMemo(
     () => members.find((member) => member.id === value) || members.find((member) => member.id === "mohammed") || members[0],
@@ -130,6 +168,7 @@ export function TeamMemberSelect({
       <label className={cn("mb-1 block text-right text-xs font-bold", dark ? "text-slate-200" : "text-royal/80")}>{label}</label>
       <button
         type="button"
+        ref={selectorRef}
         onClick={() => setOpen((current) => !current)}
         className={cn(
           "flex w-full items-center justify-between gap-2 rounded-xl border px-3 py-2.5 text-right text-xs font-bold transition",
@@ -143,8 +182,18 @@ export function TeamMemberSelect({
         </span>
         <ChevronDown className={cn("h-4 w-4 transition", open && "rotate-180")} />
       </button>
-      {open ? (
-        <div className={cn("absolute inset-x-0 top-full z-[80] mt-1 rounded-xl border p-1.5 shadow-2xl", dark ? "border-slate-700 bg-[#0b1322]" : "border-gold/20 bg-white")}>
+      {open && menuPosition && typeof document !== "undefined"
+        ? createPortal(
+            <div
+              dir="rtl"
+              style={{
+                position: "fixed",
+                left: menuPosition.left,
+                width: `min(${menuPosition.width}px, calc(100vw - 24px))`,
+                ...(menuPosition.top != null ? { top: menuPosition.top } : { bottom: menuPosition.bottom }),
+              }}
+              className={cn("z-[1000] max-h-[min(22.5rem,calc(100vh-1.5rem))] overflow-y-auto rounded-xl border p-1.5 shadow-2xl", dark ? "border-slate-700 bg-[#0b1322]" : "border-gold/20 bg-white")}
+            >
           {members.map((member) => (
             <div key={member.id} className={cn("flex items-center gap-1 rounded-lg p-1", dark ? "hover:bg-white/5" : "hover:bg-amber-50")}>
               <button
@@ -185,8 +234,10 @@ export function TeamMemberSelect({
           >
             <Plus className="h-3 w-3" /> إدارة وإضافة أعضاء
           </button>
-        </div>
-      ) : null}
+            </div>,
+            document.body,
+          )
+        : null}
       {manageOpen ? (
         <div className={cn("mt-2 rounded-xl border p-2.5", dark ? "border-slate-700 bg-[#070b12]" : "border-gold/20 bg-cream")}>
           <div className="mb-2 flex items-center justify-between">

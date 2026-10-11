@@ -1224,6 +1224,33 @@ export function AdminDashboard() {
     () => (teamFilterId ? buildMemberLogistics(teamOrders, logistics) : logistics),
     [logistics, teamFilterId, teamOrders],
   );
+
+  function exportDashboardMetrics() {
+    const financial = dashboardLogistics.financial;
+    const selectedTeam = teamFilterId ? teamMembers.find((member) => member.id === teamFilterId)?.name_ar || teamFilterId : "الكل";
+    const rows: Array<[string, string | number]> = [
+      ["تقرير لوحة التحكم", "Chifaglow"],
+      ["الفريق المحدد", selectedTeam],
+      ["إجمالي الطلبات", dashboardStats.total_orders],
+      ["الطلبات الجديدة", dashboardStats.new_orders],
+      ["الطلبات المؤكدة", dashboardStats.confirmed_orders],
+      ["الطلبات قيد الشحن", dashboardStats.shipped_orders],
+      ["الطلبات المسلمة", dashboardStats.delivered_orders],
+      ["الطلبات الملغاة", dashboardStats.cancelled_orders],
+      ["نسبة التوصيل الحقيقية", `${dashboardLogistics.delivery_rate.toFixed(1)}%`],
+      ["الطلبات المغلقة", dashboardLogistics.delivery_rate_denominator],
+      ["إجمالي المبالغ المحصلة", financial.total_delivered_amount],
+      ["المبالغ قيد التوصيل", financial.in_transit_amount],
+      ["صافي المستحقات التقديري", financial.net_cash_due],
+      ["تكاليف الشحن التقديرية", financial.estimated_shipping_costs],
+      ["تاريخ التصدير", new Date().toLocaleString("ar-MA")],
+    ];
+    const escapeCell = (value: string | number) => `"${String(value).replace(/"/g, '""')}"`;
+    const csv = `\uFEFF${rows.map(([label, value]) => `${escapeCell(label)},${escapeCell(value)}`).join("\r\n")}\r\n`;
+    downloadCsv(`chifaglow-dashboard-${new Date().toISOString().slice(0, 10)}.csv`, csv);
+    notifyDashboard("تم تصدير إحصائيات لوحة التحكم بنجاح", "success");
+  }
+
   const confirmedWon = dashboardStats.confirmed_orders + dashboardStats.shipped_orders + dashboardStats.delivered_orders;
   const hideOverviewNums = hideAll || hideOverview;
   const hideLogisticsNums = hideAll || hideLogistics;
@@ -1685,6 +1712,15 @@ export function AdminDashboard() {
                   {hideAll ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                   {hideAll ? "إظهار الأرقام" : "إخفاء الأرقام"}
                 </button>
+                <button
+                  type="button"
+                  aria-label="تصدير إحصائيات لوحة التحكم"
+                  onClick={exportDashboardMetrics}
+                  className={`${DESKTOP_CHIP} border border-emerald-500/40 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20`}
+                >
+                  <Download className="h-4 w-4" />
+                  تصدير الإحصائيات
+                </button>
               </div>
             </div>
           </div>
@@ -1841,6 +1877,17 @@ export function AdminDashboard() {
               >
                 {hideAll ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                 <span>{hideAll ? "إظهار الأرقام" : "إخفاء الأرقام"}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  exportDashboardMetrics();
+                  setMenuOpen(false);
+                }}
+                className="flex w-full items-center justify-between rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3.5 py-2.5 text-xs font-semibold text-emerald-400 transition hover:bg-emerald-500/20"
+              >
+                <Download className="h-4 w-4" />
+                <span>تصدير الإحصائيات</span>
               </button>
             </div>
           </div>
