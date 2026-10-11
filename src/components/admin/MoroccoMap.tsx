@@ -5,7 +5,7 @@ import { Eye, EyeOff, Info, Minus, Plus, X } from "lucide-react";
 import { MOROCCO_PATHS } from "@/lib/admin-map/paths";
 import { formatMad } from "@/lib/admin";
 import { MOROCCO_REGIONS } from "@/lib/admin-geo";
-import { regionRateFill, RATE_AMBER, RATE_GRAY, RATE_GREEN, RATE_ROSE, type LogisticsRegion } from "@/lib/logistics";
+import { RATE_GREEN, type LogisticsRegion } from "@/lib/logistics";
 import { cn } from "@/lib/cn";
 
 type Props = {
@@ -15,12 +15,7 @@ type Props = {
   className?: string;
 };
 
-const LEGEND = [
-  { label: "≥ 75%", color: RATE_GREEN },
-  { label: "55–74%", color: RATE_AMBER },
-  { label: "< 55%", color: RATE_ROSE },
-  { label: "بدون طلبيات", color: RATE_GRAY },
-];
+const REGION_FILL = RATE_GREEN;
 
 export function MoroccoMap({ regions, hideNumbers, onToggleNumbers, className }: Props) {
   const [pinned, setPinned] = useState<LogisticsRegion | null>(null);
@@ -110,7 +105,7 @@ export function MoroccoMap({ regions, hideNumbers, onToggleNumbers, className }:
         >
           <div className="mb-2 flex items-center justify-between border-b border-gold/10 pb-2">
             <div className="flex items-center gap-2">
-              <span className="h-2.5 w-2.5 rounded-full" style={{ background: active ? regionRateFill(active) : RATE_GRAY }} />
+              <span className="h-2.5 w-2.5 rounded-full" style={{ background: REGION_FILL }} />
               <div>
                 <h4 className="text-xs font-black text-royal dark:text-white">جهة {active?.name}</h4>
                 {active?.region_id ? <span className="text-[10px] font-bold text-gold">{active.region_id}</span> : null}
@@ -156,14 +151,13 @@ export function MoroccoMap({ regions, hideNumbers, onToggleNumbers, className }:
           <g transform="scale(0.6) translate(87.5, -130.16666666666669)">
             {MOROCCO_PATHS.map((region) => {
               const stat = lookup(region.name);
-              const fill = stat ? regionRateFill(stat) : RATE_GRAY;
               const isActive = active?.name === region.name;
               return (
                 <path
                   key={region.name}
                   d={region.d}
                   className={cn("morocco-region", isActive && "active-region")}
-                  style={{ fill }}
+                  style={{ fill: REGION_FILL }}
                   onMouseEnter={() => setHovered(stat)}
                   onMouseLeave={() => setHovered(null)}
                   onClick={() => select(region.name)}
@@ -183,7 +177,7 @@ export function MoroccoMap({ regions, hideNumbers, onToggleNumbers, className }:
                   y={region.labelY}
                   className={cn("region-count-label", hideNumbers && "blurred-number")}
                 >
-                  {stat?.delivered ?? 0} / {stat?.total_orders ?? 0}
+                  {stat?.total_orders ?? 0}
                 </text>
               );
             })}
@@ -192,12 +186,10 @@ export function MoroccoMap({ regions, hideNumbers, onToggleNumbers, className }:
       </div>
 
       <div className="mt-3 flex flex-wrap items-center justify-center gap-3 text-[11px] font-semibold text-royal/60 dark:text-slate-400">
-        {LEGEND.map((item) => (
-          <span key={item.label} className="inline-flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-sm" style={{ background: item.color }} />
-            {item.label}
-          </span>
-        ))}
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-sm" style={{ background: REGION_FILL }} />
+          إجمالي الطلبات حسب الجهة
+        </span>
       </div>
     </div>
   );
