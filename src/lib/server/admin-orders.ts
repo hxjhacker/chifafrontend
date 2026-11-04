@@ -214,7 +214,7 @@ function serialize(row: OrderRow): AdminOrder {
     delivered_at: stampReached(row.delivered_at, updated, status === "delivered"),
     cancelled_at: stampReached(row.cancelled_at, updated, status === "cancelled"),
     assigned_team_member_id: row.assigned_team_member_id || "mohammed",
-    team_payout_paid: Boolean(row.team_payout_paid),
+    team_payout_paid: displayStatus(row.status) === "delivered" && Boolean(row.team_payout_paid),
     meta_livraison_sent_at: iso(row.meta_livraison_sent_at || null),
     meta_livraison_ticket_url: row.meta_livraison_ticket_url || null,
     carrier,
@@ -253,6 +253,7 @@ export async function markMetaLivraisonSent(orderId: string, code: string, ticke
     if (cols.has("shipped_at")) assignments.push("shipped_at = COALESCE(shipped_at, now())");
     if (cols.has("confirmed_at")) assignments.push("confirmed_at = COALESCE(confirmed_at, now())");
     if (cols.has("cancelled_at")) assignments.push("cancelled_at = NULL");
+    if (cols.has("team_payout_paid")) assignments.push("team_payout_paid = false");
     if (cols.has("meta_livraison_code")) {
       values.push(code);
       assignments.push(`meta_livraison_code = $${values.length}`);
@@ -447,6 +448,10 @@ function isPayoutOnlyPatch(patch: OrderPatch) {
   return defined.length === 1 && defined[0][0] === "team_payout_paid" && patch.team_payout_paid !== undefined;
 }
 
+function stayedDelivered(currentStatus: string, nextStatus: string) {
+  return displayStatus(currentStatus) === "delivered" && displayStatus(nextStatus) === "delivered";
+}
+
 async function stampStatusColumns(
   client: { query: (sql: string, values?: unknown[]) => Promise<{ rows: OrderRow[] }> },
   orderId: string,
@@ -499,11 +504,28 @@ async function stampStatusColumns(
   }
 }
 
+async function clearPayoutUnlessDelivered(
+  client: { query: (sql: string, values?: unknown[]) => Promise<{ rows: OrderRow[] }> },
+  orderId: string,
+  saved: OrderRow,
+  keepPaid: boolean,
+) {
+  if (keepPaid || !saved.team_payout_paid) return saved;
+  try {
+    const result = await client.query(`UPDATE orders SET team_payout_paid = false WHERE id = $1 RETURNING *`, [orderId]);
+    return result.rows[0] || { ...saved, team_payout_paid: false };
+  } catch (err) {
+    console.error("admin_payout_reset_skipped", err);
+    return { ...saved, team_payout_paid: false };
+  }
+}
+
 async function applyStatusOnly(
   client: { query: (sql: string, values?: unknown[]) => Promise<{ rows: OrderRow[] }> },
   orderId: string,
   status: AdminStatus,
   cols: Set<string>,
+  previousStatus: string,
 ) {
   if (!ALLOWED.includes(status)) throw new Error("invalid_status");
   const boundStatus = String(status);
@@ -523,6 +545,7 @@ async function applyStatusOnly(
   }
   if (!saved) return null;
   saved = await stampStatusColumns(client, orderId, status, cols, saved);
+  saved = await clearPayoutUnlessDelivered(client, orderId, saved, stayedDelivered(previousStatus, status));
   try {
     return serialize(saved);
   } catch (err) {
@@ -558,11 +581,13 @@ export async function updateAdminOrder(orderId: string, patch: OrderPatch): Prom
       if (displayStatus(patch.status) === "confirmed" && displayStatus(row.status) !== "confirmed" && !hasCompleteConfirmDetails(row)) {
         throw new Error("confirmation_details_required");
       }
-      return applyStatusOnly(client, orderId, patch.status, cols);
+      return applyStatusOnly(client, orderId, patch.status, cols, row.status);
     }
 
     if (isPayoutOnlyPatch(patch)) {
-      const paid = Boolean(patch.team_payout_paid);
+      const wantsPaid = Boolean(patch.team_payout_paid);
+      if (wantsPaid && displayStatus(row.status) !== "delivered") throw new Error("payout_requires_delivered");
+      const paid = displayStatus(row.status) === "delivered" && wantsPaid;
       const sql = cols.has("updated_at")
         ? `UPDATE orders SET team_payout_paid = $2, updated_at = now() WHERE id = $1 RETURNING *`
         : `UPDATE orders SET team_payout_paid = $2 WHERE id = $1 RETURNING *`;
@@ -686,7 +711,8 @@ export async function updateAdminOrder(orderId: string, patch: OrderPatch): Prom
       const { ensureTeamMemberId } = await import("@/lib/server/team-members");
       assignedTeamMemberId = await ensureTeamMemberId(patch.assigned_team_member_id);
     }
-    const payoutPaid = patch.team_payout_paid;
+    const keepPaid = stayedDelivered(row.status, status);
+    const payoutPaid = keepPaid ? patch.team_payout_paid : false;
     if (!bundleEnabled) {
       crossSlug = null;
       crossCents = 0;
@@ -727,7 +753,7 @@ export async function updateAdminOrder(orderId: string, patch: OrderPatch): Prom
       ["tier_price_cents", cents],
       ["subtotal_cents", cents],
       ["assigned_team_member_id", assignedTeamMemberId],
-      ...(payoutPaid !== undefined ? ([["team_payout_paid", payoutPaid]] as Array<[string, unknown]>) : []),
+      ...(keepPaid && payoutPaid === undefined ? [] : ([["team_payout_paid", Boolean(payoutPaid)]] as Array<[string, unknown]>)),
     ];
 
     const run = async (sql: string, values: unknown[]) => client.query<OrderRow>(sql, values);

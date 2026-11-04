@@ -55,6 +55,8 @@ export function OrderActionsMenu({
   );
   const [pos, setPos] = useState({ top: 0, left: 0 });
   const sent = Boolean(order.meta_livraison_code);
+  const canSettlePayout = order.status === "delivered";
+  const payoutPaid = canSettlePayout && Boolean(order.team_payout_paid);
   const canPrint = hasTracking(order);
   const canQuickStock = Boolean(order.is_quick_stock && order.quick_product_id);
 
@@ -274,15 +276,25 @@ export function OrderActionsMenu({
               {onTogglePayout ? (
                 <button
                   type="button"
-                  onClick={() => run(() => onTogglePayout(order))}
+                  disabled={!canSettlePayout}
+                  title={canSettlePayout ? undefined : "لا يمكن تعليم الطلبية كمدفوعة قبل التسليم"}
+                  onClick={() => {
+                    if (!canSettlePayout) return;
+                    run(() => onTogglePayout(order));
+                  }}
                   className={cn(
                     CARD,
-                    order.team_payout_paid
+                    !canSettlePayout && "cursor-not-allowed opacity-60",
+                    payoutPaid
                       ? "border-amber-500/30 bg-amber-950/20 text-amber-300 hover:bg-amber-900/30"
-                      : "border-emerald-500/30 bg-emerald-950/20 text-emerald-300 hover:bg-emerald-900/30",
+                      : canSettlePayout
+                        ? "border-emerald-500/30 bg-emerald-950/20 text-emerald-300 hover:bg-emerald-900/30"
+                        : "border-amber-500/30 bg-amber-950/20 text-amber-300",
                   )}
                 >
-                  <span>{order.team_payout_paid ? "تعليم كغير مدفوعة" : "تعليم كمدفوعة"}</span>
+                  <span>
+                    {!canSettlePayout ? "غير مدفوع حتى التسليم" : payoutPaid ? "تعليم كغير مدفوعة" : "تعليم كمدفوعة"}
+                  </span>
                   <Wallet className="h-5 w-5 shrink-0" />
                 </button>
               ) : null}
@@ -409,9 +421,16 @@ export function OrderActionsMenu({
             </span>
           </MenuItem>
           {onTogglePayout ? (
-            <MenuItem onSelect={() => run(() => onTogglePayout(order))}>
-              <Wallet className={cn("h-4 w-4 shrink-0", order.team_payout_paid ? "text-amber-500" : "text-emerald-500")} />
-              {order.team_payout_paid ? "Marquer non payé" : "Marquer payé"}
+            <MenuItem
+              disabled={!canSettlePayout}
+              title={canSettlePayout ? undefined : "لا يمكن تعليم الطلبية كمدفوعة قبل التسليم"}
+              onSelect={() => {
+                if (!canSettlePayout) return;
+                run(() => onTogglePayout(order));
+              }}
+            >
+              <Wallet className={cn("h-4 w-4 shrink-0", payoutPaid || !canSettlePayout ? "text-amber-500" : "text-emerald-500")} />
+              {!canSettlePayout ? "Non payé avant livraison" : payoutPaid ? "Marquer non payé" : "Marquer payé"}
             </MenuItem>
           ) : null}
           <MenuItem onSelect={() => run(() => onEdit(order))}>

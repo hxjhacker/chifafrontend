@@ -22,6 +22,7 @@ import {
   Sun,
   Trash2,
   Moon,
+  Receipt,
   RefreshCw,
   Scale,
   X,
@@ -705,7 +706,9 @@ export function AdminDashboard() {
 
   async function changeStatus(order: AdminOrder, next: AdminStatus) {
     const prev = order.status;
-    setOrders((list) => list.map((o) => (o.order_id === order.order_id ? { ...o, status: next } : o)));
+    const prevPaid = Boolean(order.team_payout_paid);
+    const nextPaid = next === "delivered" && prev === "delivered" && prevPaid;
+    setOrders((list) => list.map((o) => (o.order_id === order.order_id ? { ...o, status: next, team_payout_paid: nextPaid } : o)));
     setSavingId(order.order_id);
     try {
       const res = await adminFetch(`/api/admin/orders/${order.order_id}`, {
@@ -727,7 +730,7 @@ export function AdminDashboard() {
       await refreshStats();
       dispatchDashboardSound(next === "cancelled" ? "error" : "success");
     } catch (err) {
-      setOrders((list) => list.map((o) => (o.order_id === order.order_id ? { ...o, status: prev } : o)));
+      setOrders((list) => list.map((o) => (o.order_id === order.order_id ? { ...o, status: prev, team_payout_paid: prevPaid } : o)));
       const msg = err instanceof Error && err.message !== "fail" ? err.message : "فشل تحديث الحالة. أعد المحاولة.";
       setError(msg);
       notifyDashboard(msg, "error");
@@ -737,6 +740,10 @@ export function AdminDashboard() {
   }
 
   async function toggleTeamPayout(order: AdminOrder) {
+    if (order.status !== "delivered") {
+      notifyDashboard("لا يمكن تعليم الطلبية كمدفوعة قبل التسليم.", "warning");
+      return;
+    }
     const prev = Boolean(order.team_payout_paid);
     const next = !prev;
     setOrders((list) => list.map((o) => (o.order_id === order.order_id ? { ...o, team_payout_paid: next } : o)));
@@ -749,7 +756,10 @@ export function AdminDashboard() {
       }, 15000);
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { detail?: string; message?: string };
-        throw new Error(serverErrorMessage(res.status, body.message || body.detail, "فشل تحديث حالة الدفع. أعد المحاولة."));
+        const map: Record<string, string> = {
+          payout_requires_delivered: "لا يمكن تعليم الطلبية كمدفوعة قبل التسليم.",
+        };
+        throw new Error(map[body.detail || ""] || serverErrorMessage(res.status, body.message || body.detail, "فشل تحديث حالة الدفع. أعد المحاولة."));
       }
       const updated = (await res.json()) as AdminOrder;
       setOrders((list) => list.map((o) => (o.order_id === order.order_id ? updated : o)));
@@ -1571,6 +1581,14 @@ export function AdminDashboard() {
             >
               <Menu className="h-5 w-5" />
             </button>
+            <Link
+              href={`${DASHBOARD_HOME}/invoices`}
+              aria-label="الفواتير"
+              title="الفواتير"
+              className={`${ICON_BTN} border-emerald-500/40 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20`}
+            >
+              <Receipt className="h-4 w-4" />
+            </Link>
             <button
               type="button"
               aria-label="إضافة سريعة واتساب"
@@ -1641,6 +1659,15 @@ export function AdminDashboard() {
               <WhatsAppIcon className="h-4 w-4" />
             </button>
             <span className="mx-1 h-6 w-px shrink-0 bg-slate-800" aria-hidden />
+            <Link
+              href={`${DASHBOARD_HOME}/invoices`}
+              aria-label="الفواتير"
+              title="الفواتير"
+              className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 text-xs font-bold text-emerald-300 transition hover:bg-emerald-500/20"
+            >
+              <Receipt className="h-4 w-4" />
+              الفواتير
+            </Link>
             <button
               type="button"
               id="toggleExpandBtn"
@@ -1707,6 +1734,14 @@ export function AdminDashboard() {
                   <SlidersHorizontal className="h-4 w-4" />
                   تخصيص الواجهة
                 </button>
+                <Link
+                  href={`${DASHBOARD_HOME}/invoices`}
+                  aria-label="الفواتير"
+                  className={`${DESKTOP_CHIP} border border-emerald-500/40 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20`}
+                >
+                  <Receipt className="h-4 w-4" />
+                  الفواتير
+                </Link>
                 <Link
                   href={`${DASHBOARD_HOME}/pricing-comparison`}
                   aria-label="مقارنة الأسعار"
@@ -1869,6 +1904,14 @@ export function AdminDashboard() {
                 <SlidersHorizontal className="h-4 w-4" />
                 <span>تخصيص الواجهة</span>
               </button>
+              <Link
+                href={`${DASHBOARD_HOME}/invoices`}
+                onClick={() => setMenuOpen(false)}
+                className="flex w-full items-center justify-between rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3.5 py-2.5 text-xs font-semibold text-emerald-300 transition hover:bg-emerald-500/20"
+              >
+                <Receipt className="h-4 w-4" />
+                <span>الفواتير</span>
+              </Link>
               <Link
                 href={`${DASHBOARD_HOME}/pricing-comparison`}
                 onClick={() => setMenuOpen(false)}

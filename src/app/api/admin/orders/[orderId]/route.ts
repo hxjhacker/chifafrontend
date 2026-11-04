@@ -156,6 +156,7 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ orderId?:
       "invalid_delivery_window",
       "invalid_qty",
       "invalid_payout_status",
+      "payout_requires_delivered",
     ];
     const status = known.includes(message) ? 422 : 500;
     if (status === 500) console.error("admin_order_patch_failed", err);

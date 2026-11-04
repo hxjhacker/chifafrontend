@@ -66,28 +66,38 @@ function MemberAvatar({ member }: { member?: TeamMemberOption }) {
 
 function PaymentBadge({
   paid,
+  locked,
   saving,
   onToggle,
 }: {
   paid: boolean;
+  locked: boolean;
   saving: boolean;
   onToggle: () => void;
 }) {
+  const settled = !locked && paid;
   return (
     <button
       type="button"
-      disabled={saving}
+      disabled={saving || locked}
       onClick={onToggle}
-      aria-pressed={paid}
-      title={paid ? "مدفوع — اضغط لتعليمها غير مدفوعة" : "غير مدفوع — اضغط لتعليمها مدفوعة"}
+      aria-pressed={settled}
+      title={
+        locked
+          ? "لا يمكن تعليم الطلبية كمدفوعة قبل التسليم"
+          : settled
+            ? "مدفوع — اضغط لتعليمها غير مدفوعة"
+            : "غير مدفوع — اضغط لتعليمها مدفوعة"
+      }
       className={cn(
         "inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[10px] font-black transition disabled:opacity-60",
-        paid
+        locked && "cursor-not-allowed disabled:opacity-100",
+        settled
           ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/25 dark:text-emerald-300"
           : "border-amber-500/45 bg-amber-500/15 text-amber-700 hover:bg-amber-500/25 dark:text-amber-300",
       )}
     >
-      {paid ? "مدفوع" : "غير مدفوع"}
+      {settled ? "مدفوع" : "غير مدفوع"}
     </button>
   );
 }
@@ -116,7 +126,12 @@ function StatusSelect({
         ))}
       </select>
       <MemberAvatar member={assignedMember} />
-      <PaymentBadge paid={Boolean(order.team_payout_paid)} saving={saving} onToggle={onTogglePayout} />
+      <PaymentBadge
+        paid={order.status === "delivered" && Boolean(order.team_payout_paid)}
+        locked={order.status !== "delivered"}
+        saving={saving}
+        onToggle={onTogglePayout}
+      />
       {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin text-gold" /> : null}
     </div>
   );

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, ExternalLink, Menu, Scale, X } from "lucide-react";
+import { Bell, ExternalLink, Menu, Receipt, Scale, X } from "lucide-react";
 import { ThemeToggle, WhatsAppIcon } from "@/components/Chrome";
 import { DashboardSoundToggle } from "@/components/admin/DashboardSoundEngine";
 import { TeamMembersMenu } from "@/components/admin/TeamMembersMenu";
@@ -95,6 +95,9 @@ export function DashboardHeader() {
           </Link>
           <TeamMembersMenu />
           <span className="mx-1 h-6 w-px bg-slate-800" aria-hidden />
+          <Link href={`${DASHBOARD_HOME}/invoices`} className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs font-semibold text-emerald-300 transition hover:bg-emerald-500/20">
+            <Receipt className="h-3.5 w-3.5" /> الفواتير
+          </Link>
           <Link href={`${DASHBOARD_HOME}/pricing-comparison`} className="inline-flex items-center gap-1.5 rounded-xl border border-cyan-500/40 bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-400 transition hover:bg-cyan-500/20">
             <Scale className="h-3.5 w-3.5" /> مقارنة الأسعار
           </Link>
@@ -185,6 +188,7 @@ export function DashboardHeader() {
       <div className={cn("border-b border-slate-800 bg-[#0c1322] px-4 py-3 sm:hidden", menuOpen ? "block" : "hidden")}>
         <nav className="space-y-2" aria-label="تنقل لوحة التحكم">
           <Link href={DASHBOARD_HOME} onClick={() => setMenuOpen(false)} className="block rounded-xl px-3 py-2 text-xs font-bold text-slate-300 transition hover:bg-white/5 hover:text-white">لوحة التحكم</Link>
+          <Link href={`${DASHBOARD_HOME}/invoices`} onClick={() => setMenuOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold text-emerald-300 transition hover:bg-emerald-500/10"><Receipt className="h-3.5 w-3.5" /> الفواتير</Link>
           <Link href={`${DASHBOARD_HOME}/pricing-comparison`} onClick={() => setMenuOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold text-cyan-400 transition hover:bg-cyan-500/10"><Scale className="h-3.5 w-3.5" /> مقارنة الأسعار</Link>
           <Link href={`${DASHBOARD_HOME}/links`} onClick={() => setMenuOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold text-amber-400 transition hover:bg-amber-500/10"><ExternalLink className="h-3.5 w-3.5" /> مركز الروابط</Link>
         </nav>

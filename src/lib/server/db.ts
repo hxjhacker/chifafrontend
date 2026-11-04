@@ -212,6 +212,7 @@ const SCHEMA_ALTERS = [
   `ALTER TABLE orders ADD COLUMN IF NOT EXISTS carrier varchar(50) DEFAULT 'meta_livraison'`,
   `ALTER TABLE orders ADD COLUMN IF NOT EXISTS assigned_team_member_id varchar(64) DEFAULT 'mohammed'`,
   `ALTER TABLE orders ADD COLUMN IF NOT EXISTS team_payout_paid boolean NOT NULL DEFAULT false`,
+  `UPDATE orders SET team_payout_paid = false WHERE team_payout_paid IS TRUE AND status IS DISTINCT FROM 'delivered'`,
   `UPDATE orders SET assigned_team_member_id = 'mohammed' WHERE assigned_team_member_id IS NULL OR BTRIM(assigned_team_member_id) = ''`,
   `CREATE INDEX IF NOT EXISTS ix_orders_assigned_team_member_id ON orders (assigned_team_member_id)`,
   `CREATE INDEX IF NOT EXISTS ix_orders_carrier ON orders (carrier)`,
