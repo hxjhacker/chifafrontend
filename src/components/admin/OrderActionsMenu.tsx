@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { CheckCircle2, Eye, Loader2, MoreVertical, Pencil, Printer, Repeat2, Trash2, Truck, Warehouse } from "lucide-react";
+import { CheckCircle2, Eye, Loader2, MoreVertical, Pencil, Printer, Repeat2, Trash2, Truck, Wallet, Warehouse } from "lucide-react";
 import { ADMIN_CARRIERS, shortOrderRef, hasTracking, LABEL_PRINT_HINT, displayTrackingCode, type AdminCarrier, type AdminOrder } from "@/lib/admin";
 import { cn } from "@/lib/cn";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
@@ -19,6 +19,7 @@ type Props = {
   onView: (order: AdminOrder) => void;
   onDuplicate: (order: AdminOrder) => void;
   onDelete: (order: AdminOrder) => void;
+  onTogglePayout?: (order: AdminOrder) => void;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 };
@@ -38,6 +39,7 @@ export function OrderActionsMenu({
   onView,
   onDuplicate,
   onDelete,
+  onTogglePayout,
   open: openProp,
   onOpenChange,
 }: Props) {
@@ -77,7 +79,7 @@ export function OrderActionsMenu({
     if (!btn) return;
     const r = btn.getBoundingClientRect();
     const left = Math.min(Math.max(8, r.right - MENU_WIDTH), window.innerWidth - MENU_WIDTH - 8);
-    const estimated = 280;
+    const estimated = 330;
     const openUp = r.bottom + 8 + estimated > window.innerHeight && r.top > estimated;
     const top = openUp ? r.top - 8 - estimated : r.bottom + 6;
     setPos({ top: Math.max(8, top), left });
@@ -269,6 +271,21 @@ export function OrderActionsMenu({
                 </span>
                 <Printer className="h-5 w-5 shrink-0" />
               </button>
+              {onTogglePayout ? (
+                <button
+                  type="button"
+                  onClick={() => run(() => onTogglePayout(order))}
+                  className={cn(
+                    CARD,
+                    order.team_payout_paid
+                      ? "border-amber-500/30 bg-amber-950/20 text-amber-300 hover:bg-amber-900/30"
+                      : "border-emerald-500/30 bg-emerald-950/20 text-emerald-300 hover:bg-emerald-900/30",
+                  )}
+                >
+                  <span>{order.team_payout_paid ? "تعليم كغير مدفوعة" : "تعليم كمدفوعة"}</span>
+                  <Wallet className="h-5 w-5 shrink-0" />
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={() => run(() => onEdit(order))}
@@ -391,6 +408,12 @@ export function OrderActionsMenu({
               ) : null}
             </span>
           </MenuItem>
+          {onTogglePayout ? (
+            <MenuItem onSelect={() => run(() => onTogglePayout(order))}>
+              <Wallet className={cn("h-4 w-4 shrink-0", order.team_payout_paid ? "text-amber-500" : "text-emerald-500")} />
+              {order.team_payout_paid ? "Marquer non payé" : "Marquer payé"}
+            </MenuItem>
+          ) : null}
           <MenuItem onSelect={() => run(() => onEdit(order))}>
             <Pencil className="h-4 w-4 shrink-0 text-gold" />
             Modifier la commande

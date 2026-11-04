@@ -39,6 +39,7 @@ export type OrderRowProps = {
   onCopyPhone: () => void;
   onCopyTracking: () => void;
   onStatusSelect: (next: AdminStatus, el: HTMLSelectElement) => void;
+  onTogglePayout: () => void;
   onSendCarrier: (order: AdminOrder, carrier: AdminCarrier) => void;
   onSendQuickStock?: (order: AdminOrder) => void;
   onPrint: (order: AdminOrder) => void;
@@ -63,16 +64,45 @@ function MemberAvatar({ member }: { member?: TeamMemberOption }) {
   );
 }
 
+function PaymentBadge({
+  paid,
+  saving,
+  onToggle,
+}: {
+  paid: boolean;
+  saving: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={saving}
+      onClick={onToggle}
+      aria-pressed={paid}
+      title={paid ? "مدفوع — اضغط لتعليمها غير مدفوعة" : "غير مدفوع — اضغط لتعليمها مدفوعة"}
+      className={cn(
+        "inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[10px] font-black transition disabled:opacity-60",
+        paid
+          ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/25 dark:text-emerald-300"
+          : "border-amber-500/45 bg-amber-500/15 text-amber-700 hover:bg-amber-500/25 dark:text-amber-300",
+      )}
+    >
+      {paid ? "مدفوع" : "غير مدفوع"}
+    </button>
+  );
+}
+
 function StatusSelect({
   order,
   saving,
   statusOptions,
   onStatusSelect,
+  onTogglePayout,
   assignedMember,
-}: Pick<OrderRowProps, "order" | "saving" | "statusOptions" | "onStatusSelect" | "assignedMember">) {
+}: Pick<OrderRowProps, "order" | "saving" | "statusOptions" | "onStatusSelect" | "onTogglePayout" | "assignedMember">) {
   const meta = statusMeta(order.status);
   return (
-    <div className="inline-flex items-center gap-1.5">
+    <div className="inline-flex flex-wrap items-center justify-end gap-1.5">
       <select
         value={order.status}
         disabled={saving || allowedNextStatuses(order.status).length === 0}
@@ -86,6 +116,7 @@ function StatusSelect({
         ))}
       </select>
       <MemberAvatar member={assignedMember} />
+      <PaymentBadge paid={Boolean(order.team_payout_paid)} saving={saving} onToggle={onTogglePayout} />
       {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin text-gold" /> : null}
     </div>
   );
@@ -232,6 +263,7 @@ function Menu({ props, open, onOpenChange }: { props: OrderRowProps; open?: bool
       onView={props.onView}
       onDuplicate={props.onDuplicate}
       onDelete={props.onDelete}
+      onTogglePayout={props.onTogglePayout}
       open={open}
       onOpenChange={onOpenChange}
     />
@@ -293,6 +325,7 @@ export function OrderDesktopRow(props: OrderRowProps) {
           saving={props.saving}
           statusOptions={props.statusOptions}
           onStatusSelect={props.onStatusSelect}
+          onTogglePayout={props.onTogglePayout}
           assignedMember={props.assignedMember}
         />
       </td>
@@ -334,6 +367,7 @@ export function OrderMobileCard(props: OrderRowProps) {
           saving={props.saving}
           statusOptions={props.statusOptions}
           onStatusSelect={props.onStatusSelect}
+          onTogglePayout={props.onTogglePayout}
           assignedMember={props.assignedMember}
         />
       </div>

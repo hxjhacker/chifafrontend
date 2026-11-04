@@ -82,6 +82,7 @@ function normalizePatch(body: PatchBody) {
     landmark: asText(pick(body, "landmark")),
     delivery_window: windowRaw && WINDOWS.includes(windowRaw as DeliveryWindow) ? (windowRaw as DeliveryWindow) : undefined,
     status,
+    team_payout_paid: asBool(pick(body, "team_payout_paid", "teamPayoutPaid")),
   };
 }
 
@@ -124,13 +125,22 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ orderId?:
 
   try {
     const bodyKeys = Object.keys(body).filter((key) => body[key] !== undefined);
-    const patch =
-      bodyKeys.length === 1 && bodyKeys[0] === "status"
-        ? { status: asText(body.status) && ALLOWED.includes(asText(body.status) as AdminStatus) ? (asText(body.status) as AdminStatus) : undefined }
-        : normalizePatch(body);
-    if (bodyKeys.length === 1 && bodyKeys[0] === "status" && !patch.status) {
+    const payoutOnly = bodyKeys.length === 1 && (bodyKeys[0] === "team_payout_paid" || bodyKeys[0] === "teamPayoutPaid");
+    const statusOnly = bodyKeys.length === 1 && bodyKeys[0] === "status";
+    const payoutPaid = asBool(body.team_payout_paid ?? body.teamPayoutPaid);
+    const statusText = asText(body.status);
+    const status = statusText && ALLOWED.includes(statusText as AdminStatus) ? (statusText as AdminStatus) : undefined;
+    if (payoutOnly && payoutPaid === undefined) {
+      return NextResponse.json({ detail: "invalid_payout_status" }, { status: 422 });
+    }
+    if (statusOnly && !status) {
       return NextResponse.json({ detail: "invalid_status" }, { status: 422 });
     }
+    const patch = payoutOnly
+      ? { team_payout_paid: payoutPaid }
+      : statusOnly
+        ? { status }
+        : normalizePatch(body);
     const order = await updateAdminOrder(orderId, patch);
     if (!order) return NextResponse.json({ detail: "order_not_found" }, { status: 404 });
     return NextResponse.json(order);
@@ -145,6 +155,7 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ orderId?:
       "confirmation_details_required",
       "invalid_delivery_window",
       "invalid_qty",
+      "invalid_payout_status",
     ];
     const status = known.includes(message) ? 422 : 500;
     if (status === 500) console.error("admin_order_patch_failed", err);

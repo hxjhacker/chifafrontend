@@ -121,7 +121,8 @@ CREATE TABLE IF NOT EXISTS orders (
   meta_livraison_sent_at timestamptz,
   meta_livraison_ticket_url text,
   carrier varchar(50) DEFAULT 'meta_livraison',
-  assigned_team_member_id varchar(64) NOT NULL DEFAULT 'mohammed'
+  assigned_team_member_id varchar(64) NOT NULL DEFAULT 'mohammed',
+  team_payout_paid boolean NOT NULL DEFAULT false
 );
 CREATE INDEX IF NOT EXISTS ix_orders_phone ON orders (phone);
 CREATE INDEX IF NOT EXISTS ix_orders_status ON orders (status);
@@ -210,6 +211,7 @@ const SCHEMA_ALTERS = [
   `ALTER TABLE orders ADD COLUMN IF NOT EXISTS shipping_city varchar(160)`,
   `ALTER TABLE orders ADD COLUMN IF NOT EXISTS carrier varchar(50) DEFAULT 'meta_livraison'`,
   `ALTER TABLE orders ADD COLUMN IF NOT EXISTS assigned_team_member_id varchar(64) DEFAULT 'mohammed'`,
+  `ALTER TABLE orders ADD COLUMN IF NOT EXISTS team_payout_paid boolean NOT NULL DEFAULT false`,
   `UPDATE orders SET assigned_team_member_id = 'mohammed' WHERE assigned_team_member_id IS NULL OR BTRIM(assigned_team_member_id) = ''`,
   `CREATE INDEX IF NOT EXISTS ix_orders_assigned_team_member_id ON orders (assigned_team_member_id)`,
   `CREATE INDEX IF NOT EXISTS ix_orders_carrier ON orders (carrier)`,
@@ -418,7 +420,7 @@ const PRODUCT_SEED = [
 
 const ACTIVE_PRODUCT_SLUGS = PRODUCT_SEED.map((product) => product.slug);
 
-const SCHEMA_ALTER_VERSION = 13;
+const SCHEMA_ALTER_VERSION = 14;
 let appliedAlterVersion = 0;
 
 export async function ensureSchema() {

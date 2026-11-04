@@ -45,6 +45,16 @@ export function TeamMembersMenu() {
 
   const totalOrders = useMemo(() => members.reduce((sum, member) => sum + (member.order_count || 0), 0), [members]);
 
+  const sortedMembers = useMemo(
+    () =>
+      [...members].sort((a, b) => {
+        const countDiff = (b.order_count || 0) - (a.order_count || 0);
+        if (countDiff !== 0) return countDiff;
+        return a.name_ar.localeCompare(b.name_ar, "ar", { sensitivity: "base" });
+      }),
+    [members],
+  );
+
   function beginEdit(member: TeamMemberOption) {
     setEditingId(member.id);
     setDraftName(member.name_ar);
@@ -130,7 +140,7 @@ export function TeamMembersMenu() {
             <span className="font-mono text-[10px] text-slate-500">({totalOrders})</span>
             {activeId === null ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : null}
           </button>
-          {members.map((member) => (
+          {sortedMembers.map((member) => (
             <div key={member.id}>
               <div className="flex items-center gap-1 rounded-xl px-1 py-0.5 hover:bg-white/5">
                 <button

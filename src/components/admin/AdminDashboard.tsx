@@ -736,6 +736,34 @@ export function AdminDashboard() {
     }
   }
 
+  async function toggleTeamPayout(order: AdminOrder) {
+    const prev = Boolean(order.team_payout_paid);
+    const next = !prev;
+    setOrders((list) => list.map((o) => (o.order_id === order.order_id ? { ...o, team_payout_paid: next } : o)));
+    setSavingId(order.order_id);
+    try {
+      const res = await adminFetch(`/api/admin/orders/${order.order_id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ team_payout_paid: next }),
+      }, 15000);
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { detail?: string; message?: string };
+        throw new Error(serverErrorMessage(res.status, body.message || body.detail, "فشل تحديث حالة الدفع. أعد المحاولة."));
+      }
+      const updated = (await res.json()) as AdminOrder;
+      setOrders((list) => list.map((o) => (o.order_id === order.order_id ? updated : o)));
+      notifyDashboard(next ? "تم تعليم الطلبية كمدفوعة." : "تم تعليم الطلبية كغير مدفوعة.", "ok");
+    } catch (err) {
+      setOrders((list) => list.map((o) => (o.order_id === order.order_id ? { ...o, team_payout_paid: prev } : o)));
+      const msg = err instanceof Error && err.message !== "fail" ? err.message : "فشل تحديث حالة الدفع. أعد المحاولة.";
+      setError(msg);
+      notifyDashboard(msg, "error");
+    } finally {
+      setSavingId(null);
+    }
+  }
+
   async function copyPhone(order: AdminOrder) {
     const phone = copyablePhone(order);
     const ok = await copyText(phone);
@@ -1328,6 +1356,7 @@ export function AdminDashboard() {
       onCopyPhone: () => void copyPhone(order),
       onCopyTracking: () => void copyTracking(order),
       onStatusSelect: (next: AdminStatus, el: HTMLSelectElement) => onStatusSelect(order, next, el),
+      onTogglePayout: () => void toggleTeamPayout(order),
       onSendCarrier: (row: AdminOrder, carrier: AdminCarrier) => void sendToLivraison(row, carrier),
       onSendQuickStock: (row: AdminOrder) => void sendQuickStock(row),
       onPrint: printShipping,
