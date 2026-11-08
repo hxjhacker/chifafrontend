@@ -24,6 +24,7 @@ export type ParsedWhatsAppOrder = {
   price: number | null;
   qty: number;
   qtyFallback: boolean;
+  customProduct: string;
   missing: Array<"name" | "city" | "address" | "phone">;
 };
 
@@ -188,6 +189,7 @@ export function parseWhatsAppOrderText(raw: string): ParsedWhatsAppOrder {
   const phone = nationalTenDigits(lines[3] || "");
   const price = parsePrice(lines[4] || "");
   const { qty, fallback: qtyFallback } = parseQty(lines[5] || "");
+  const customProduct = (lines[6] || "").trim().slice(0, 160);
 
   const missing: ParsedWhatsAppOrder["missing"] = [];
   if (customerName.trim().length < 3) missing.push("name");
@@ -203,6 +205,7 @@ export function parseWhatsAppOrderText(raw: string): ParsedWhatsAppOrder {
     price,
     qty,
     qtyFallback,
+    customProduct,
     missing,
   };
 }
@@ -214,5 +217,6 @@ export function whatsappPlaceholder(quickStock: boolean) {
 حي مولاي رشيد، زنقة 12، رقم 8
 0612345678
 ${price}
-1`;
+1
+عطر خاص`;
 }

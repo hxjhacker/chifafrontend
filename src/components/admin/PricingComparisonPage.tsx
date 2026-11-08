@@ -166,7 +166,7 @@ export function PricingComparisonPage() {
   const avgRate = stats?.average_delivery_rate ?? 0;
 
   return (
-    <div dir="rtl" className="min-h-screen px-4 py-6 sm:px-6" style={{ background: "#070d19", color: "#e8eefc" }}>
+    <div dir="rtl" className="min-h-full flex-1 px-4 py-6 sm:px-6" style={{ background: "#070d19", color: "#e8eefc" }}>
       <div className="mx-auto w-full max-w-[1400px] space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { DashboardShield } from "@/components/admin/DashboardShield";
-import { DashboardHeader } from "@/components/admin/DashboardHeader";
+import { DashboardHeader, DashboardNavProvider } from "@/components/admin/DashboardHeader";
 import { DashboardSoundEngine } from "@/components/admin/DashboardSoundEngine";
 import { CalculatorWidget } from "@/components/admin/CalculatorWidget";
 import { DashboardOrdersProvider, StickyNotesWidget } from "@/components/admin/StickyNotesWidget";
@@ -35,11 +35,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <DashboardOrdersProvider>
       <DashboardShield>
-        <DashboardSoundEngine />
-        <DashboardHeader />
-        {children}
-        <CalculatorWidget />
-        <StickyNotesWidget />
+        <DashboardNavProvider>
+          <DashboardSoundEngine />
+          <div className="flex min-h-screen flex-col">
+            <DashboardHeader />
+            <div className="flex flex-1 flex-col">{children}</div>
+          </div>
+          <CalculatorWidget />
+          <StickyNotesWidget />
+        </DashboardNavProvider>
       </DashboardShield>
     </DashboardOrdersProvider>
   );

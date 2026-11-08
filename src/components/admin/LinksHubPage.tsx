@@ -134,7 +134,7 @@ export function LinksHubPage() {
   }
 
   return (
-    <main dir="rtl" className="mx-auto min-h-[calc(100vh-5rem)] w-full max-w-7xl space-y-6 px-3 py-4 sm:space-y-8 sm:px-6 sm:py-6">
+    <main dir="rtl" className="mx-auto min-h-full w-full max-w-7xl flex-1 space-y-6 px-3 py-4 sm:space-y-8 sm:px-6 sm:py-6">
       <section className="relative overflow-hidden rounded-2xl border border-slate-800/90 bg-[#0c1322] p-4 shadow-2xl sm:p-5">
         <div className="pointer-events-none absolute -right-16 -top-16 h-36 w-36 rounded-full bg-emerald-500/10 blur-3xl" />
         <div className="relative flex flex-col justify-between gap-4 lg:flex-row lg:items-center">

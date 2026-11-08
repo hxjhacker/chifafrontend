@@ -3,33 +3,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import {
-  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Download,
   Eye,
   EyeOff,
-  ExternalLink,
-  FileSpreadsheet,
   Loader2,
-  LogOut,
-  Menu,
-  Package,
   PieChart,
-  Plus,
   Search,
-  SlidersHorizontal,
-  Sun,
   Trash2,
   Moon,
-  Receipt,
   RefreshCw,
-  Scale,
   X,
 } from "lucide-react";
-import Link from "next/link";
-import { ThemeToggle, WhatsAppIcon } from "@/components/Chrome";
-import { DASHBOARD_LOGIN, DASHBOARD_HOME, goAdmin } from "@/lib/admin-paths";
+import { DASHBOARD_LOGIN, goAdmin } from "@/lib/admin-paths";
 import SplashScreen from "@/components/SplashScreen";
 import { AddOrderModal } from "@/components/admin/AddOrderModal";
 import { AddProductModal } from "@/components/admin/AddProductModal";
@@ -41,20 +28,18 @@ import { IosSwitch } from "@/components/admin/IosSwitch";
 import { LogisticsKpiCards } from "@/components/admin/LogisticsKpiCards";
 import { MoroccoMap } from "@/components/admin/MoroccoMap";
 import { DashboardBanner, notifyDashboard } from "@/components/admin/DashboardAlert";
+import { OverdueOrdersBanner } from "@/components/admin/OrderAlertsBell";
 import {
-  AccountPopover,
-  DEFAULT_PROFILE_EMAIL,
-  DEFAULT_STORE_NAME,
-  EditProfileModal,
-  STORE_NAME_KEY,
-  storeInitials,
-} from "@/components/admin/EditProfileModal";
-import { OrderAlertsBell, OverdueOrdersBanner } from "@/components/admin/OrderAlertsBell";
+  DASHBOARD_NAV_EVENT,
+  DASHBOARD_NAV_PENDING_KEY,
+  takeLatestNavSummary,
+  useBindDashboardNav,
+  type DashboardNavDetail,
+} from "@/components/admin/DashboardHeader";
 import { OrderDesktopRow, OrderMobileCard } from "@/components/admin/OrderRow";
 import { OrderTimelineModal } from "@/components/admin/OrderTimelineModal";
 import { QuickWhatsAppOrderModal } from "@/components/admin/QuickWhatsAppOrderModal";
-import { DashboardSoundToggle, dispatchDashboardSound } from "@/components/admin/DashboardSoundEngine";
-import { TeamMembersMenu } from "@/components/admin/TeamMembersMenu";
+import { dispatchDashboardSound } from "@/components/admin/DashboardSoundEngine";
 import type { TeamMemberOption } from "@/components/admin/TeamMemberSelect";
 import { useDashboardOrders } from "@/components/admin/StickyNotesWidget";
 import { ViewsObservatory } from "@/components/admin/ViewsObservatory";
@@ -81,7 +66,6 @@ import {
 import { CITY_CHART_COLORS } from "@/lib/admin-geo";
 import { EMPTY_UNDISPATCHED, type UndispatchedSummary } from "@/lib/order-alerts";
 import { EMPTY_LOGISTICS, type LogisticsAnalytics } from "@/lib/logistics";
-import { useHorizontalDragScroll } from "@/hooks/useHorizontalDragScroll";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import { cn } from "@/lib/cn";
 import { applyTheme, resolveIsDark, THEME_STORAGE_KEY } from "@/lib/theme";
@@ -130,10 +114,6 @@ const SECTION_ITEMS: { key: keyof SectionPrefs; label: string }[] = [
 ];
 
 const DASHBOARD_SHELL = "mx-auto w-full max-w-[1720px] px-4 sm:px-6 lg:px-8";
-const ICON_BTN =
-  "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border shadow-sm transition active:scale-95";
-const DESKTOP_CHIP =
-  "shrink-0 inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition";
 const FILTER_CONTROL =
   "h-11 shrink-0 rounded-xl border border-gold/30 bg-cream px-3.5 text-sm font-semibold text-royal shadow-sm transition focus:border-gold focus:outline-none dark:border-white/15 dark:bg-brandDark dark:text-white";
 
@@ -388,7 +368,6 @@ export function AdminDashboard() {
   const [logistics, setLogistics] = useState<LogisticsAnalytics>(EMPTY_LOGISTICS);
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const { setOrders: setDashboardOrders } = useDashboardOrders();
-  const [username, setUsername] = useState("");
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("all");
   const [page, setPage] = useState(1);
@@ -424,20 +403,13 @@ export function AdminDashboard() {
   const [showAllCities, setShowAllCities] = useState(false);
   const [prefs, setPrefs] = useState<SectionPrefs>(DEFAULT_PREFS);
   const [prefsOpen, setPrefsOpen] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [actionsOpen, setActionsOpen] = useState(false);
-  const [accountOpen, setAccountOpen] = useState(false);
-  const [profileOpen, setProfileOpen] = useState(false);
   const [teamFilterId, setTeamFilterId] = useState<string | null>(null);
   const [teamMembers, setTeamMembers] = useState<TeamMemberOption[]>([]);
-  const [storeName, setStoreName] = useState(DEFAULT_STORE_NAME);
   const [darkMode, setDarkMode] = useState(false);
   const selectAllRef = useRef<HTMLInputElement>(null);
-  const accountRef = useRef<HTMLDivElement>(null);
-  const mobileAccountRef = useRef<HTMLDivElement>(null);
-  const actionsScrollRef = useHorizontalDragScroll<HTMLDivElement>();
+  const applyNavRef = useRef<(detail: DashboardNavDetail) => void>(() => {});
 
-  useLockBodyScroll(Boolean(deleteTarget) || prefsOpen || menuOpen || profileOpen);
+  useLockBodyScroll(Boolean(deleteTarget) || prefsOpen);
 
   const closeTimeline = useCallback(() => setViewingId(null), []);
   const closePrint = useCallback(() => setPrintingId(null), []);
@@ -528,7 +500,6 @@ export function AdminDashboard() {
 
   useEffect(() => {
     setPrefs(readPrefs());
-    setStoreName(readStorage(STORE_NAME_KEY)?.trim() || DEFAULT_STORE_NAME);
     setDarkMode(resolveIsDark());
     function onTheme(e: Event) {
       setDarkMode(Boolean((e as CustomEvent<{ dark: boolean }>).detail?.dark));
@@ -541,30 +512,10 @@ export function AdminDashboard() {
     function onKey(e: KeyboardEvent) {
       if (e.key !== "Escape") return;
       setPrefsOpen(false);
-      setMenuOpen(false);
-      setActionsOpen(false);
-      setAccountOpen(false);
-      setProfileOpen(false);
     }
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, []);
-
-  useEffect(() => {
-    if (!accountOpen) return;
-    function onDoc(e: MouseEvent) {
-      const target = e.target as Node;
-      if (accountRef.current?.contains(target) || mobileAccountRef.current?.contains(target)) return;
-      setAccountOpen(false);
-    }
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, [accountOpen]);
-
-  useEffect(() => {
-    if (actionsOpen) return;
-    if (actionsScrollRef.current) actionsScrollRef.current.scrollLeft = 0;
-  }, [actionsOpen, actionsScrollRef]);
 
   function persistPrefs(next: SectionPrefs) {
     writeJsonStorage(PREFS_KEY, next);
@@ -598,21 +549,6 @@ export function AdminDashboard() {
     });
   }
 
-  const profileEmail = username.includes("@") ? username : DEFAULT_PROFILE_EMAIL;
-  const initials = storeInitials(storeName);
-
-  function openProfileEditor() {
-    setAccountOpen(false);
-    setMenuOpen(false);
-    setProfileOpen(true);
-  }
-
-  function saveStoreName(name: string) {
-    setStoreName(name);
-    writeStorage(STORE_NAME_KEY, name);
-    notifyDashboard("تم حفظ تعديلات الملف الشخصي.", "ok");
-  }
-
   const load = useCallback(async () => {
     setError("");
     try {
@@ -620,10 +556,6 @@ export function AdminDashboard() {
       if (meRes.status === 401) {
         goAdmin(DASHBOARD_LOGIN);
         return;
-      }
-      if (meRes.ok) {
-        const me = (await meRes.json()) as { username?: string };
-        setUsername(me.username || "");
       }
 
       const ordersRes = await adminFetch("/api/admin/orders?limit=2000", {}, 20000);
@@ -680,11 +612,6 @@ export function AdminDashboard() {
     } catch {
       /* ignore background stats errors */
     }
-  }
-
-  async function logout() {
-    await fetch("/api/admin/logout", { method: "POST", credentials: "include" });
-    goAdmin(DASHBOARD_LOGIN);
   }
 
   function onStatusSelect(order: AdminOrder, next: AdminStatus, selectEl: HTMLSelectElement) {
@@ -1388,27 +1315,86 @@ export function AdminDashboard() {
     setPage(1);
   }, [q, status, perPage]);
 
-  const alertBellShared = {
-    orders,
-    shippingId,
-    onSendCarrier: (row: AdminOrder, carrier: AdminCarrier) => {
-      void sendToLivraison(row, carrier);
-    },
-    onShowOverdue: () => {
-      setUndispatchedOnly(true);
-      setStatus("confirmed");
-      setPage(1);
-    },
-    onNotice: (message: string, kind?: "ok" | "warn") => {
-      notifyDashboard(message, kind);
-    },
-    onSummary: setAlerts,
+  useBindDashboardNav({ orders, shippingId, hideNumbers: hideAll });
+  applyNavRef.current = (detail) => {
+    switch (detail.action) {
+      case "add-order":
+        setModalOpen(true);
+        break;
+      case "products":
+        setProductsOpen(true);
+        break;
+      case "received":
+        showReceivedOrders();
+        break;
+      case "prefs":
+        setPrefsOpen(true);
+        break;
+      case "export-csv":
+        downloadCsv("orders-chifaglow.csv", ordersToCsv(filtered));
+        break;
+      case "toggle-hide":
+        setHideAll((value) => !value);
+        break;
+      case "export-metrics":
+        exportDashboardMetrics();
+        break;
+      case "quick-whatsapp":
+        setQuickOpen(true);
+        break;
+      case "show-overdue":
+        setUndispatchedOnly(true);
+        setStatus("confirmed");
+        setPage(1);
+        break;
+      case "send-carrier": {
+        const order = orders.find((row) => row.order_id === detail.orderId);
+        if (order) void sendToLivraison(order, detail.carrier);
+        break;
+      }
+      case "summary":
+        setAlerts(detail.summary);
+        break;
+      default:
+        break;
+    }
   };
+
+  useEffect(() => {
+    const pending = takeLatestNavSummary();
+    if (pending) setAlerts(pending);
+    function onNav(event: Event) {
+      event.preventDefault();
+      const detail = (event as CustomEvent<DashboardNavDetail>).detail;
+      if (detail) applyNavRef.current(detail);
+    }
+    window.addEventListener(DASHBOARD_NAV_EVENT, onNav);
+    return () => window.removeEventListener(DASHBOARD_NAV_EVENT, onNav);
+  }, []);
+
+  useEffect(() => {
+    if (loading) return;
+    let raw: string | null = null;
+    try {
+      raw = sessionStorage.getItem(DASHBOARD_NAV_PENDING_KEY);
+      if (raw) sessionStorage.removeItem(DASHBOARD_NAV_PENDING_KEY);
+    } catch {
+      return;
+    }
+    if (!raw) return;
+    try {
+      const detail = JSON.parse(raw) as DashboardNavDetail;
+      if (!detail || detail.action === "summary") return;
+      applyNavRef.current(detail);
+    } catch {
+      /* Ignore a malformed pending menu action. */
+    }
+  }, [loading]);
 
   return (
     <>
     <SplashScreen isLoading={loading} />
-    <div className="admin-print-root no-select flex min-h-screen select-none flex-col justify-between bg-cream text-royal antialiased transition-colors duration-300 dark:bg-brandDark dark:text-slate-100 print:hidden">
+    <div className="admin-print-root no-select flex flex-1 select-none flex-col justify-between bg-cream text-royal antialiased transition-colors duration-300 dark:bg-brandDark dark:text-slate-100 print:hidden">
       <AddOrderModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
@@ -1557,442 +1543,6 @@ export function AdminDashboard() {
           </div>
         </div>
       ) : null}
-
-      <header
-        dir="ltr"
-        className="sticky top-0 z-40 w-full overflow-visible"
-      >
-        <div
-          dir="rtl"
-          className="flex items-center justify-between border-b border-slate-800/80 bg-[#0b101b] px-3 py-2.5 select-none md:hidden"
-        >
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              aria-label="القائمة"
-              title="القائمة"
-              aria-expanded={menuOpen}
-              aria-controls="mobile-admin-menu"
-              onClick={() => {
-                setAccountOpen(false);
-                setMenuOpen((v) => !v);
-              }}
-              className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-800/80 bg-[#111927] text-slate-300 shadow-sm transition hover:bg-slate-800 hover:text-white active:scale-95"
-            >
-              <Menu className="h-5 w-5" />
-            </button>
-            <Link
-              href={`${DASHBOARD_HOME}/invoices`}
-              aria-label="الفواتير"
-              title="الفواتير"
-              className={`${ICON_BTN} border-emerald-500/40 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20`}
-            >
-              <Receipt className="h-4 w-4" />
-            </Link>
-            <button
-              type="button"
-              aria-label="إضافة سريعة واتساب"
-              title="إضافة سريعة واتساب"
-              onClick={() => setQuickOpen(true)}
-              className={`${ICON_BTN} border-emerald-500/40 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20`}
-            >
-              <WhatsAppIcon className="h-4 w-4" />
-            </button>
-            <OrderAlertsBell
-              variant="icon"
-              poll
-              emitOrderToasts={false}
-              panel="sheet"
-              className="h-10 w-10 border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-400 dark:hover:bg-amber-500/20"
-              {...alertBellShared}
-            />
-          </div>
-
-          <div className="relative z-30 flex items-center gap-2" ref={mobileAccountRef}>
-            <button
-              type="button"
-              aria-label="معلومات الحساب"
-              title="معلومات الحساب"
-              aria-expanded={accountOpen}
-              onClick={() => setAccountOpen((v) => !v)}
-              className="group relative flex items-center justify-center transition focus:outline-none active:scale-95"
-            >
-              <span className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-amber-600/70 bg-[#181615] text-sm font-extrabold tracking-wider text-amber-500 shadow-md shadow-amber-500/10 transition-all duration-200 group-hover:scale-105 group-hover:border-amber-500">
-                {initials}
-              </span>
-              <span className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full border-2 border-[#0b101b] bg-emerald-500" />
-            </button>
-            {accountOpen ? (
-              <AccountPopover
-                className="w-72 p-4"
-                storeName={storeName}
-                email={profileEmail}
-                initials={initials}
-                onOpenProfile={openProfileEditor}
-              />
-            ) : null}
-            <TeamMembersMenu />
-          </div>
-        </div>
-
-        <div
-          dir="rtl"
-          className="relative hidden w-full items-center justify-between gap-3 overflow-visible border-b border-slate-800/80 bg-[#0b101b] px-4 py-2.5 sm:px-6 md:flex lg:px-8"
-        >
-          <div className="flex min-w-0 flex-1 items-center gap-2">
-            <ThemeToggle
-              className={`${ICON_BTN} border-slate-800 bg-slate-900/90 text-amber-400 hover:scale-100 hover:border-slate-700 hover:text-white`}
-            />
-            <DashboardSoundToggle className={`${ICON_BTN} border-slate-800 bg-slate-900/90 text-slate-400 hover:border-slate-700 hover:text-white`} />
-            <OrderAlertsBell
-              variant="icon"
-              className="h-10 w-10 border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-400 dark:hover:bg-amber-500/20"
-              {...alertBellShared}
-            />
-            <button
-              type="button"
-              aria-label="إضافة سريعة واتساب"
-              title="إضافة سريعة واتساب"
-              onClick={() => setQuickOpen(true)}
-              className={`${ICON_BTN} border-emerald-500/40 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20`}
-            >
-              <WhatsAppIcon className="h-4 w-4" />
-            </button>
-            <span className="mx-1 h-6 w-px shrink-0 bg-slate-800" aria-hidden />
-            <Link
-              href={`${DASHBOARD_HOME}/invoices`}
-              aria-label="الفواتير"
-              title="الفواتير"
-              className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 text-xs font-bold text-emerald-300 transition hover:bg-emerald-500/20"
-            >
-              <Receipt className="h-4 w-4" />
-              الفواتير
-            </Link>
-            <button
-              type="button"
-              id="toggleExpandBtn"
-              aria-label="القائمة والإجراءات"
-              title="القائمة والإجراءات"
-              aria-expanded={actionsOpen}
-              onClick={() => setActionsOpen((v) => !v)}
-              className={cn(
-                ICON_BTN,
-                "bg-slate-900 text-slate-200 hover:bg-slate-800",
-                actionsOpen ? "border-amber-500/50 text-amber-400" : "border-slate-700",
-              )}
-            >
-              <Menu className={cn("h-4 w-4 transition-transform duration-300", actionsOpen && "rotate-90")} />
-            </button>
-            <div
-              ref={actionsScrollRef}
-              className="no-scrollbar flex min-w-0 flex-1 cursor-grab items-center overflow-x-auto py-1 touch-pan-x"
-            >
-              <div
-                className={cn(
-                  "flex items-center gap-2 transition-all duration-300 ease-out",
-                  actionsOpen ? "max-w-[1700px] opacity-100" : "pointer-events-none max-w-0 overflow-hidden opacity-0",
-                )}
-              >
-                <button
-                  type="button"
-                  aria-label="إضافة طلب"
-                  onClick={() => setModalOpen(true)}
-                  className={`${DESKTOP_CHIP} bg-amber-500 font-bold text-slate-950 shadow hover:bg-amber-400`}
-                >
-                  <Plus className="h-4 w-4" />
-                  إضافة طلب
-                </button>
-                <button
-                  type="button"
-                  aria-label="إدارة المنتجات"
-                  onClick={() => setProductsOpen(true)}
-                  className={`${DESKTOP_CHIP} border border-purple-500/40 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20`}
-                >
-                  <Package className="h-4 w-4" />
-                  إدارة المنتجات
-                </button>
-                <button
-                  type="button"
-                  aria-label="الطلبات المستلمة"
-                  onClick={showReceivedOrders}
-                  className={`${DESKTOP_CHIP} border border-teal-500/40 bg-teal-500/10 text-teal-400 hover:bg-teal-500/20`}
-                >
-                  <CheckCircle2 className="h-4 w-4" />
-                  الطلبات المستلمة
-                </button>
-                <button
-                  type="button"
-                  aria-label="تخصيص الواجهة"
-                  aria-haspopup="dialog"
-                  aria-expanded={prefsOpen}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setPrefsOpen(true);
-                  }}
-                  className={`${DESKTOP_CHIP} border border-indigo-500/40 bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20`}
-                >
-                  <SlidersHorizontal className="h-4 w-4" />
-                  تخصيص الواجهة
-                </button>
-                <Link
-                  href={`${DASHBOARD_HOME}/invoices`}
-                  aria-label="الفواتير"
-                  className={`${DESKTOP_CHIP} border border-emerald-500/40 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20`}
-                >
-                  <Receipt className="h-4 w-4" />
-                  الفواتير
-                </Link>
-                <Link
-                  href={`${DASHBOARD_HOME}/pricing-comparison`}
-                  aria-label="مقارنة الأسعار"
-                  className={`${DESKTOP_CHIP} border border-cyan-500/40 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20`}
-                >
-                  <Scale className="h-4 w-4" />
-                  مقارنة الأسعار
-                </Link>
-                <Link
-                  href={`${DASHBOARD_HOME}/links`}
-                  aria-label="مركز الروابط"
-                  className={`${DESKTOP_CHIP} border border-slate-700/80 bg-[#111927] text-slate-300 hover:border-amber-500/50 hover:bg-[#162134] hover:text-amber-400`}
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  مركز الروابط
-                </Link>
-                <button
-                  type="button"
-                  aria-label="تصدير Excel"
-                  onClick={() => downloadCsv("orders-chifaglow.csv", ordersToCsv(filtered))}
-                  className={`${DESKTOP_CHIP} border border-slate-700 bg-slate-900/80 text-slate-300 hover:bg-slate-800`}
-                >
-                  <FileSpreadsheet className="h-4 w-4 text-emerald-500" />
-                  تصدير Excel
-                </button>
-                <button
-                  type="button"
-                  aria-label={hideAll ? "إظهار كل الأرقام" : "إخفاء الأرقام"}
-                  onClick={() => setHideAll((v) => !v)}
-                  className={`${DESKTOP_CHIP} border border-sky-500/40 bg-sky-500/10 text-sky-400 hover:bg-sky-500/20`}
-                >
-                  {hideAll ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                  {hideAll ? "إظهار الأرقام" : "إخفاء الأرقام"}
-                </button>
-                <button
-                  type="button"
-                  aria-label="تصدير إحصائيات لوحة التحكم"
-                  onClick={exportDashboardMetrics}
-                  className={`${DESKTOP_CHIP} border border-emerald-500/40 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20`}
-                >
-                  <Download className="h-4 w-4" />
-                  تصدير الإحصائيات
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div
-            dir="ltr"
-            ref={accountRef}
-            className="relative z-30 flex shrink-0 items-center gap-2 bg-[#0b101b] py-1 pl-1 pr-3 shadow-[-20px_0_20px_#0b101b]"
-          >
-            <TeamMembersMenu />
-            <button
-              type="button"
-              aria-label="معلومات الحساب"
-              title="معلومات الحساب"
-              aria-expanded={accountOpen}
-              onClick={() => setAccountOpen((v) => !v)}
-              className="group relative flex items-center justify-center focus:outline-none"
-            >
-              <span className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-amber-600/70 bg-[#181615] text-sm font-extrabold tracking-wider text-amber-500 shadow-md shadow-amber-500/10 transition-all duration-200 group-hover:scale-105 group-hover:border-amber-500">
-                {initials}
-              </span>
-              <span className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full border-2 border-[#0b101b] bg-emerald-500" />
-            </button>
-            {accountOpen ? (
-              <AccountPopover
-                storeName={storeName}
-                email={profileEmail}
-                initials={initials}
-                onOpenProfile={openProfileEditor}
-              />
-            ) : null}
-          </div>
-        </div>
-      </header>
-
-      <div className="md:hidden">
-        <button
-          type="button"
-          aria-label="إغلاق القائمة"
-          tabIndex={menuOpen ? 0 : -1}
-          aria-hidden={!menuOpen}
-          className={cn(
-            "fixed inset-0 z-[70] bg-black/70 backdrop-blur-sm transition-opacity duration-300",
-            menuOpen ? "opacity-100" : "pointer-events-none opacity-0",
-          )}
-          onClick={() => setMenuOpen(false)}
-        />
-        <aside
-          id="mobile-admin-menu"
-          dir="rtl"
-          role="dialog"
-          aria-modal={menuOpen}
-          aria-hidden={!menuOpen}
-          aria-labelledby="mobile-menu-title"
-          className={cn(
-            "fixed top-0 right-0 z-[80] flex h-full w-[290px] flex-col justify-between border-l border-slate-800 bg-[#0c1322] p-4 shadow-2xl transition-transform duration-300 ease-out",
-            menuOpen ? "translate-x-0" : "pointer-events-none translate-x-full",
-          )}
-        >
-          <div className="space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
-              <span id="mobile-menu-title" className="text-sm font-extrabold text-white">
-                القائمة السريعة
-              </span>
-              <button
-                type="button"
-                onClick={() => setMenuOpen(false)}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-800 bg-slate-900 text-slate-400 transition hover:text-white"
-                aria-label="إغلاق"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="space-y-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setModalOpen(true);
-                  setMenuOpen(false);
-                }}
-                className="flex w-full items-center justify-between rounded-xl bg-amber-500 px-3.5 py-2.5 text-xs font-bold text-slate-950 shadow-md transition hover:bg-amber-400"
-              >
-                <Plus className="h-4 w-4" strokeWidth={2.5} />
-                <span>إضافة طلب</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setProductsOpen(true);
-                  setMenuOpen(false);
-                }}
-                className="flex w-full items-center justify-between rounded-xl border border-purple-500/40 bg-purple-500/10 px-3.5 py-2.5 text-xs font-semibold text-purple-400 transition hover:bg-purple-500/20"
-              >
-                <Package className="h-4 w-4" />
-                <span>إدارة المنتجات</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  showReceivedOrders();
-                  setMenuOpen(false);
-                }}
-                className="flex w-full items-center justify-between rounded-xl border border-teal-500/40 bg-teal-500/10 px-3.5 py-2.5 text-xs font-semibold text-teal-400 transition hover:bg-teal-500/20"
-              >
-                <CheckCircle2 className="h-4 w-4" />
-                <span>الطلبات المستلمة</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setPrefsOpen(true);
-                  setMenuOpen(false);
-                }}
-                className="flex w-full items-center justify-between rounded-xl border border-indigo-500/40 bg-indigo-500/10 px-3.5 py-2.5 text-xs font-semibold text-indigo-400 transition hover:bg-indigo-500/20"
-              >
-                <SlidersHorizontal className="h-4 w-4" />
-                <span>تخصيص الواجهة</span>
-              </button>
-              <Link
-                href={`${DASHBOARD_HOME}/invoices`}
-                onClick={() => setMenuOpen(false)}
-                className="flex w-full items-center justify-between rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3.5 py-2.5 text-xs font-semibold text-emerald-300 transition hover:bg-emerald-500/20"
-              >
-                <Receipt className="h-4 w-4" />
-                <span>الفواتير</span>
-              </Link>
-              <Link
-                href={`${DASHBOARD_HOME}/pricing-comparison`}
-                onClick={() => setMenuOpen(false)}
-                className="flex w-full items-center justify-between rounded-xl border border-cyan-500/40 bg-cyan-500/10 px-3.5 py-2.5 text-xs font-semibold text-cyan-400 transition hover:bg-cyan-500/20"
-              >
-                <Scale className="h-4 w-4" />
-                <span>مقارنة الأسعار</span>
-              </Link>
-              <Link
-                href={`${DASHBOARD_HOME}/links`}
-                onClick={() => setMenuOpen(false)}
-                className="flex w-full items-center justify-between rounded-xl border border-slate-700/80 bg-[#111927] px-3.5 py-2.5 text-xs font-semibold text-slate-300 transition hover:border-amber-500/50 hover:bg-[#162134] hover:text-amber-400"
-              >
-                <ExternalLink className="h-4 w-4" />
-                <span>مركز الروابط</span>
-              </Link>
-              <button
-                type="button"
-                onClick={() => {
-                  downloadCsv("orders-chifaglow.csv", ordersToCsv(filtered));
-                  setMenuOpen(false);
-                }}
-                className="flex w-full items-center justify-between rounded-xl border border-slate-700 bg-slate-900/80 px-3.5 py-2.5 text-xs font-semibold text-slate-300 transition hover:bg-slate-800"
-              >
-                <FileSpreadsheet className="h-4 w-4 text-emerald-500" />
-                <span>تصدير Excel</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setHideAll((v) => !v);
-                  setMenuOpen(false);
-                }}
-                className="flex w-full items-center justify-between rounded-xl border border-sky-500/40 bg-sky-500/10 px-3.5 py-2.5 text-xs font-semibold text-sky-400 transition hover:bg-sky-500/20"
-              >
-                {hideAll ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                <span>{hideAll ? "إظهار الأرقام" : "إخفاء الأرقام"}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  exportDashboardMetrics();
-                  setMenuOpen(false);
-                }}
-                className="flex w-full items-center justify-between rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3.5 py-2.5 text-xs font-semibold text-emerald-400 transition hover:bg-emerald-500/20"
-              >
-                <Download className="h-4 w-4" />
-                <span>تصدير الإحصائيات</span>
-              </button>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between border-t border-slate-800/80 pt-4">
-            <button
-              type="button"
-              onClick={() => void logout()}
-              className="inline-flex items-center gap-2 text-xs font-bold text-rose-400 transition hover:text-rose-300"
-            >
-              <LogOut className="h-4 w-4" />
-              <span>تسجيل الخروج</span>
-            </button>
-            <button
-              type="button"
-              onClick={toggleDarkMode}
-              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-800 bg-slate-900 text-slate-400 transition hover:text-amber-400"
-              aria-label="المظهر"
-              title="المظهر"
-            >
-              {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-            </button>
-          </div>
-        </aside>
-      </div>
-
-      <EditProfileModal
-        open={profileOpen}
-        storeName={storeName}
-        email={profileEmail}
-        onClose={() => setProfileOpen(false)}
-        onSave={saveStoreName}
-      />
 
       <main className={cn(DASHBOARD_SHELL, "flex-grow space-y-6 py-6", selectedIds.length ? "pb-28" : "")}>
         {error ? (

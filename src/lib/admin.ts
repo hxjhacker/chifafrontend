@@ -34,6 +34,7 @@ export type AdminOrder = {
   phone: string;
   phone_national: string;
   product_slug: string;
+  custom_product_name?: string | null;
   tier_qty: number;
   cross_sell_slug: string | null;
   upsell_slug: string | null;
@@ -284,9 +285,12 @@ export function packLabel(order: {
   tier_qty: number;
   cross_sell_slug: string | null;
   upsell_slug: string | null;
+  custom_product_name?: string | null;
 }) {
-  const primary =
-    order.product_slug === "pack-royal-power" || order.product_slug === "pack-royal"
+  const custom = (order.custom_product_name || "").trim();
+  const primary = custom
+    ? `${custom} × ${order.tier_qty}`
+    : order.product_slug === "pack-royal-power" || order.product_slug === "pack-royal"
       ? PACK_NAMES[order.product_slug]
       : `${PACK_NAMES[order.product_slug] || order.product_slug} × ${order.tier_qty}`;
   const parts = [primary];
@@ -298,7 +302,7 @@ export function packLabel(order: {
 export function orderLineItems(order: AdminOrder) {
   const lines: { label: string; qty: number }[] = [
     {
-      label: PACK_NAMES[order.product_slug] || order.product_slug,
+      label: (order.custom_product_name || "").trim() || PACK_NAMES[order.product_slug] || order.product_slug,
       qty: Math.max(1, order.tier_qty || order.primary_qty || 1),
     },
   ];
@@ -466,6 +470,7 @@ export function cloneOrderCreatePayload(order: AdminOrder) {
     address: detailedAddress(order) || order.address || "",
     region_id: order.region_id || order.region || "",
     product_slug: order.product_slug,
+    custom_product_name: order.custom_product_name || null,
     tier_qty: Math.max(1, order.tier_qty || order.primary_qty || 1),
     total_mad: Number(order.total ?? order.total_price) || 0,
     status: "new" as AdminStatus,

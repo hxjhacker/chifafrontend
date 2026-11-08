@@ -30,6 +30,8 @@ const TONE_CLASS: Record<WhatsAppStockTone, string> = {
   blue: "border-blue-500/25 bg-blue-500/15 text-blue-400",
 };
 
+const OTHER_SLUG = "other";
+
 function WhatsAppBadge() {
   return (
     <div
@@ -76,6 +78,8 @@ export function QuickWhatsAppOrderModal({ open, onClose, onCreated, onWarning }:
   const [products, setProducts] = useState<AdminProduct[]>([]);
   const [quickStock, setQuickStock] = useState(true);
   const [productSlug, setProductSlug] = useState("");
+  const [customName, setCustomName] = useState("");
+  const [customEdited, setCustomEdited] = useState(false);
   const [productError, setProductError] = useState(false);
   const [selectOpen, setSelectOpen] = useState(false);
   const [teamMemberId, setTeamMemberId] = useState("mohammed");
@@ -84,11 +88,15 @@ export function QuickWhatsAppOrderModal({ open, onClose, onCreated, onWarning }:
   useLockBodyScroll(open);
 
   const catalog = useMemo(() => whatsappCatalog(products, quickStock), [products, quickStock]);
+  const parsed = useMemo(() => parseWhatsAppOrderText(raw), [raw]);
+  const isOther = productSlug === OTHER_SLUG;
   const selected = catalog.find((row) => row.slug === productSlug) || null;
 
   useEffect(() => {
     if (!open) {
       setProductSlug("");
+      setCustomName("");
+      setCustomEdited(false);
       setTeamMemberId("mohammed");
       setProductError(false);
       setSelectOpen(false);
@@ -98,6 +106,8 @@ export function QuickWhatsAppOrderModal({ open, onClose, onCreated, onWarning }:
     setError("");
     setSaving(false);
     setProductSlug("");
+    setCustomName("");
+    setCustomEdited(false);
     setProductError(false);
     setQuickStock(true);
     setSelectOpen(false);
@@ -109,10 +119,15 @@ export function QuickWhatsAppOrderModal({ open, onClose, onCreated, onWarning }:
   }, [open]);
 
   useEffect(() => {
-    if (productSlug && !catalog.some((row) => row.slug === productSlug)) {
+    if (productSlug && productSlug !== OTHER_SLUG && !catalog.some((row) => row.slug === productSlug)) {
       setProductSlug("");
     }
   }, [catalog, productSlug]);
+
+  useEffect(() => {
+    if (!isOther || customEdited) return;
+    setCustomName(parsed.customProduct);
+  }, [isOther, customEdited, parsed.customProduct]);
 
   useEffect(() => {
     if (!open) return;
@@ -139,33 +154,41 @@ export function QuickWhatsAppOrderModal({ open, onClose, onCreated, onWarning }:
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (saving) return;
-    const parsed = parseWhatsAppOrderText(raw);
-    if (!selected) {
+    const parsedOrder = parseWhatsAppOrderText(raw);
+    const customProduct = customName.trim();
+    if (!selected && !isOther) {
       const message = "يرجى تحديد المنتج أولاً قبل المتابعة";
       setError(message);
       setProductError(true);
       dispatchDashboardSound("error");
       return;
     }
-    if (parsed.missing.length) {
-      const labels: Record<(typeof parsed.missing)[number], string> = {
+    if (isOther && customProduct.length < 2) {
+      const message = "يرجى إدخال اسم المنتج المخصص.";
+      setError(message);
+      setProductError(true);
+      dispatchDashboardSound("error");
+      return;
+    }
+    if (parsedOrder.missing.length) {
+      const labels: Record<(typeof parsedOrder.missing)[number], string> = {
         name: "الاسم",
         city: "المدينة",
         address: "العنوان",
         phone: "رقم الهاتف",
       };
       const message =
-        parsed.missing.includes("name") && parsed.missing.includes("phone")
+        parsedOrder.missing.includes("name") && parsedOrder.missing.includes("phone")
           ? "الاسم ورقم الهاتف مطلوبان. الصق النص بالترتيب الصحيح."
-          : `الحقول الناقصة: ${parsed.missing.map((key) => labels[key]).join("، ")}`;
+          : `الحقول الناقصة: ${parsedOrder.missing.map((key) => labels[key]).join("، ")}`;
       setError(message);
       onWarning(message);
       return;
     }
 
-    const price = parsed.price ?? selected.price;
+    const price = parsedOrder.price ?? (isOther ? null : selected?.price ?? null);
     if (!price || price < 1) {
-      const message = "الثمن غير صالح.";
+      const message = isOther && parsedOrder.price == null ? "الثمن مطلوب للمنتج المخصص." : "الثمن غير صالح.";
       setError(message);
       onWarning(message);
       return;
@@ -179,15 +202,16 @@ export function QuickWhatsAppOrderModal({ open, onClose, onCreated, onWarning }:
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          full_name: parsed.customerName,
-          city: parsed.city,
-          address: parsed.address,
-          phone: parsed.phone,
+          full_name: parsedOrder.customerName,
+          city: parsedOrder.city,
+          address: parsedOrder.address,
+          phone: parsedOrder.phone,
           total_mad: price,
-          product_slug: selected.slug,
-          tier_qty: parsed.qty,
+          product_slug: isOther ? OTHER_SLUG : selected!.slug,
+          custom_product_name: isOther ? customProduct : null,
+          tier_qty: parsedOrder.qty,
           status: "new",
-          region_id: regionIdForCity(parsed.city),
+          region_id: regionIdForCity(parsedOrder.city),
           assigned_team_member_id: teamMemberId,
         }),
       });
@@ -198,11 +222,14 @@ export function QuickWhatsAppOrderModal({ open, onClose, onCreated, onWarning }:
           invalid_ma_phone: "رقم الهاتف يجب أن يتكون من 10 أرقام بالضبط.",
           invalid_city: "المدينة غير صالحة.",
           invalid_price: "الثمن غير صالح.",
+          invalid_custom_product: "يرجى إدخال اسم المنتج المخصص.",
         };
         throw new Error(map[body.detail || ""] || "تعذر حفظ الطلبية.");
       }
       onCreated((await res.json()) as AdminOrder);
       setProductSlug("");
+      setCustomName("");
+      setCustomEdited(false);
       setProductError(false);
       onClose();
     } catch (err) {
@@ -296,10 +323,13 @@ export function QuickWhatsAppOrderModal({ open, onClose, onCreated, onWarning }:
               </div>
               <div className="col-span-2 flex items-center gap-1.5">
                 <span className="shrink-0 font-bold text-slate-400">5.</span>
-                الثمن{selected ? ` — إن نُقص يُؤخذ ${selected.price} MAD` : ""}
+                الثمن{isOther ? " — مطلوب للمنتج المخصص" : selected ? ` — إن نُقص يُؤخذ ${selected.price} MAD` : ""}
               </div>
               <div className="col-span-2 flex items-center gap-1.5">
                 <span className="shrink-0 font-bold text-slate-400">6.</span> الكمية (اختياري - الافتراضي 1)
+              </div>
+              <div className="col-span-2 flex items-center gap-1.5">
+                <span className="shrink-0 font-bold text-slate-400">7.</span> اسم المنتج المخصص (عند اختيار أخرى)
               </div>
             </div>
             <p className="mt-2 text-right text-[0.74rem] text-slate-500">
@@ -335,6 +365,8 @@ export function QuickWhatsAppOrderModal({ open, onClose, onCreated, onWarning }:
                 <div className="flex min-w-0 flex-1 items-center justify-between gap-2.5">
                   <ProductRow product={selected} />
                 </div>
+              ) : isOther ? (
+                <span className="truncate text-[0.88rem] font-semibold text-white">أخرى{customName.trim() ? ` — ${customName.trim()}` : ""}</span>
               ) : (
                 <span className="text-slate-500">-- اختر المنتج المطلوب --</span>
               )}
@@ -348,16 +380,18 @@ export function QuickWhatsAppOrderModal({ open, onClose, onCreated, onWarning }:
                 <button
                   type="button"
                   role="option"
-                  aria-selected={!selected}
+                  aria-selected={!selected && !isOther}
                   onClick={() => {
                     setProductSlug("");
+                    setCustomName("");
+                    setCustomEdited(false);
                     setProductError(false);
                     setError("");
                     setSelectOpen(false);
                   }}
                   className={cn(
                     "rounded-lg px-3 py-2 text-right text-sm text-slate-400",
-                    !selected ? "border border-blue-500/30 bg-blue-500/18" : "hover:bg-blue-500/12",
+                    !selected && !isOther ? "border border-blue-500/30 bg-blue-500/18" : "hover:bg-blue-500/12",
                   )}
                 >
                   -- اختر المنتج المطلوب --
@@ -372,6 +406,8 @@ export function QuickWhatsAppOrderModal({ open, onClose, onCreated, onWarning }:
                       aria-selected={active}
                       onClick={() => {
                         setProductSlug(product.slug);
+                        setCustomEdited(false);
+                        setCustomName("");
                         setProductError(false);
                         setError("");
                         setSelectOpen(false);
@@ -385,9 +421,52 @@ export function QuickWhatsAppOrderModal({ open, onClose, onCreated, onWarning }:
                     </button>
                   );
                 })}
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={isOther}
+                  onClick={() => {
+                    setProductSlug(OTHER_SLUG);
+                    setCustomEdited(false);
+                    setCustomName(parseWhatsAppOrderText(raw).customProduct);
+                    setProductError(false);
+                    setError("");
+                    setSelectOpen(false);
+                  }}
+                  className={cn(
+                    "rounded-lg border-t border-[#1e2d4a] px-3 py-2 text-right text-sm font-bold text-white",
+                    isOther ? "border border-blue-500/30 bg-blue-500/18" : "hover:bg-blue-500/12",
+                  )}
+                >
+                  أخرى
+                </button>
               </div>
             ) : null}
           </div>
+
+          {isOther ? (
+            <div className="mb-4">
+              <label className="mb-1.5 block text-right text-[0.85rem] font-bold text-slate-100" htmlFor="whatsapp-custom-product">
+                اسم المنتج المخصص
+              </label>
+              <input
+                id="whatsapp-custom-product"
+                value={customName}
+                onChange={(event) => {
+                  setCustomName(event.target.value);
+                  setCustomEdited(true);
+                  setProductError(false);
+                  setError("");
+                }}
+                placeholder="يُملأ من السطر 7 أو اكتبه هنا"
+                maxLength={160}
+                className={cn(
+                  "h-11 w-full rounded-[10px] border bg-[#050a14] px-3.5 text-right text-sm font-semibold text-white outline-none placeholder:text-slate-600 focus:border-blue-500",
+                  productError && !customName.trim() ? "border-red-500" : "border-[#1e2d4a]",
+                )}
+              />
+            </div>
+          ) : null}
 
           {error ? (
             <p
@@ -406,7 +485,7 @@ export function QuickWhatsAppOrderModal({ open, onClose, onCreated, onWarning }:
 
           <button
             type="submit"
-            disabled={saving || !selected}
+            disabled={saving || (!selected && !isOther)}
             className="mt-1 flex w-full items-center justify-center gap-2 rounded-[10px] bg-emerald-500 py-3 text-[0.95rem] font-bold text-white transition hover:bg-emerald-600 disabled:opacity-60"
           >
             <Sparkles className="h-4 w-4" />

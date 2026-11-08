@@ -11,6 +11,7 @@ type OrderRow = {
   phone_national: string;
   city: string;
   product_slug: string;
+  custom_product_name?: string | null;
   tier_qty: number;
   cross_sell_slug: string | null;
   upsell_slug: string | null;
@@ -177,6 +178,7 @@ function serialize(row: OrderRow): AdminOrder {
     phone: row.phone || "",
     phone_national: row.phone_national || "",
     product_slug: row.product_slug || "quran",
+    custom_product_name: (row.custom_product_name || "").trim() || null,
     tier_qty: Number(row.tier_qty) || 1,
     cross_sell_slug: row.cross_sell_slug,
     upsell_slug: row.upsell_slug,
@@ -185,6 +187,7 @@ function serialize(row: OrderRow): AdminOrder {
       tier_qty: Number(row.tier_qty) || 1,
       cross_sell_slug: row.cross_sell_slug || null,
       upsell_slug: row.upsell_slug || null,
+      custom_product_name: row.custom_product_name,
     }),
     total: Math.round(Number(row.total_cents) || 0) / 100,
     currency: row.currency || "MAD",
@@ -869,6 +872,7 @@ export async function createAdminOrder(input: {
   city: string;
   shipping_city?: string | null;
   product_slug: string;
+  custom_product_name?: string | null;
   tier_qty: number;
   total_mad: number;
   status: AdminStatus;
@@ -906,7 +910,9 @@ export async function createAdminOrder(input: {
   const qty = Math.min(20, Math.max(1, Math.round(Number(input.tier_qty) || 1)));
   const cents = Math.round(Number(input.total_mad) * 100);
   if (!Number.isFinite(cents) || cents < 100) throw new Error("invalid_price");
-  const slug = await resolveProductSlug(input.product_slug);
+  const customName = String(input.custom_product_name || "").trim().slice(0, 160);
+  if (customName && customName.length < 2) throw new Error("invalid_custom_product");
+  const slug = customName ? "other" : await resolveProductSlug(input.product_slug);
   const national = e164.startsWith("+212") && e164.length === 13 ? `0${e164.slice(4)}` : e164;
   const orderId = randomUUID();
   const eventId = `admin-${orderId}`;
@@ -941,6 +947,7 @@ export async function createAdminOrder(input: {
       city: cityAr,
       shipping_city: officialShipping,
       product_slug: slug,
+      custom_product_name: customName || null,
       tier_qty: qty,
       tier_price_cents: cents,
       cross_sell_slug: bundleEnabled ? crossSlug : null,
