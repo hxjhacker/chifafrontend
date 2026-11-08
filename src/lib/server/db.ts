@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS admin_credentials (
   id smallint PRIMARY KEY CHECK (id = 1),
   username varchar(120) NOT NULL,
   password_hash text NOT NULL,
+  email varchar(160) NOT NULL DEFAULT '',
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
@@ -215,6 +216,7 @@ const SCHEMA_ALTERS = [
   `ALTER TABLE orders ADD COLUMN IF NOT EXISTS team_payout_paid boolean NOT NULL DEFAULT false`,
   `ALTER TABLE orders ADD COLUMN IF NOT EXISTS custom_product_name varchar(160)`,
   `UPDATE orders SET team_payout_paid = false WHERE team_payout_paid IS TRUE AND status IS DISTINCT FROM 'delivered'`,
+  `ALTER TABLE admin_credentials ADD COLUMN IF NOT EXISTS email varchar(160) NOT NULL DEFAULT ''`,
   `UPDATE orders SET assigned_team_member_id = 'mohammed' WHERE assigned_team_member_id IS NULL OR BTRIM(assigned_team_member_id) = ''`,
   `CREATE INDEX IF NOT EXISTS ix_orders_assigned_team_member_id ON orders (assigned_team_member_id)`,
   `CREATE INDEX IF NOT EXISTS ix_orders_carrier ON orders (carrier)`,
@@ -423,7 +425,7 @@ const PRODUCT_SEED = [
 
 const ACTIVE_PRODUCT_SLUGS = PRODUCT_SEED.map((product) => product.slug);
 
-const SCHEMA_ALTER_VERSION = 14;
+const SCHEMA_ALTER_VERSION = 15;
 let appliedAlterVersion = 0;
 
 export async function ensureSchema() {

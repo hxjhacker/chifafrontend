@@ -27,7 +27,6 @@ import { DashboardSoundToggle } from "@/components/admin/DashboardSoundEngine";
 import { TeamMembersMenu } from "@/components/admin/TeamMembersMenu";
 import {
   AccountPopover,
-  DEFAULT_PROFILE_EMAIL,
   DEFAULT_STORE_NAME,
   EditProfileModal,
   STORE_NAME_KEY,
@@ -35,6 +34,7 @@ import {
   type PasswordUpdate,
 } from "@/components/admin/EditProfileModal";
 import { notifyDashboard } from "@/components/admin/DashboardAlert";
+import { accountErrorMessage } from "@/lib/account-errors";
 import { useHorizontalDragScroll } from "@/hooks/useHorizontalDragScroll";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import type { AdminCarrier, AdminOrder } from "@/lib/admin";
@@ -142,6 +142,7 @@ export function DashboardHeader() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [storeName, setStoreName] = useState(DEFAULT_STORE_NAME);
   const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [darkMode, setDarkMode] = useState(false);
   const accountRef = useRef<HTMLDivElement>(null);
   const mobileAccountRef = useRef<HTMLDivElement>(null);
@@ -158,7 +159,10 @@ export function DashboardHeader() {
     setDarkMode(resolveIsDark());
     void fetch("/api/admin/me", { credentials: "include", cache: "no-store" })
       .then((response) => (response.ok ? response.json() : null))
-      .then((body: { username?: string } | null) => setUsername(body?.username || ""))
+      .then((body: { username?: string; email?: string } | null) => {
+        setUsername(body?.username || "");
+        setEmail(body?.email || "");
+      })
       .catch(() => undefined);
     function onTheme(event: Event) {
       setDarkMode(Boolean((event as CustomEvent<{ dark: boolean }>).detail?.dark));
@@ -212,7 +216,7 @@ export function DashboardHeader() {
 
   if (hidden) return null;
 
-  const profileEmail = username.includes("@") ? username : DEFAULT_PROFILE_EMAIL;
+  const profileEmail = email || (username.includes("@") ? username : "");
   const initials = storeInitials(storeName);
 
   function toggleDarkMode() {
@@ -228,28 +232,51 @@ export function DashboardHeader() {
     setProfileOpen(true);
   }
 
-  async function saveProfile(name: string, password?: PasswordUpdate) {
-    if (password) {
-      const response = await fetch("/api/admin/account/password", {
+  async function saveProfile(name: string, nextEmail: string, password?: PasswordUpdate) {
+    let response: Response;
+    try {
+      response = await fetch("/api/admin/account", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(password),
+        body: JSON.stringify({
+          username: name,
+          email: nextEmail,
+          currentPassword: password?.currentPassword || "",
+          newPassword: password?.newPassword || "",
+          confirmPassword: password?.confirmPassword || "",
+        }),
       });
-      const body = (await response.json().catch(() => ({}))) as { detail?: string; message?: string };
-      if (!response.ok) throw new Error(body.message || body.detail || "تعذر تحديث كلمة المرور.");
+    } catch {
+      throw new Error("تعذر الاتصال بالخادم. حاولي مرة أخرى.");
+    }
+    const body = (await response.json().catch(() => ({}))) as {
+      detail?: string;
+      message?: string;
+      username?: string;
+      email?: string;
+      passwordChanged?: boolean;
+    };
+    if (!response.ok) throw new Error(body.message || accountErrorMessage(body.detail, response.status));
+    if (body.passwordChanged) {
       try {
         sessionStorage.setItem("cg_admin_login_notice", body.message || "تم تحديث كلمة المرور بنجاح، يرجى تسجيل الدخول مجدداً");
       } catch {
         /* ignore unavailable browser storage */
       }
-      await fetch("/api/admin/logout", { method: "POST", credentials: "include" }).catch(() => undefined);
       window.location.assign(DASHBOARD_LOGIN);
       return;
     }
-    setStoreName(name);
-    writeStorage(STORE_NAME_KEY, name);
-    notifyDashboard("تم حفظ تعديلات الملف الشخصي.", "ok");
+    const savedUsername = body.username || name;
+    const savedEmail = body.email ?? nextEmail;
+    setUsername(savedUsername);
+    setEmail(savedEmail);
+    try {
+      if (localStorage.getItem("cg_admin_remember_user")) localStorage.setItem("cg_admin_remember_user", savedUsername);
+    } catch {
+      /* ignore unavailable browser storage */
+    }
+    notifyDashboard(body.message || "تم حفظ تعديلات الملف الشخصي.", "ok");
   }
 
   async function logout() {
@@ -515,7 +542,7 @@ export function DashboardHeader() {
         </aside>
       </div>
 
-      <EditProfileModal open={profileOpen} storeName={storeName} email={profileEmail} onClose={() => setProfileOpen(false)} onSave={saveProfile} />
+      <EditProfileModal open={profileOpen} username={username} email={profileEmail} onClose={() => setProfileOpen(false)} onSave={saveProfile} />
     </div>
   );
 }

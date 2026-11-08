@@ -81,18 +81,19 @@ export function AccountPopover({
 
 export function EditProfileModal({
   open,
-  storeName,
+  username,
   email,
   onClose,
   onSave,
 }: {
   open: boolean;
-  storeName: string;
+  username: string;
   email: string;
   onClose: () => void;
-  onSave: (name: string, password?: PasswordUpdate) => void | Promise<void>;
+  onSave: (username: string, email: string, password?: PasswordUpdate) => void | Promise<void>;
 }) {
-  const [draftName, setDraftName] = useState(storeName);
+  const [draftName, setDraftName] = useState(username);
+  const [draftEmail, setDraftEmail] = useState(email);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -101,40 +102,57 @@ export function EditProfileModal({
 
   useEffect(() => {
     if (!open) return;
-    setDraftName(storeName);
+    setDraftName(username);
+    setDraftEmail(email);
     setCurrentPassword("");
     setNewPassword("");
     setConfirmPassword("");
     setError("");
-  }, [open, storeName]);
+  }, [open, username, email]);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (saving) return;
     const name = draftName.trim();
+    const nextEmail = draftEmail.trim();
     if (name.length < 2) {
-      setError("كتبي اسم المتجر (حرفين على الأقل).");
+      setError("اسم المستخدم مطلوب (حرفين على الأقل).");
       return;
     }
-    const changingPassword = Boolean(currentPassword || newPassword || confirmPassword);
+    if (nextEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nextEmail)) {
+      setError("البريد الإلكتروني غير صالح.");
+      return;
+    }
+    const changingPassword = Boolean(newPassword || confirmPassword);
     if (changingPassword) {
       if (!currentPassword || !newPassword || !confirmPassword) {
-        setError("باش تبدّلي كلمة المرور، عمّري الخانات الثلاثة.");
+        setError("لتغيير كلمة المرور، عمّري الحالية والجديدة وتأكيدها.");
         return;
       }
       if (newPassword.length < 8) {
-        setError("كلمة المرور الجديدة خاصها تكون 8 حروف على الأقل.");
+        setError("كلمة المرور الجديدة يجب أن تكون 8 حروف على الأقل.");
         return;
       }
       if (newPassword !== confirmPassword) {
-        setError("تأكيد كلمة المرور ما كيتطابقش.");
+        setError("تأكيد كلمة المرور لا يطابق الكلمة الجديدة.");
+        return;
+      }
+      if (currentPassword === newPassword) {
+        setError("كلمة المرور الجديدة يجب أن تكون مختلفة عن الحالية.");
         return;
       }
     }
+    const identityChanged =
+      name.toLowerCase() !== username.trim().toLowerCase() || nextEmail.toLowerCase() !== email.trim().toLowerCase();
+    if ((identityChanged || changingPassword) && !currentPassword) {
+      setError("أدخلي كلمة المرور الحالية لتأكيد تعديل الحساب.");
+      return;
+    }
     setSaving(true);
+    setError("");
     try {
-      const password = changingPassword ? { currentPassword, newPassword, confirmPassword } : undefined;
-      await onSave(name, password);
+      const password = currentPassword || changingPassword ? { currentPassword, newPassword, confirmPassword } : undefined;
+      await onSave(name, nextEmail, password);
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "تعذر حفظ التعديلات.");
@@ -187,11 +205,12 @@ export function EditProfileModal({
           <div className="space-y-3">
             <div>
               <label className="mb-1.5 block font-semibold text-slate-300" htmlFor="inputUsername">
-                اسم المستخدم / المتجر
+                اسم المستخدم
               </label>
               <input
                 id="inputUsername"
                 type="text"
+                autoComplete="username"
                 value={draftName}
                 onChange={(e) => setDraftName(e.target.value)}
                 className="w-full rounded-xl border border-slate-800 bg-[#070b12] px-3 py-2 text-xs text-white transition focus:border-amber-500 focus:outline-none"
@@ -204,9 +223,11 @@ export function EditProfileModal({
               <input
                 id="inputEmail"
                 type="email"
-                value={email}
-                readOnly
-                className="w-full cursor-not-allowed rounded-xl border border-slate-800 bg-[#070b12] px-3 py-2 text-xs text-slate-400 focus:outline-none"
+                autoComplete="email"
+                value={draftEmail}
+                onChange={(e) => setDraftEmail(e.target.value)}
+                placeholder="name@example.com"
+                className="w-full rounded-xl border border-slate-800 bg-[#070b12] px-3 py-2 text-xs text-white transition focus:border-amber-500 focus:outline-none"
               />
             </div>
           </div>
