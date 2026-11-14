@@ -15,6 +15,7 @@ export async function GET(request: Request) {
       q: url.searchParams.get("q") || "",
       city: url.searchParams.get("city") || "",
       status: url.searchParams.get("status") || "",
+      member: url.searchParams.get("member") || "",
       limit: Number(url.searchParams.get("limit") || 2000),
     });
     return NextResponse.json(payload);

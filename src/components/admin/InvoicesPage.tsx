@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Eye, Loader2, Receipt, RefreshCw, Search, X } from "lucide-react";
+import { ArrowRight, Check, Eye, Loader2, Receipt, RefreshCw, Search, X } from "lucide-react";
 import { notifyDashboard } from "@/components/admin/DashboardAlert";
 import type { TeamMemberOption } from "@/components/admin/TeamMemberSelect";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
@@ -76,6 +76,23 @@ function payoutFor(order: AdminOrder, member: TeamMemberOption | undefined) {
   };
 }
 
+function mergeMemberRows(current: Invoice[], member: string, incoming: Invoice[]) {
+  if (current.length === 0) return incoming;
+  const incomingById = new Map(incoming.map((row) => [row.id, row]));
+  const seen = new Set<string>();
+  const next = current.flatMap((row) => {
+    if (row.memberId !== member) return [row];
+    const updated = incomingById.get(row.id);
+    if (!updated) return [];
+    seen.add(row.id);
+    return [updated];
+  });
+  for (const row of incoming) {
+    if (!seen.has(row.id)) next.push(row);
+  }
+  return next;
+}
+
 function toInvoice(order: AdminOrder, members: Map<string, TeamMemberOption>): Invoice {
   const memberId = order.assigned_team_member_id || "mohammed";
   const member = members.get(memberId);
@@ -123,17 +140,25 @@ export function InvoicesPage() {
   const [error, setError] = useState("");
   const [savingId, setSavingId] = useState("");
   const [viewing, setViewing] = useState<Invoice | null>(null);
+  const [catalogReady, setCatalogReady] = useState(false);
+  const memberRequest = useRef(0);
 
   useLockBodyScroll(Boolean(viewing));
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError("");
+  const load = useCallback(async (selectedMember = "all", silent = false) => {
+    const requestId = selectedMember === "all" ? 0 : ++memberRequest.current;
+    if (!silent) {
+      setLoading(true);
+      setError("");
+    }
     try {
+      const params = new URLSearchParams({ status: "delivered", limit: "2000" });
+      if (selectedMember !== "all") params.set("member", selectedMember);
       const [ordersRes, membersRes] = await Promise.all([
-        fetch("/api/admin/orders?status=delivered&limit=2000", { credentials: "include", cache: "no-store" }),
+        fetch(`/api/admin/orders?${params.toString()}`, { credentials: "include", cache: "no-store" }),
         fetch("/api/admin/team-members", { credentials: "include", cache: "no-store" }),
       ]);
+      if (selectedMember !== "all" && requestId !== memberRequest.current) return;
       if (ordersRes.status === 401 || membersRes.status === 401) {
         window.location.replace(DASHBOARD_HOME);
         return;
@@ -143,39 +168,73 @@ export function InvoicesPage() {
       const membersBody = membersRes.ok ? ((await membersRes.json()) as { members?: TeamMemberOption[] }) : { members: [] };
       const memberRows = membersBody.members || [];
       const memberMap = new Map(memberRows.map((member) => [member.id, member]));
+      const next = (ordersBody.orders || []).filter((order) => order.status === "delivered").map((order) => toInvoice(order, memberMap));
+      if (selectedMember !== "all" && requestId !== memberRequest.current) return;
       setMembers(memberRows);
-      setInvoices((ordersBody.orders || []).filter((order) => order.status === "delivered").map((order) => toInvoice(order, memberMap)));
+      setInvoices((current) => (selectedMember === "all" ? next : mergeMemberRows(current, selectedMember, next)));
+      if (selectedMember === "all") setCatalogReady(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "تعذر تحميل الفواتير.");
+      if (!silent) setError(err instanceof Error ? err.message : "تعذر تحميل الفواتير.");
     } finally {
-      setLoading(false);
+      if (!silent && (selectedMember === "all" || requestId === memberRequest.current)) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    void load();
+    void load("all");
   }, [load]);
 
-  const visibleMembers = useMemo(() => {
-    const ids = new Set(invoices.map((invoice) => invoice.memberId));
-    return members.filter((member) => ids.has(member.id));
+  useEffect(() => {
+    if (!catalogReady || memberId === "all") return;
+    void load(memberId, true);
+  }, [catalogReady, memberId, load]);
+
+  const sidebarMembers = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const invoice of invoices) counts.set(invoice.memberId, (counts.get(invoice.memberId) || 0) + 1);
+    const known = new Map(members.map((member) => [member.id, member]));
+    const ids = new Set<string>([...members.filter((member) => member.is_active).map((member) => member.id), ...counts.keys()]);
+    return [...ids]
+      .map((id) => {
+        const member = known.get(id);
+        return {
+          id,
+          name: memberLabel(member, id),
+          color: member?.avatar_color || "#38bdf8",
+          count: counts.get(id) || 0,
+        };
+      })
+      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, "ar"));
   }, [invoices, members]);
+
+  const memberInvoices = useMemo(
+    () => (memberId === "all" ? invoices : invoices.filter((invoice) => invoice.memberId === memberId)),
+    [invoices, memberId],
+  );
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase("ar");
-    return invoices.filter((invoice) => {
+    return memberInvoices.filter((invoice) => {
       if (tab === "paid" && !invoice.paid) return false;
       if (tab === "unpaid" && invoice.paid) return false;
-      if (memberId !== "all" && invoice.memberId !== memberId) return false;
       if (!needle) return true;
       const hay = `${invoice.reference} ${invoice.orderRef} ${invoice.customer} ${invoice.memberName} ${invoice.city} ${invoice.pack}`.toLocaleLowerCase("ar");
       return hay.includes(needle);
     });
-  }, [invoices, tab, query, memberId]);
+  }, [memberInvoices, tab, query]);
 
-  const unpaid = invoices.filter((invoice) => !invoice.paid);
-  const paid = invoices.filter((invoice) => invoice.paid);
+  const unpaid = memberInvoices.filter((invoice) => !invoice.paid);
+  const paid = memberInvoices.filter((invoice) => invoice.paid);
   const sum = (rows: Invoice[]) => rows.reduce((total, invoice) => total + invoice.payout, 0);
+  const selectedMember = sidebarMembers.find((member) => member.id === memberId);
+
+  function selectMember(nextId: string) {
+    setMemberId(nextId);
+    setViewing((current) => {
+      if (!current || nextId === "all" || current.memberId === nextId) return current;
+      return null;
+    });
+  }
 
   async function setPaid(invoice: Invoice, next: boolean) {
     if (savingId) return;
@@ -221,7 +280,7 @@ export function InvoicesPage() {
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              onClick={() => void load()}
+              onClick={() => void load(memberId)}
               disabled={loading}
               className="inline-flex h-10 items-center gap-2 rounded-xl border px-3.5 text-sm font-semibold text-slate-200 disabled:opacity-60"
               style={{ borderColor: "#1e2d4a", background: "#0b1324" }}
@@ -240,10 +299,59 @@ export function InvoicesPage() {
           </div>
         </div>
 
+        <div className="flex flex-col gap-4 lg:flex-row-reverse lg:items-start">
+          <aside className="w-full shrink-0 lg:sticky lg:top-4 lg:w-72">
+            <div className="rounded-2xl border p-2" style={{ borderColor: "#1e2d4a", background: "#0b1324" }}>
+              <p className="px-2.5 py-2 text-xs font-black text-slate-400">أعضاء الفريق</p>
+              <div className="flex gap-2 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0">
+                <button
+                  type="button"
+                  onClick={() => selectMember("all")}
+                  aria-pressed={memberId === "all"}
+                  className={cn(
+                    "flex min-w-[11rem] shrink-0 items-center gap-2 rounded-xl px-2.5 py-2 text-right text-sm font-bold transition lg:min-w-0 lg:w-full",
+                    memberId === "all" ? "bg-emerald-500/15 text-white ring-1 ring-emerald-500/40" : "text-slate-200 hover:bg-white/5",
+                  )}
+                >
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-700 text-[11px] font-black text-white">∑</span>
+                  <span className="min-w-0 flex-1 truncate">الإختيار الكل</span>
+                  <span className="font-mono text-[11px] text-slate-500">{invoices.length}</span>
+                  {memberId === "all" ? <Check className="h-3.5 w-3.5 shrink-0 text-emerald-400" /> : null}
+                </button>
+                {sidebarMembers.map((member) => {
+                  const active = memberId === member.id;
+                  return (
+                    <button
+                      key={member.id}
+                      type="button"
+                      onClick={() => selectMember(member.id)}
+                      aria-pressed={active}
+                      className={cn(
+                        "flex min-w-[11rem] shrink-0 items-center gap-2 rounded-xl px-2.5 py-2 text-right text-sm font-bold transition lg:min-w-0 lg:w-full",
+                        active ? "bg-emerald-500/15 text-white ring-1 ring-emerald-500/40" : "text-slate-200 hover:bg-white/5",
+                      )}
+                    >
+                      <span
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-black text-[#07111f]"
+                        style={{ backgroundColor: member.color }}
+                      >
+                        {member.name.slice(0, 1)}
+                      </span>
+                      <span className="min-w-0 flex-1 truncate">{member.name}</span>
+                      <span className="font-mono text-[11px] text-slate-500">{member.count}</span>
+                      {active ? <Check className="h-3.5 w-3.5 shrink-0 text-emerald-400" /> : null}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </aside>
+
+          <div className="min-w-0 flex-1 space-y-5">
         <div className="grid gap-3 sm:grid-cols-3">
-          <SummaryCard label="غير مدفوعة" value={money(sum(unpaid))} hint={`${unpaid.length} فاتورة معلّقة`} tone="amber" />
-          <SummaryCard label="مدفوعة" value={money(sum(paid))} hint={`${paid.length} فاتورة مسوّاة`} tone="emerald" />
-          <SummaryCard label="الإجمالي" value={money(sum(invoices))} hint={`${invoices.length} طلبية مسلّمة`} tone="slate" />
+          <SummaryCard label="غير مدفوعة" value={money(sum(unpaid))} hint={`${unpaid.length} فاتورة معلّقة${selectedMember ? ` · ${selectedMember.name}` : ""}`} tone="amber" />
+          <SummaryCard label="مدفوعة" value={money(sum(paid))} hint={`${paid.length} فاتورة مسوّاة${selectedMember ? ` · ${selectedMember.name}` : ""}`} tone="emerald" />
+          <SummaryCard label="الإجمالي" value={money(sum(memberInvoices))} hint={`${memberInvoices.length} طلبية مسلّمة${selectedMember ? ` · ${selectedMember.name}` : ""}`} tone="slate" />
         </div>
 
         <div className="flex flex-col gap-3 rounded-2xl border p-3 sm:flex-row sm:items-center" style={{ borderColor: "#1e2d4a", background: "#0b1324" }}>
@@ -260,7 +368,7 @@ export function InvoicesPage() {
               >
                 {item.label}
                 <span className="mr-1 font-mono text-[10px] opacity-70">
-                  {item.id === "paid" ? paid.length : item.id === "unpaid" ? unpaid.length : invoices.length}
+                  {item.id === "paid" ? paid.length : item.id === "unpaid" ? unpaid.length : memberInvoices.length}
                 </span>
               </button>
             ))}
@@ -274,24 +382,12 @@ export function InvoicesPage() {
               className="h-10 w-full rounded-xl border border-[#1e2d4a] bg-[#070d19] pr-9 pl-3 text-sm font-semibold text-white outline-none focus:border-emerald-500/50"
             />
           </label>
-          <select
-            value={memberId}
-            onChange={(event) => setMemberId(event.target.value)}
-            className="h-10 rounded-xl border border-[#1e2d4a] bg-[#070d19] px-3 text-sm font-semibold text-white outline-none focus:border-emerald-500/50"
-          >
-            <option value="all">كل الأعضاء</option>
-            {visibleMembers.map((member) => (
-              <option key={member.id} value={member.id}>
-                {member.name_ar}
-              </option>
-            ))}
-          </select>
         </div>
 
         {error ? <p className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm font-bold text-rose-300">{error}</p> : null}
 
         <div className="overflow-hidden rounded-2xl border" style={{ borderColor: "#1e2d4a", background: "#0b1324" }}>
-          {loading ? (
+          {loading && invoices.length === 0 ? (
             <div className="flex items-center justify-center gap-2 p-16 text-slate-400">
               <Loader2 className="h-5 w-5 animate-spin text-emerald-400" />
               جاري تحميل الفواتير…
@@ -370,6 +466,8 @@ export function InvoicesPage() {
               </div>
             </>
           )}
+        </div>
+          </div>
         </div>
       </div>
 

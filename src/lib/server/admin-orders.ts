@@ -278,7 +278,7 @@ export async function markMetaLivraisonSent(orderId: string, code: string, ticke
   }
 }
 
-export async function listAdminOrders(filters: { q?: string; city?: string; status?: string; limit?: number }) {
+export async function listAdminOrders(filters: { q?: string; city?: string; status?: string; member?: string; limit?: number }) {
   await ensureSchema();
   const limit = Math.min(Math.max(filters.limit || 400, 1), 2000);
   const params: unknown[] = [];
@@ -306,6 +306,11 @@ export async function listAdminOrders(filters: { q?: string; city?: string; stat
       params.push(status);
       where.push(`status = $${params.length}`);
     }
+  }
+  const member = (filters.member || "").trim();
+  if (member && member !== "all") {
+    params.push(member.slice(0, 80));
+    where.push(`COALESCE(NULLIF(assigned_team_member_id, ''), 'mohammed') = $${params.length}`);
   }
 
   params.push(limit);
