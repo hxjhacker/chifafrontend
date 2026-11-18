@@ -1,3 +1,5 @@
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { gooliExternalRef, hasCompleteConfirmDetails, type AdminOrder, type AdminStatus } from "@/lib/admin";
 import { ensureSchema, getPool } from "@/lib/server/db";
 import { getAdminOrder, getAdminOrdersByIds } from "@/lib/server/admin-orders";
@@ -38,11 +40,43 @@ export type GooliDispatchResponse = {
   results: DispatchRow[];
 };
 
+function cleanEnvValue(value: string | undefined | null) {
+  let text = String(value || "").trim().replace(/^\uFEFF/, "");
+  if (text.length >= 2 && (text[0] === "'" || text[0] === '"') && text[0] === text[text.length - 1]) {
+    text = text.slice(1, -1).trim();
+  }
+  return text;
+}
+
+function envFromFiles(name: string) {
+  const roots = [process.cwd(), join(process.cwd(), "chifafrontend"), join(process.cwd(), "..")];
+  const files = [".env.local", ".env.production.local", ".env.production", ".env"];
+  for (const root of roots) {
+    for (const file of files) {
+      const path = join(root, file);
+      if (!existsSync(path)) continue;
+      let raw = "";
+      try {
+        raw = readFileSync(path, "utf8");
+      } catch {
+        continue;
+      }
+      for (const line of raw.split(/\r?\n/)) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith("#")) continue;
+        const body = trimmed.startsWith("export ") ? trimmed.slice(7).trim() : trimmed;
+        const eq = body.indexOf("=");
+        if (eq < 1 || body.slice(0, eq).trim() !== name) continue;
+        const value = cleanEnvValue(body.slice(eq + 1));
+        if (value) return value;
+      }
+    }
+  }
+  return "";
+}
+
 function cleanEnv(name: string) {
-  return String(process.env[name] || "")
-    .trim()
-    .replace(/^\uFEFF/, "")
-    .replace(/^['"]|['"]$/g, "");
+  return cleanEnvValue(process.env[name]) || envFromFiles(name);
 }
 
 export function gooliApiKey() {
