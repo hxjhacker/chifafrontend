@@ -70,7 +70,7 @@ import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import { cn } from "@/lib/cn";
 import { applyTheme, resolveIsDark, THEME_STORAGE_KEY } from "@/lib/theme";
 import { clearStorage, readStorage, writeJsonStorage, writeStorage } from "@/lib/safe-storage";
-import { downloadDeliveryWorkbook } from "@/lib/delivery-export";
+import { exportOrdersForDelivery } from "@/lib/delivery-export";
 
 const EMPTY_STATS: AdminStats = {
   revenue: 0,
@@ -1024,7 +1024,7 @@ export function AdminDashboard() {
       notifyDashboard("حدّد طلبيات أولاً.", "warning");
       return;
     }
-    downloadDeliveryWorkbook(selected);
+    exportOrdersForDelivery(selected);
     notifyDashboard(`تم تصدير ${selected.length} طلبية لشركة التوصيل.`, "success");
   }
 

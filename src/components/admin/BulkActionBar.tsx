@@ -72,7 +72,7 @@ export function BulkActionBar({
               className="inline-flex items-center gap-1.5 rounded-xl border border-amber-400/40 bg-amber-500/15 px-3 py-2 text-xs font-bold text-amber-100 transition hover:bg-amber-500/25 disabled:opacity-60"
             >
               <FileSpreadsheet className="h-3.5 w-3.5" />
-              تصدير لشركة توصيل (Excel)
+              تصدير لشركة التوصيل
             </button>
             <button
               type="button"
