@@ -1960,7 +1960,7 @@ export function AdminDashboard() {
             ? LABEL_PRINT_HINT
             : printableSelected.length < selectedIds.length
               ? `سيتم طباعة ${printableSelected.length} بوليصة فقط — الطلبيات بدون تتبع ستُتجاهل.`
-              : "طباعة البوالص الحرارية A6"
+              : "طباعة البوالص الحرارية 100×100 مم"
         }
         carrier={dispatchCarrier}
         onCarrierChange={setDispatchCarrier}

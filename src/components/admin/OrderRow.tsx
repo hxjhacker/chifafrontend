@@ -192,7 +192,7 @@ function TrackingChip({
       {onPrint ? (
         <button
           type="button"
-          title="طباعة البوليصة الحرارية A6"
+          title="طباعة البوليصة الحرارية 100×100 مم"
           onClick={() => onPrint(order)}
           className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-teal-500/40 bg-teal-500/10 text-teal-600 hover:bg-teal-500/20 dark:text-teal-300"
         >

@@ -53,16 +53,16 @@ export function BulkActionBar({
               {busy === "dispatch" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Truck className="h-3.5 w-3.5" />}
               إرسال إلى الناقل
             </button>
-            <span className="inline-flex" title={labelsHint || "طباعة البوالص (A6 PDF)"}>
+            <span className="inline-flex" title={labelsHint || "طباعة البوالص (100×100 مم PDF)"}>
               <button
                 type="button"
                 disabled={locked || labelsLocked}
-                title={labelsHint || "طباعة البوالص (A6 PDF)"}
+                title={labelsHint || "طباعة البوالص (100×100 مم PDF)"}
                 onClick={onLabels}
                 className="inline-flex items-center gap-1.5 rounded-xl border border-sky-400/40 bg-sky-500/15 px-3 py-2 text-xs font-bold text-sky-200 transition hover:bg-sky-500/25 disabled:cursor-not-allowed disabled:opacity-45"
               >
                 {busy === "labels" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Printer className="h-3.5 w-3.5" />}
-                طباعة البوالص (A6 PDF)
+                طباعة البوالص (100×100 مم PDF)
               </button>
             </span>
             <button

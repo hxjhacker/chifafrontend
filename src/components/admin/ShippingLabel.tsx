@@ -3,8 +3,7 @@
 import { useEffect } from "react";
 import { Printer } from "lucide-react";
 import { type AdminOrder } from "@/lib/admin";
-import { MetaLivraisonLabel } from "@/components/admin/labels/MetaLivraisonLabel";
-import { QuickLivraisonLabel } from "@/components/admin/labels/QuickLivraisonLabel";
+import { ReferenceShippingLabel } from "@/components/admin/labels/ReferenceShippingLabel";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 
 type Props = {
@@ -25,8 +24,12 @@ export function ShippingLabel({ order, onClose }: Props) {
 
   if (!order) return null;
 
-  const quick = order.carrier === "quick_livraison";
-  const carrierName = quick ? "Quick Livraison" : "Meta Livraison";
+  const carrierName =
+    order.carrier === "gooli"
+      ? "Gooli Express"
+      : order.carrier === "quick_livraison"
+        ? "Quick Livraison"
+        : "Meta Livraison";
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/75 p-4 print:static print:inset-auto print:bg-white print:p-0">
@@ -56,7 +59,7 @@ export function ShippingLabel({ order, onClose }: Props) {
           </div>
         </div>
 
-        {quick ? <QuickLivraisonLabel order={order} /> : <MetaLivraisonLabel order={order} />}
+        <ReferenceShippingLabel order={order} />
       </div>
     </div>
   );
