@@ -20,9 +20,9 @@ export function adminAuthHeaders(req: NextRequest): HeadersInit {
   };
 }
 
-export async function proxyAdminJson(req: NextRequest, path: string) {
+export async function proxyAdminJson(req: NextRequest, path: string, rawBody?: string) {
   const targetUrl = `${adminBackendBase()}${path}`;
-  const body = (await req.text()).trim() || "{}";
+  const body = (rawBody !== undefined ? rawBody : await req.text()).trim() || "{}";
   const backendRes = await fetch(targetUrl, {
     method: "POST",
     cache: "no-store",

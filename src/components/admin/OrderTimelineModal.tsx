@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { Eye, MapPin, MessageSquare, Pencil, Phone, X } from "lucide-react";
 import {
+  carrierChip,
   copyablePhone,
   detailedAddress,
   formatMad,
@@ -178,7 +179,7 @@ export function OrderTimelineModal({ order, onClose, onEdit }: Props) {
               </div>
               {order.shipping_cost != null ? (
                 <div>
-                  <dt className="text-slate-500">تكلفة الشحن ({order.carrier === "quick_livraison" ? "كويك" : "ميتا"})</dt>
+                  <dt className="text-slate-500">تكلفة الشحن ({carrierChip(order.carrier)})</dt>
                   <dd className="mt-0.5 font-black text-amber-300">{formatMad(order.shipping_cost)}</dd>
                 </div>
               ) : null}

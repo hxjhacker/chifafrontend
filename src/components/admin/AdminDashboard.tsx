@@ -821,6 +821,7 @@ export function AdminDashboard() {
         const map: Record<string, string> = {
           meta_livraison_not_configured: "أضف مفاتيح Meta Livraison في الخادم أولاً.",
           quick_livraison_not_configured: "أضف مفتاح Quick Livraison في الخادم أولاً.",
+          gooli_not_configured: "أضف مفتاح Gooli في الخادم أولاً.",
           quick_district_not_mapped: "هذه المدينة غير مربوطة بـ Quick Livraison. زامن قائمة المدن أولاً.",
           force_log_not_implemented: "Force Log غير مفعّل بعد.",
           confirmation_details_required: "كمّل معلومات التوصيل قبل الشحن.",
@@ -1002,10 +1003,31 @@ export function AdminDashboard() {
     });
   }
 
+  function dispatchAlertText(body: {
+    detail?: string;
+    message?: string;
+    errors?: Array<{ external_ref?: string; field?: string; message?: string } | string>;
+    results?: Array<{ error?: string; success?: boolean }>;
+  }) {
+    const fromErrors = (body.errors || [])
+      .map((error) => {
+        if (typeof error === "string") return error.trim();
+        const ref = error.external_ref ? `${error.external_ref}: ` : "";
+        const field = error.field ? `${error.field} — ` : "";
+        return `${ref}${field}${error.message || ""}`.trim();
+      })
+      .filter(Boolean);
+    const fromResults = (body.results || []).flatMap((row) => (!row.success && row.error ? [row.error] : []));
+    const unique = [...new Set([...fromErrors, ...fromResults])];
+    if (unique.length) return unique.slice(0, 6).join(" · ");
+    return String(body.message || body.detail || "").trim();
+  }
+
   async function readError(res: Response) {
     const body = (await res.json().catch(() => ({}))) as { detail?: string; message?: string };
     const map: Record<string, string> = {
       meta_livraison_not_configured: "أضف مفاتيح Meta Livraison في الخادم أولاً.",
+      gooli_not_configured: "أضف مفتاح Gooli في الخادم أولاً.",
       order_ids_required: "حدّد طلبيات أولاً.",
       no_labels: "ما كايناش بوالص للطلبيات المحددة.",
       order_not_confirmed: "كاين طلبيات ما تزادش تأكيدها.",
@@ -1074,26 +1096,29 @@ export function AdminDashboard() {
         failed_count?: number;
         detail?: string;
         message?: string;
+        errors?: Array<{ external_ref?: string; field?: string; message?: string } | string>;
         results?: Array<{ error?: string; success?: boolean }>;
       };
-      if (!res.ok) throw new Error(await (async () => {
+      const alertText = dispatchAlertText(body);
+      if (!res.ok) {
         const map: Record<string, string> = {
           meta_livraison_not_configured: "أضف مفاتيح Meta Livraison في الخادم أولاً.",
           quick_livraison_not_configured: "أضف مفتاح Quick Livraison في الخادم أولاً.",
+          gooli_not_configured: "أضف مفتاح Gooli في الخادم أولاً.",
           force_log_not_implemented: "Force Log غير مفعّل بعد.",
           order_ids_required: "حدّد طلبيات أولاً.",
           not_authenticated: "جلسة الأدمن غير صالحة. أعد تسجيل الدخول.",
         };
-        return map[String(body.detail || "")] || serverErrorMessage(res.status, body.message || body.detail, "تعذر الإرسال الجماعي.");
-      })());
+        throw new Error(alertText || map[String(body.detail || "")] || serverErrorMessage(res.status, body.message || body.detail, "تعذر الإرسال الجماعي."));
+      }
       const ok = Number(body.success_count || 0);
       const fail = Number(body.failed_count || 0);
-      const firstFail = (body.results || []).find((row) => !row.success)?.error;
       notifyDashboard(
         fail ? `تم إرسال ${ok} طلبية إلى ${carrierLabel(dispatchCarrier)}` : `تم إرسال ${ok} طلبية إلى ${carrierLabel(dispatchCarrier)} بنجاح`,
         fail ? "warning" : "success",
-        fail ? `فشل ${fail}${firstFail ? ` (${firstFail})` : ""}` : undefined,
+        fail ? alertText || `فشل ${fail}` : undefined,
       );
+      if (fail && alertText) setError(alertText);
       setBulkConfirm(false);
       await load();
       await refreshStats();

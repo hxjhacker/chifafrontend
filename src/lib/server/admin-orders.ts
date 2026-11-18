@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { AdminOrder, AdminStats, AdminStatus, DeliveryWindow } from "@/lib/admin";
-import { assertStatusTransition, displayStatus, displayTrackingCode, hasCompleteConfirmDetails, packLabel } from "@/lib/admin";
+import { assertStatusTransition, displayStatus, displayTrackingCode, hasCompleteConfirmDetails, packLabel, storedCarrier } from "@/lib/admin";
 import { resolveProductSlug } from "@/lib/server/admin-products";
 import { ensureSchema, getPool } from "./db";
 
@@ -162,7 +162,7 @@ function serialize(row: OrderRow): AdminOrder {
     status === "out_of_zone";
   const slug = row.product_slug || "quran";
   const catalog = CATALOG_BY_SLUG[slug];
-  const carrier = row.carrier === "quick_livraison" || row.carrier === "force_log" ? row.carrier : "meta_livraison";
+  const carrier = storedCarrier(row.carrier);
   const tracking =
     displayTrackingCode({
       carrier,
@@ -237,6 +237,25 @@ export async function getAdminOrder(orderId: string): Promise<AdminOrder | null>
   try {
     const result = await client.query<OrderRow>(`SELECT * FROM orders WHERE id = $1 LIMIT 1`, [orderId]);
     return result.rows[0] ? serialize(result.rows[0]) : null;
+  } finally {
+    client.release();
+  }
+}
+
+const ORDER_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export async function getAdminOrdersByIds(orderIds: string[]): Promise<AdminOrder[]> {
+  const ids = [...new Set(orderIds.map((id) => id.trim()).filter((id) => ORDER_UUID.test(id)))];
+  if (!ids.length) return [];
+  await ensureSchema();
+  const client = await getPool().connect();
+  try {
+    const result = await client.query<OrderRow>(`SELECT * FROM orders WHERE id = ANY($1::uuid[])`, [ids]);
+    const byId = new Map(result.rows.map((row) => [String(row.id), serialize(row)]));
+    return ids.flatMap((id) => {
+      const order = byId.get(id);
+      return order ? [order] : [];
+    });
   } finally {
     client.release();
   }

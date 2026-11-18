@@ -288,7 +288,12 @@ const SCHEMA_ALTERS = [
   `CREATE INDEX IF NOT EXISTS ix_orders_confirmed_at ON orders (confirmed_at)`,
   `CREATE INDEX IF NOT EXISTS ix_orders_meta_livraison_code ON orders (meta_livraison_code)`,
   `ALTER TABLE orders ADD COLUMN IF NOT EXISTS carrier_status varchar(50)`,
+  `ALTER TABLE orders ADD COLUMN IF NOT EXISTS gooli_call_proof text`,
   `ALTER TABLE orders ADD COLUMN IF NOT EXISTS dispatched_at timestamptz`,
+  `CREATE TABLE IF NOT EXISTS gooli_webhook_events (
+    event_id varchar(120) PRIMARY KEY,
+    received_at timestamptz NOT NULL DEFAULT now()
+  )`,
   `ALTER TABLE orders ADD COLUMN IF NOT EXISTS shipping_cost double precision`,
   `CREATE INDEX IF NOT EXISTS ix_orders_undispatched_status_created ON orders (status, created_at DESC) WHERE COALESCE(BTRIM(meta_livraison_code), '') = ''`,
   `CREATE INDEX IF NOT EXISTS ix_orders_undispatched_confirmed ON orders (confirmed_at) WHERE COALESCE(BTRIM(meta_livraison_code), '') = ''`,

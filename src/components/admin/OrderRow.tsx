@@ -11,6 +11,7 @@ import {
   canTransitionStatus,
   copyablePhone,
   formatMad,
+  carrierChip,
   shortOrderRef,
   statusMeta,
   telHref,
@@ -139,16 +140,19 @@ function StatusSelect({
 
 function CarrierBadge({ carrier }: { carrier?: string | null }) {
   const quick = carrier === "quick_livraison";
+  const gooli = carrier === "gooli";
   return (
     <span
       className={cn(
         "shrink-0 rounded-full px-1.5 py-px text-[9px] font-black",
         quick
           ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
-          : "bg-sky-500/15 text-sky-600 dark:text-sky-300",
+          : gooli
+            ? "bg-amber-500/15 text-amber-700 dark:text-amber-300"
+            : "bg-sky-500/15 text-sky-600 dark:text-sky-300",
       )}
     >
-      {quick ? "كويك" : "ميتا"}
+      {carrierChip(carrier)}
     </span>
   );
 }
@@ -330,7 +334,7 @@ export function OrderDesktopRow(props: OrderRowProps) {
         {order.shipping_cost != null ? (
           <div className={cn("text-[10px] font-bold text-royal/45 dark:text-slate-400", hideNums && "blurred-number")}>
             شحن {formatMad(order.shipping_cost)}
-            {order.carrier === "quick_livraison" ? " · كويك" : order.carrier === "meta_livraison" ? " · ميتا" : ""}
+            {` · ${carrierChip(order.carrier)}`}
           </div>
         ) : null}
       </td>
@@ -407,7 +411,7 @@ export function OrderMobileCard(props: OrderRowProps) {
           {order.shipping_cost != null ? (
             <span className={cn("block text-[10px] font-bold text-royal/45 dark:text-slate-400", hideNums && "blurred-number")}>
               شحن {formatMad(order.shipping_cost)}
-              {order.carrier === "quick_livraison" ? " · كويك" : order.carrier === "meta_livraison" ? " · ميتا" : ""}
+              {` · ${carrierChip(order.carrier)}`}
             </span>
           ) : null}
         </div>

@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAdmin } from "@/lib/admin-auth";
+import { dispatchOneToGooli, isGooliCarrier } from "@/lib/server/gooli";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -10,6 +12,19 @@ export async function POST(
   try {
     const resolvedParams = await params;
     const orderId = resolvedParams.orderId || resolvedParams.id;
+    const rawBody = await req.text();
+    let carrier = "";
+    try {
+      carrier = String((JSON.parse(rawBody || "{}") as { carrier?: unknown }).carrier || "");
+    } catch {
+      carrier = "";
+    }
+    if (isGooliCarrier(carrier)) {
+      const denied = await requireAdmin(req);
+      if (denied instanceof NextResponse) return denied;
+      const result = await dispatchOneToGooli(String(orderId || ""));
+      return NextResponse.json(result.body, { status: result.status });
+    }
 
     const backendBase =
       process.env.INTERNAL_API_URL ||
@@ -30,7 +45,7 @@ export async function POST(
         ...(cookie ? { cookie } : {}),
         ...(authHeader ? { authorization: authHeader } : {}),
       },
-      body: await req.text(),
+      body: rawBody.trim() || "{}",
     });
 
     const rawText = await backendRes.text();

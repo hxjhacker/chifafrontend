@@ -1,16 +1,29 @@
 export type AdminStatus = "new" | "confirmed" | "shipped" | "delivered" | "returned" | "cancelled" | "out_of_zone";
 
-export type AdminCarrier = "meta_livraison" | "quick_livraison" | "force_log";
+export type AdminCarrier = "meta_livraison" | "quick_livraison" | "force_log" | "gooli";
 
 export const ADMIN_CARRIERS: { id: AdminCarrier; label: string; enabled: boolean }[] = [
   { id: "meta_livraison", label: "Meta Livraison", enabled: true },
   { id: "quick_livraison", label: "Quick Livraison", enabled: true },
+  { id: "gooli", label: "Gooli Express", enabled: true },
   { id: "force_log", label: "Force Log", enabled: false },
 ];
+
+export function storedCarrier(value?: string | null): AdminCarrier {
+  if (value === "quick_livraison" || value === "force_log" || value === "gooli") return value;
+  return "meta_livraison";
+}
 
 export function carrierLabel(carrier?: string | null) {
   const hit = ADMIN_CARRIERS.find((row) => row.id === carrier);
   return hit?.label || "Meta Livraison";
+}
+
+export function carrierChip(carrier?: string | null) {
+  if (carrier === "quick_livraison") return "كويك";
+  if (carrier === "gooli") return "غولي";
+  if (carrier === "force_log") return "فورس";
+  return "ميتا";
 }
 
 /** Verified Quick warehouse SKUs */
@@ -362,6 +375,11 @@ export function formatMad(value: number) {
 
 export function shortOrderRef(id: string) {
   return `#CFG-${id.replace(/-/g, "").slice(0, 6).toUpperCase()}`;
+}
+
+/** Gooli `external_ref`, without a leading hash. Example: CFG-821E46. */
+export function gooliExternalRef(id: string) {
+  return shortOrderRef(id).replace(/^#/, "");
 }
 
 export function pct(part: number, total: number) {
