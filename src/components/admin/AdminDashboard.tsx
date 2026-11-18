@@ -70,6 +70,7 @@ import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import { cn } from "@/lib/cn";
 import { applyTheme, resolveIsDark, THEME_STORAGE_KEY } from "@/lib/theme";
 import { clearStorage, readStorage, writeJsonStorage, writeStorage } from "@/lib/safe-storage";
+import { downloadDeliveryWorkbook } from "@/lib/delivery-export";
 
 const EMPTY_STATS: AdminStats = {
   revenue: 0,
@@ -1013,6 +1014,20 @@ export function AdminDashboard() {
     return map[String(body.detail || "")] || body.message || body.detail || "تعذر تنفيذ العملية.";
   }
 
+  function exportSelectedForDelivery() {
+    const byId = new Map(orders.map((order) => [order.order_id, order]));
+    const selected = selectedIds.flatMap((id) => {
+      const order = byId.get(id);
+      return order ? [order] : [];
+    });
+    if (!selected.length) {
+      notifyDashboard("حدّد طلبيات أولاً.", "warning");
+      return;
+    }
+    downloadDeliveryWorkbook(selected);
+    notifyDashboard(`تم تصدير ${selected.length} طلبية لشركة التوصيل.`, "success");
+  }
+
   async function openBulkFile(path: string, accept: string, busy: "labels" | "manifest") {
     if (!selectedIds.length || bulkBusy) return;
     setBulkBusy(busy);
@@ -1928,6 +1943,7 @@ export function AdminDashboard() {
         onConfirmClose={() => setBulkConfirm(false)}
         onDispatch={() => void bulkDispatch()}
         onLabels={() => void openBulkFile("/api/admin/orders/bulk-labels-pdf", "application/pdf", "labels")}
+        onDeliveryExport={exportSelectedForDelivery}
         onManifest={() => void openBulkFile("/api/admin/orders/manifest", "text/html", "manifest")}
         onClear={() => setSelectedIds([])}
       />

@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, Loader2, Printer, Truck, X } from "lucide-react";
+import { FileSpreadsheet, FileText, Loader2, Printer, Truck, X } from "lucide-react";
 import { ADMIN_CARRIERS, type AdminCarrier } from "@/lib/admin";
 
 type Props = {
@@ -16,6 +16,7 @@ type Props = {
   onDispatch: () => void;
   onLabels: () => void;
   onManifest: () => void;
+  onDeliveryExport: () => void;
   onClear: () => void;
 };
 
@@ -32,6 +33,7 @@ export function BulkActionBar({
   onDispatch,
   onLabels,
   onManifest,
+  onDeliveryExport,
   onClear,
 }: Props) {
   if (count < 1) return null;
@@ -63,6 +65,15 @@ export function BulkActionBar({
                 طباعة البوالص (A6 PDF)
               </button>
             </span>
+            <button
+              type="button"
+              disabled={locked}
+              onClick={onDeliveryExport}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-amber-400/40 bg-amber-500/15 px-3 py-2 text-xs font-bold text-amber-100 transition hover:bg-amber-500/25 disabled:opacity-60"
+            >
+              <FileSpreadsheet className="h-3.5 w-3.5" />
+              تصدير لشركة توصيل (Excel)
+            </button>
             <button
               type="button"
               disabled={locked}
