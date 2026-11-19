@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  STORE_CONTACT,
   copyablePhone,
   detailedAddress,
   displayTrackingCode,
@@ -10,18 +9,10 @@ import {
   type AdminOrder,
 } from "@/lib/admin";
 import { LabelBarcode, LabelQr } from "@/components/admin/labels/LabelCodes";
-import {
-  canOpenParcel,
-  labelAmount,
-} from "@/lib/label-hub";
-import { hair, thick, ticketBox, TICKET_FONT } from "@/components/admin/labels/ticketStyles";
+import { labelAmount } from "@/lib/label-hub";
+import { thick, ticketBox, TICKET_FONT } from "@/components/admin/labels/ticketStyles";
 
-function carrierName(carrier?: string | null) {
-  if (carrier === "gooli") return "GOOLI EXPRESS";
-  if (carrier === "quick_livraison") return "QUICK LIVRAISON";
-  if (carrier === "force_log") return "FORCE LOG";
-  return "META LIVRAISON";
-}
+const VENDOR_PHONE = "0640108706";
 
 function shipmentDate(order: AdminOrder) {
   const raw = order.meta_livraison_sent_at || order.created_at || new Date().toISOString();
@@ -35,15 +26,7 @@ function shipmentDate(order: AdminOrder) {
   }).format(date);
 }
 
-function vendor(order: AdminOrder) {
-  const record = order as AdminOrder & { vendor_name?: string | null; vendor_phone?: string | null };
-  return {
-    name: String(record.vendor_name || STORE_CONTACT.name).trim() || STORE_CONTACT.name,
-    phone: String(record.vendor_phone || STORE_CONTACT.phone).trim() || STORE_CONTACT.phone,
-  };
-}
-
-function CheckBox({ checked }: { checked: boolean }) {
+function CheckBox() {
   return (
     <span
       aria-hidden="true"
@@ -55,13 +38,25 @@ function CheckBox({ checked }: { checked: boolean }) {
         alignItems: "center",
         justifyContent: "center",
         flex: "0 0 auto",
-        fontSize: "11px",
-        fontWeight: 900,
-        lineHeight: 1,
       }}
-    >
-      {checked ? "✓" : ""}
-    </span>
+    />
+  );
+}
+
+function LivmaxLogo() {
+  return (
+    <svg width="92" height="34" viewBox="0 0 184 68" role="img" aria-label="livmax Logistics Solutions">
+      <g fill="#111">
+        <rect x="4" y="11" width="26" height="31" rx="7" />
+        <path d="M11 17h7v14h9v6H11z" fill="#fff" />
+      </g>
+      <text x="36" y="40" fontFamily="Arial, Helvetica, sans-serif" fontSize="35" fontWeight="800" letterSpacing="-2">
+        livmax
+      </text>
+      <text x="102" y="57" textAnchor="middle" fontFamily="Arial, Helvetica, sans-serif" fontSize="8" fontWeight="700" letterSpacing="1.5">
+        LOGISTICS SOLUTIONS
+      </text>
+    </svg>
   );
 }
 
@@ -80,20 +75,20 @@ function Detail({
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "22mm minmax(0, 1fr)",
-        gap: "1mm",
+        gridTemplateColumns: "19mm minmax(0, 1fr)",
+        gap: "0.7mm",
         alignItems: "start",
         minWidth: 0,
         lineHeight: 1.15,
       }}
     >
-      <span style={{ fontSize: "7.2px", fontWeight: 800, whiteSpace: "nowrap" }}>{label}:</span>
+      <span style={{ fontSize: "7.5px", fontWeight: 900, whiteSpace: "nowrap" }}>{label}:</span>
       <strong
         dir={dir}
         style={{
           minWidth: 0,
-          fontSize: "8.2px",
-          fontWeight: 900,
+          fontSize: "7.8px",
+          fontWeight: 750,
           unicodeBidi: "isolate",
           overflow: "hidden",
           display: "-webkit-box",
@@ -118,33 +113,55 @@ export function ReferenceShippingLabel({ order }: { order: AdminOrder }) {
   const products = orderLineItems(order)
     .map((line) => `${line.label} × ${Math.max(1, Number(line.qty) || 1)}`)
     .join(" + ");
-  const seller = vendor(order);
-  const canOpen = order.carrier === "gooli" || canOpenParcel(order);
 
   return (
-    <div id="printable-ticket" dir="ltr" style={{ ...ticketBox, border: "1.5px solid #111" }}>
+    <div
+      id="printable-ticket"
+      dir="ltr"
+      style={{
+        ...ticketBox,
+        border: "0",
+        padding: "1mm",
+      }}
+    >
+      <div
+        style={{
+          height: "100%",
+          border: "1.5px solid #111",
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+          boxSizing: "border-box",
+        }}
+      >
       <section
         style={{
-          height: "36mm",
-          display: "grid",
-          gridTemplateColumns: "68fr 32fr",
+          height: "32.5mm",
+          position: "relative",
           borderBottom: thick,
           flexShrink: 0,
+          padding: "2mm 2.2mm 1.4mm",
+          boxSizing: "border-box",
         }}
       >
         <div
           style={{
-            padding: "2.1mm 2.2mm 1.6mm",
-            borderRight: hair,
             display: "flex",
             flexDirection: "column",
             justifyContent: "space-between",
+            height: "100%",
             minWidth: 0,
           }}
         >
-          <Detail label="Nom complet" value={order.full_name || "—"} />
-          <Detail label="Téléphone" value={phone} dir="ltr" />
-          <Detail label="Ville" value={city} />
+          <div style={{ width: "66mm" }}>
+            <Detail label="Nom complet" value={order.full_name || "—"} />
+          </div>
+          <div style={{ width: "66mm" }}>
+            <Detail label="Téléphone" value={phone} dir="ltr" />
+          </div>
+          <div style={{ width: "66mm" }}>
+            <Detail label="Ville" value={city} />
+          </div>
           <Detail label="Adresse" value={address} clamp={2} />
           <Detail label="Commentaire" value={note} clamp={2} />
           <Detail label="Date d'envoi" value={shipmentDate(order)} dir="ltr" />
@@ -152,38 +169,17 @@ export function ReferenceShippingLabel({ order }: { order: AdminOrder }) {
 
         <div
           style={{
-            padding: "2mm 1.6mm",
+            position: "absolute",
+            right: "2mm",
+            top: "2.2mm",
+            width: "25mm",
+            height: "12mm",
             display: "flex",
-            flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
-            textAlign: "center",
-            overflow: "hidden",
           }}
         >
-          <div
-            style={{
-              width: "19mm",
-              height: "12mm",
-              border: "2px solid #111",
-              borderRadius: "5mm 2mm 5mm 2mm",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              transform: "skew(-7deg)",
-              marginBottom: "1.2mm",
-            }}
-          >
-            <span style={{ transform: "skew(7deg)", fontSize: "14px", fontWeight: 950, letterSpacing: "-0.6px" }}>
-              CG
-            </span>
-          </div>
-          <div style={{ fontSize: "10px", fontWeight: 950, lineHeight: 1.05, maxWidth: "28mm" }}>
-            {carrierName(order.carrier)}
-          </div>
-          <div style={{ marginTop: "1mm", fontSize: "5.5px", fontWeight: 750, letterSpacing: "0.3px" }}>
-            LOGISTICS &amp; SOLUTIONS
-          </div>
+          <LivmaxLogo />
         </div>
       </section>
 
@@ -191,39 +187,43 @@ export function ReferenceShippingLabel({ order }: { order: AdminOrder }) {
         dir="rtl"
         style={{
           height: "8.5mm",
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-around",
           borderBottom: thick,
           flexShrink: 0,
           fontFamily: TICKET_FONT,
+          padding: "0 3mm",
+          boxSizing: "border-box",
         }}
       >
-        <div style={{ borderLeft: hair, display: "flex", alignItems: "center", justifyContent: "center", gap: "2mm" }}>
-          <CheckBox checked={canOpen} />
-          <strong style={{ fontSize: "9px" }}>{canOpen ? "يمكن فتح العلبة" : "لا يمكن فتح العلبة"}</strong>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "1.8mm" }}>
+          <CheckBox />
+          <strong style={{ fontSize: "8px" }}>لا يمكنك فتح الطلبية</strong>
         </div>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "2mm" }}>
-          <CheckBox checked={false} />
-          <strong style={{ fontSize: "9px" }}>استبدال المنتج</strong>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "1.8mm" }}>
+          <CheckBox />
+          <strong style={{ fontSize: "8px" }}>إستبدال المنتوج</strong>
         </div>
       </section>
 
       <section
         style={{
-          minHeight: "10mm",
+          height: "10mm",
           display: "grid",
-          gridTemplateColumns: "22mm minmax(0, 1fr)",
+          gridTemplateColumns: "16mm minmax(0, 1fr)",
           alignItems: "center",
           borderBottom: thick,
-          padding: "1mm 2.2mm",
+          padding: "1mm 2mm",
+          boxSizing: "border-box",
           flexShrink: 0,
         }}
       >
-        <strong style={{ fontSize: "9px" }}>Produit:</strong>
+        <strong style={{ fontSize: "7.5px" }}>Produit:</strong>
         <strong
           dir="auto"
           style={{
-            fontSize: "9.5px",
+            fontSize: "8px",
             lineHeight: 1.15,
             textAlign: "center",
             overflow: "hidden",
@@ -238,46 +238,44 @@ export function ReferenceShippingLabel({ order }: { order: AdminOrder }) {
 
       <section
         style={{
-          height: "9.5mm",
-          display: "grid",
-          gridTemplateColumns: "34mm 1fr",
+          height: "10mm",
+          display: "flex",
           alignItems: "center",
+          justifyContent: "center",
           borderBottom: thick,
           flexShrink: 0,
+          gap: "1.5mm",
         }}
       >
-        <strong style={{ paddingLeft: "2.2mm", fontSize: "12px" }}>CRBT:</strong>
-        <strong style={{ textAlign: "center", fontSize: "18px", fontWeight: 950, letterSpacing: "0.4px" }}>
-          {labelAmount(order)} DH
-        </strong>
+        <strong style={{ fontSize: "11px", fontWeight: 950 }}>CRBT: {labelAmount(order)} DH</strong>
       </section>
 
       <section
         style={{
-          height: "10.5mm",
+          height: "11mm",
           borderBottom: thick,
           display: "flex",
           flexDirection: "column",
+          alignItems: "center",
           justifyContent: "center",
-          padding: "1mm 2.2mm",
+          textAlign: "center",
+          padding: "1mm 2mm",
           lineHeight: 1.15,
           flexShrink: 0,
+          boxSizing: "border-box",
         }}
       >
-        <div style={{ fontSize: "8.5px" }}>
-          <strong>Vendeur:</strong>{" "}
-          <strong dir="ltr" style={{ unicodeBidi: "isolate" }}>
-            {seller.name} — {seller.phone}
-          </strong>
-        </div>
-        <div style={{ fontSize: "7px", marginTop: "0.8mm" }}>Nous vous remercions pour votre confiance :</div>
+        <strong dir="ltr" style={{ unicodeBidi: "isolate", fontSize: "7.5px" }}>
+          Vendeur : &lt;-- glow --&gt; - {VENDOR_PHONE}
+        </strong>
+        <strong style={{ fontSize: "6.2px", marginTop: "1mm" }}>Nous vous remercions pour votre confiance:</strong>
       </section>
 
-      <section style={{ flex: 1, minHeight: 0, display: "grid", gridTemplateColumns: "70fr 30fr" }}>
+      <section style={{ flex: 1, minHeight: 0, display: "grid", gridTemplateColumns: "68fr 32fr" }}>
         <div
           style={{
             borderRight: thick,
-            padding: "2mm 2mm 1.3mm",
+            padding: "2.2mm 2mm 1.5mm",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
@@ -285,13 +283,13 @@ export function ReferenceShippingLabel({ order }: { order: AdminOrder }) {
             minWidth: 0,
           }}
         >
-          <LabelBarcode value={code} height={52} width={1.15} style={{ width: "100%", height: "14mm" }} />
+          <LabelBarcode value={code} height={52} width={1.15} style={{ width: "100%", height: "13mm" }} />
           <strong
             dir="ltr"
             style={{
               marginTop: "1mm",
               fontFamily: "Consolas, 'Courier New', monospace",
-              fontSize: "8.5px",
+              fontSize: "7.5px",
               letterSpacing: "0.4px",
               textAlign: "center",
               overflowWrap: "anywhere",
@@ -300,10 +298,11 @@ export function ReferenceShippingLabel({ order }: { order: AdminOrder }) {
             {code || shortOrderRef(order.order_id).replace(/^#/, "")}
           </strong>
         </div>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "2mm" }}>
-          <LabelQr value={qr} size={82} title={code} />
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "2.5mm" }}>
+          <LabelQr value={qr} size={80} title={code} />
         </div>
       </section>
+      </div>
     </div>
   );
 }
